@@ -3,21 +3,21 @@ package com.dancepractice.app.web;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 @Testcontainers
 public abstract class AbstractIntegrationTest {
 
-    static final PostgreSQLContainer<?> POSTGRES;
+  static final PostgreSQLContainer<?> POSTGRES;
 
-    static {
-        POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine")
-                .withDatabaseName("dance_practice_test")
-                .withUsername("dance")
-                .withPassword("dance");
-        POSTGRES.start();
-    }
+  static {
+    POSTGRES =
+        new PostgreSQLContainer<>("postgres:16-alpine")
+            .withDatabaseName("dance_practice_test")
+            .withUsername("dance")
+            .withPassword("dance");
+    POSTGRES.start();
+  }
 
   @DynamicPropertySource
   static void overrideProps(DynamicPropertyRegistry registry) {

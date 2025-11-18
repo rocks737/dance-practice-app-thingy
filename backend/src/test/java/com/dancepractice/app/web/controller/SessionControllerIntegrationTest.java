@@ -96,7 +96,9 @@ class SessionControllerIntegrationTest extends AbstractIntegrationTest {
     assertThat(sessionId).isNotBlank();
 
     MvcResult listResult =
-        mockMvc.perform(get("/api/sessions").param("organizerId", organizerId.toString())).andReturn();
+        mockMvc
+            .perform(get("/api/sessions").param("organizerId", organizerId.toString()))
+            .andReturn();
     assertThat(listResult.getResponse().getStatus())
         .withFailMessage(listResult.getResponse().getContentAsString())
         .isEqualTo(HttpStatus.OK.value());
