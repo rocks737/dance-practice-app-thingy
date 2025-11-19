@@ -1,34 +1,35 @@
-import { Home, Plus } from "lucide-react";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import { CalendarRange } from "lucide-react";
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+import { SessionsExplorer } from "@/components/sessions/SessionsExplorer";
 
-export default function SessionsPage() {
+export default async function SessionsPage() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
   return (
-    <div className="max-w-6xl">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center space-x-3">
-          <Home className="w-8 h-8 text-gray-700" />
-          <h1 className="text-3xl font-bold text-gray-900">Sessions</h1>
-        </div>
-        <Link href="/sessions/new">
-          <Button>
-            <Plus className="w-4 h-4 mr-2" />
-            Create Session
-          </Button>
-        </Link>
-      </div>
-      
-      <div className="bg-white rounded-lg shadow p-6">
-        <p className="text-gray-600 mb-4">
-          Browse upcoming practice sessions, join sessions that match your schedule,
-          or create your own practice sessions to invite others.
-        </p>
-        <div className="mt-4 p-4 bg-blue-50 rounded-md">
-          <p className="text-sm text-blue-800">
-            🚧 This page is under construction. Session browsing and management features coming soon!
-          </p>
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="rounded-full bg-primary/10 p-3 text-primary">
+            <CalendarRange className="h-6 w-6" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Sessions</h1>
+            <p className="text-sm text-muted-foreground">
+              Search, filter, and manage your practice sessions.
+            </p>
+          </div>
         </div>
       </div>
+
+      <SessionsExplorer authUserId={user.id} />
     </div>
   );
 }

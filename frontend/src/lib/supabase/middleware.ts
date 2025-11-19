@@ -8,6 +8,59 @@ function forceLoginWithReturn(request: NextRequest) {
   return NextResponse.redirect(new URL(`/login?returnUrl=${encodeURIComponent(path + (query ? `?${query}` : ''))}`, request.url));
 }
 
+/**
+ * Ensures user profile exists in database
+ * Creates profile with defaults if it doesn't exist
+ */
+async function ensureUserProfileExists(supabase: any, userId: string, email: string) {
+  try {
+    // Check if profile exists
+    const { data: profile } = await supabase
+      .from('user_profiles')
+      .select('id')
+      .eq('auth_user_id', userId)
+      .single();
+
+    if (profile) {
+      return; // Profile exists, nothing to do
+    }
+
+        // Create profile with defaults
+        const { data: newProfile, error: profileError } = await supabase
+          .from('user_profiles')
+          .insert({
+            auth_user_id: userId,
+            email: email,
+            first_name: '',
+            last_name: '',
+            primary_role: 0, // LEADER
+            wsdc_level: 1, // NOVICE (since NEWCOMER is 0)
+            competitiveness_level: 3,
+            profile_visible: true,
+            account_status: 0, // ACTIVE
+          })
+          .select()
+          .single();
+
+    if (profileError) {
+      console.error('Error creating user profile:', profileError);
+      return;
+    }
+
+    // Add default DANCER role
+    await supabase
+      .from('user_roles')
+      .insert({
+        user_id: newProfile.id,
+        role: 'DANCER',
+      });
+
+    console.log('Created profile for new user:', email);
+  } catch (error) {
+    console.error('Error ensuring user profile:', error);
+  }
+}
+
 export const validateSession = async (request: NextRequest) => {
   // This `try/catch` block is only here for the interactive tutorial.
   // Feel free to remove once you have Supabase connected.
@@ -71,7 +124,12 @@ export const validateSession = async (request: NextRequest) => {
     // https://supabase.com/docs/guides/auth/server-side/nextjs
     const { data: { user } } = await supabase.auth.getUser();
 
-    const protectedRoutes = ['/dashboard', '/invitation', '/profile', '/schedule', '/matches', '/sessions', '/admin', '/settings'];
+    // If user is authenticated, ensure their profile exists
+    if (user && user.email) {
+      await ensureUserProfileExists(supabase, user.id, user.email);
+    }
+
+    const protectedRoutes = ['/invitation', '/profile', '/schedule', '/matches', '/sessions', '/admin', '/settings'];
 
     if (!user && protectedRoutes.some(path => request.nextUrl.pathname.startsWith(path))) {
       // redirect to /login

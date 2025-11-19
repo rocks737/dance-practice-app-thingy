@@ -85,7 +85,24 @@ Or connect via GitHub: push your repo and import it in the Vercel dashboard. Add
 
   The app starts in non-web mode, generates the SQL script, logs the absolute output path, and exits automatically. Use the resulting file to seed Supabase migrations.
 
-- The backend `user_profiles` table stores dancer metadata and references Supabase Auth via `auth_user_id`. Whenever you create a profile through `/api/users`, supply the Supabase user UUID as `authUserId` so relational tables (`sessions`, `schedule_preferences`, etc.) stay linked to the upstream identity.
+- The backend `user_profiles` table stores dancer metadata and references Supabase Auth via `auth_user_id`. User profiles are **automatically created** when someone signs up through Supabase Auth (via database trigger). The trigger creates a default profile with DANCER role.
+
+- To add additional roles (ADMIN, INSTRUCTOR, ORGANIZER):
+
+  ```sql
+  -- Add ADMIN role to a user
+  INSERT INTO user_roles (user_id, role)
+  SELECT id, 'ADMIN'
+  FROM user_profiles
+  WHERE email = 'user@example.com'
+  ON CONFLICT (user_id, role) DO NOTHING;
+  ```
+
+- For existing users who signed up before the auto-profile trigger was added, use:
+
+  ```sql
+  SELECT public.create_profile_for_existing_user('user@example.com');
+  ```
 
 - Supabase bootstrap assets now live under `supabase/` (copied from the Basejump template). To recreate the Supabase state locally run:
 
@@ -95,3 +112,45 @@ Or connect via GitHub: push your repo and import it in the Vercel dashboard. Add
   ```
 
   To push your local migrations to the hosted project (ref `ycouamhfhambbfcakkqo`), run `supabase db push` after logging in via `npx supabase login`.
+
+## User Profile Auto-Creation
+
+User profiles are **automatically created at the API layer** on first login after authentication. This happens in the Next.js middleware (`src/lib/supabase/middleware.ts`).
+
+New users automatically get:
+- ✅ A `user_profiles` record linked to their auth account
+- ✅ Default DANCER role
+- ✅ Default settings (INTERMEDIATE skill, LEADER role, profile visible)
+
+### Why API Layer vs Database Trigger?
+
+We moved profile creation from database triggers to the application layer for:
+- ✨ Better control over onboarding flows
+- ✨ Easier to customize and validate
+- ✨ Simpler to add business logic
+- ✨ Future-proof for custom onboarding workflows
+
+### Adding Roles
+
+To add additional roles (ADMIN, INSTRUCTOR, ORGANIZER):
+
+```sql
+-- Add ADMIN role to a user
+INSERT INTO user_roles (user_id, role)
+SELECT id, 'ADMIN'
+FROM user_profiles
+WHERE email = 'user@example.com'
+ON CONFLICT (user_id, role) DO NOTHING;
+```
+
+### Backfilling Existing Users
+
+If you have auth users without profiles, use:
+
+```bash
+# Run the backfill script
+npx supabase db execute -f supabase/migrations/helpers/backfill_steve_profile.sql
+
+# Or manually in SQL editor:
+# See supabase/migrations/helpers/create_existing_user_profiles.sql
+```
