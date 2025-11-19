@@ -49,7 +49,9 @@ class SchedulePreferenceServiceTest {
   @Test
   void createThrowsWhenWindowInvalid() {
     UUID userId = UUID.randomUUID();
-    when(userRepository.findById(userId)).thenReturn(Optional.of(new User()));
+    User user = new User();
+    user.setAuthUserId(UUID.randomUUID());
+    when(userRepository.findById(userId)).thenReturn(Optional.of(user));
     SchedulePreferenceRequest request =
         new SchedulePreferenceRequest(
             null,

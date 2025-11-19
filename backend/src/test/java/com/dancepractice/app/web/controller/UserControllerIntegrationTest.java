@@ -12,6 +12,7 @@ import com.dancepractice.app.web.AbstractIntegrationTest;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.LocalDate;
+import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -44,6 +45,7 @@ class UserControllerIntegrationTest extends AbstractIntegrationTest {
     payload.put("lastName", "Rivera");
     payload.put("displayName", "Jules R");
     payload.put("email", "jules@example.com");
+    payload.put("authUserId", UUID.randomUUID().toString());
     payload.put("bio", "NYC WCS dancer");
     payload.put("danceGoals", "Improve connection");
     payload.put("birthDate", LocalDate.of(1994, 5, 12).toString());

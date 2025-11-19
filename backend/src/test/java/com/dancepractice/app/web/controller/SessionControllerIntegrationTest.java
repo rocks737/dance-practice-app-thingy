@@ -40,31 +40,32 @@ class SessionControllerIntegrationTest extends AbstractIntegrationTest {
 
   @Autowired private com.dancepractice.app.domain.user.UserRepository userRepository;
 
-  private UUID organizerId;
+    private UUID organizerId;
 
-  @BeforeEach
-  void setupOrganizer() {
-    User user = new User();
-    user.setFirstName("Avery");
-    user.setLastName("Lee");
-    user.setEmail(UUID.randomUUID() + "@example.com");
-    user.setPrimaryRole(PrimaryRole.LEAD);
-    user.setWsdcSkillLevel(WsdcSkillLevel.NOVICE);
-    user.setAccountStatus(AccountStatus.ACTIVE);
-    user.setCompetitivenessLevel(2);
-    user.setRoles(new java.util.LinkedHashSet<>(java.util.Set.of(UserRole.DANCER)));
-    user.setNotificationChannels(new java.util.LinkedHashSet<>());
-    organizerId = userRepository.save(user).getId();
-  }
+    @BeforeEach
+    void setupOrganizer() {
+        User user = new User();
+        user.setFirstName("Avery");
+        user.setLastName("Lee");
+        user.setEmail(UUID.randomUUID() + "@example.com");
+    user.setAuthUserId(UUID.randomUUID());
+        user.setPrimaryRole(PrimaryRole.LEAD);
+        user.setWsdcSkillLevel(WsdcSkillLevel.NOVICE);
+        user.setAccountStatus(AccountStatus.ACTIVE);
+        user.setCompetitivenessLevel(2);
+        user.setRoles(new java.util.LinkedHashSet<>(java.util.Set.of(UserRole.DANCER)));
+        user.setNotificationChannels(new java.util.LinkedHashSet<>());
+        organizerId = userRepository.save(user).getId();
+    }
 
-  @AfterEach
-  void cleanup() {
-    sessionRepository.deleteAll();
-    userRepository.deleteAll();
-  }
+    @AfterEach
+    void cleanup() {
+        sessionRepository.deleteAll();
+        userRepository.deleteAll();
+    }
 
-  @Test
-  void createAndQuerySessions() throws Exception {
+    @Test
+    void createAndQuerySessions() throws Exception {
     var payload = objectMapper.createObjectNode();
     payload.put("title", "Morning Practice");
     payload.put("sessionType", SessionType.PARTNER_PRACTICE.name());
@@ -81,8 +82,8 @@ class SessionControllerIntegrationTest extends AbstractIntegrationTest {
         mockMvc
             .perform(
                 post("/api/sessions")
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .content(objectMapper.writeValueAsString(payload)))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(payload)))
             .andReturn();
 
     String createBody = createResult.getResponse().getContentAsString();
@@ -91,18 +92,18 @@ class SessionControllerIntegrationTest extends AbstractIntegrationTest {
         .isEqualTo(HttpStatus.CREATED.value());
 
     JsonNode node = objectMapper.readTree(createBody);
-    assertThat(node.get("title").textValue()).isEqualTo("Morning Practice");
-    String sessionId = node.get("id").textValue();
-    assertThat(sessionId).isNotBlank();
+        assertThat(node.get("title").textValue()).isEqualTo("Morning Practice");
+        String sessionId = node.get("id").textValue();
+        assertThat(sessionId).isNotBlank();
 
     MvcResult listResult =
         mockMvc
-            .perform(get("/api/sessions").param("organizerId", organizerId.toString()))
+                .perform(get("/api/sessions").param("organizerId", organizerId.toString()))
             .andReturn();
     assertThat(listResult.getResponse().getStatus())
         .withFailMessage(listResult.getResponse().getContentAsString())
         .isEqualTo(HttpStatus.OK.value());
     JsonNode list = objectMapper.readTree(listResult.getResponse().getContentAsString());
-    assertThat(list).hasSize(1);
-  }
+        assertThat(list).hasSize(1);
+    }
 }

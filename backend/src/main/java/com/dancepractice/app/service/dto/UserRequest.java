@@ -19,6 +19,7 @@ public record UserRequest(
     @NotBlank String lastName,
     String displayName,
     @Email @NotBlank String email,
+    @NotNull UUID authUserId,
     String bio,
     String danceGoals,
     LocalDate birthDate,

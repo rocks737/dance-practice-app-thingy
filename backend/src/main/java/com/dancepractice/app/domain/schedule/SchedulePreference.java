@@ -13,6 +13,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
+import jakarta.persistence.ForeignKey;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
@@ -38,14 +39,23 @@ import org.hibernate.annotations.SQLRestriction;
 public class SchedulePreference extends AbstractAuditableEntity {
 
   @ManyToOne(fetch = FetchType.LAZY, optional = false)
-  @JoinColumn(name = "user_id", nullable = false)
+  @JoinColumn(
+      name = "user_id",
+      nullable = false,
+      foreignKey = @ForeignKey(name = "fk_schedule_preferences_user"))
   private User user;
 
   @ManyToMany(fetch = FetchType.LAZY)
   @JoinTable(
       name = "schedule_preference_locations",
-      joinColumns = @JoinColumn(name = "preference_id"),
-      inverseJoinColumns = @JoinColumn(name = "location_id"))
+      joinColumns =
+          @JoinColumn(
+              name = "preference_id",
+              foreignKey = @ForeignKey(name = "fk_sched_pref_locations_preference")),
+      inverseJoinColumns =
+          @JoinColumn(
+              name = "location_id",
+              foreignKey = @ForeignKey(name = "fk_sched_pref_locations_location")))
   private Set<Location> preferredLocations = new LinkedHashSet<>();
 
   @Column(name = "location_note", length = 255)
@@ -57,13 +67,15 @@ public class SchedulePreference extends AbstractAuditableEntity {
   @ElementCollection
   @CollectionTable(
       name = "schedule_preference_windows",
-      joinColumns = @JoinColumn(name = "preference_id"))
+      joinColumns = @JoinColumn(name = "preference_id"),
+      foreignKey = @ForeignKey(name = "fk_sched_pref_windows_preference"))
   private Set<AvailabilityWindow> availabilityWindows = new LinkedHashSet<>();
 
   @ElementCollection
   @CollectionTable(
       name = "schedule_preference_roles",
-      joinColumns = @JoinColumn(name = "preference_id"))
+      joinColumns = @JoinColumn(name = "preference_id"),
+      foreignKey = @ForeignKey(name = "fk_sched_pref_roles_preference"))
   @Column(name = "role", length = 16)
   @Enumerated(EnumType.STRING)
   private Set<PrimaryRole> preferredRoles = new LinkedHashSet<>();
@@ -71,7 +83,8 @@ public class SchedulePreference extends AbstractAuditableEntity {
   @ElementCollection
   @CollectionTable(
       name = "schedule_preference_levels",
-      joinColumns = @JoinColumn(name = "preference_id"))
+      joinColumns = @JoinColumn(name = "preference_id"),
+      foreignKey = @ForeignKey(name = "fk_sched_pref_levels_preference"))
   @Column(name = "level", length = 32)
   @Enumerated(EnumType.STRING)
   private Set<WsdcSkillLevel> preferredLevels = new LinkedHashSet<>();
@@ -79,7 +92,8 @@ public class SchedulePreference extends AbstractAuditableEntity {
   @ElementCollection
   @CollectionTable(
       name = "schedule_preference_focus",
-      joinColumns = @JoinColumn(name = "preference_id"))
+      joinColumns = @JoinColumn(name = "preference_id"),
+      foreignKey = @ForeignKey(name = "fk_sched_pref_focus_preference"))
   @Column(name = "focus_area", length = 64)
   @Enumerated(EnumType.STRING)
   private Set<FocusArea> preferredFocusAreas = new LinkedHashSet<>();

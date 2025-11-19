@@ -33,6 +33,7 @@ public class UserService {
 
   public UserDto create(UserRequest request) {
     User user = new User();
+    user.setAuthUserId(request.authUserId());
     applyRequest(user, request);
     setHomeLocation(user, request.homeLocationId());
     return userMapper.toDto(userRepository.save(user));
@@ -40,6 +41,11 @@ public class UserService {
 
   public UserDto update(UUID userId, UserRequest request) {
     User user = getUserEntity(userId);
+    if (user.getAuthUserId() == null) {
+      user.setAuthUserId(request.authUserId());
+    } else if (!user.getAuthUserId().equals(request.authUserId())) {
+      throw new IllegalArgumentException("authUserId cannot be changed");
+    }
     applyRequest(user, request);
     setHomeLocation(user, request.homeLocationId());
     return userMapper.toDto(userRepository.save(user));

@@ -15,6 +15,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
+import jakarta.persistence.ForeignKey;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
@@ -66,22 +67,34 @@ public class Session extends AbstractAuditableEntity {
   private Visibility visibility = Visibility.PUBLIC;
 
   @ManyToOne(fetch = FetchType.LAZY, optional = false)
-  @JoinColumn(name = "organizer_id", nullable = false)
+  @JoinColumn(
+      name = "organizer_id",
+      nullable = false,
+      foreignKey = @ForeignKey(name = "fk_sessions_organizer"))
   private User organizer;
 
   @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "location_id")
+  @JoinColumn(name = "location_id", foreignKey = @ForeignKey(name = "fk_sessions_location"))
   private Location location;
 
   @ManyToMany
   @JoinTable(
       name = "session_participants",
-      joinColumns = @JoinColumn(name = "session_id"),
-      inverseJoinColumns = @JoinColumn(name = "user_id"))
+      joinColumns =
+          @JoinColumn(
+              name = "session_id",
+              foreignKey = @ForeignKey(name = "fk_session_participants_session")),
+      inverseJoinColumns =
+          @JoinColumn(
+              name = "user_id",
+              foreignKey = @ForeignKey(name = "fk_session_participants_user")))
   private Set<User> participants = new LinkedHashSet<>();
 
   @ElementCollection
-  @CollectionTable(name = "session_focus_areas", joinColumns = @JoinColumn(name = "session_id"))
+  @CollectionTable(
+      name = "session_focus_areas",
+      joinColumns = @JoinColumn(name = "session_id"),
+      foreignKey = @ForeignKey(name = "fk_session_focus_areas_session"))
   @Column(name = "focus_area", length = 64)
   @Enumerated(EnumType.STRING)
   private Set<FocusArea> focusAreas = new LinkedHashSet<>();

@@ -15,6 +15,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
+import jakarta.persistence.ForeignKey;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
@@ -27,6 +28,7 @@ import jakarta.validation.constraints.Min;
 import java.time.LocalDate;
 import java.util.LinkedHashSet;
 import java.util.Set;
+import java.util.UUID;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -38,17 +40,20 @@ import org.hibernate.annotations.SQLRestriction;
 @NoArgsConstructor
 @Entity
 @Table(
-    name = "users",
+    name = "user_profiles",
     uniqueConstraints = {
       @UniqueConstraint(
-          name = "uk_users_email",
+          name = "uk_user_profiles_email",
           columnNames = {"email"})
     })
 @SQLDelete(
     sql =
-        "UPDATE users SET deleted_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP, version = version + 1 WHERE id = ? AND version = ?")
+        "UPDATE user_profiles SET deleted_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP, version = version + 1 WHERE id = ? AND version = ?")
 @SQLRestriction("deleted_at IS NULL")
 public class User extends AbstractAuditableEntity {
+
+  @Column(name = "auth_user_id", nullable = false, unique = true, updatable = false)
+  private UUID authUserId;
 
   @Column(name = "first_name", nullable = false, length = 120)
   private String firstName;
@@ -88,18 +93,20 @@ public class User extends AbstractAuditableEntity {
   @Column(name = "account_status", nullable = false, length = 32)
   private AccountStatus accountStatus = AccountStatus.ACTIVE;
 
-  @Column(name = "oauth_subject", length = 255)
-  private String oauthSubject;
-
   @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "home_location_id")
+  @JoinColumn(
+      name = "home_location_id",
+      foreignKey = @ForeignKey(name = "fk_user_profiles_home_location"))
   private Location homeLocation;
 
   @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
   private Set<SchedulePreference> schedulePreferences = new LinkedHashSet<>();
 
   @ElementCollection(fetch = FetchType.LAZY)
-  @CollectionTable(name = "user_roles", joinColumns = @JoinColumn(name = "user_id"))
+  @CollectionTable(
+      name = "user_roles",
+      joinColumns = @JoinColumn(name = "user_id"),
+      foreignKey = @ForeignKey(name = "fk_user_roles_user"))
   @Enumerated(EnumType.STRING)
   @Column(name = "role", length = 32, nullable = false)
   private Set<UserRole> roles = new LinkedHashSet<>(Set.of(UserRole.DANCER));
@@ -107,12 +114,19 @@ public class User extends AbstractAuditableEntity {
   @ManyToMany
   @JoinTable(
       name = "user_blocks",
-      joinColumns = @JoinColumn(name = "user_id"),
-      inverseJoinColumns = @JoinColumn(name = "blocked_user_id"))
+      joinColumns =
+          @JoinColumn(name = "user_id", foreignKey = @ForeignKey(name = "fk_user_blocks_user")),
+      inverseJoinColumns =
+          @JoinColumn(
+              name = "blocked_user_id",
+              foreignKey = @ForeignKey(name = "fk_user_blocks_blocked_user")))
   private Set<User> blockedUsers = new LinkedHashSet<>();
 
   @ElementCollection
-  @JoinTable(name = "user_notification_channels", joinColumns = @JoinColumn(name = "user_id"))
+  @CollectionTable(
+      name = "user_notification_channels",
+      joinColumns = @JoinColumn(name = "user_id"),
+      foreignKey = @ForeignKey(name = "fk_user_notification_channels_user"))
   @Column(name = "channel", length = 64)
   private Set<String> notificationChannels = new LinkedHashSet<>();
 }

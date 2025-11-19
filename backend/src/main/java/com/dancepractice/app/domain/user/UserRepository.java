@@ -11,6 +11,8 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
   Optional<User> findByEmailIgnoreCase(String email);
 
+  Optional<User> findByAuthUserId(UUID authUserId);
+
   @EntityGraph(attributePaths = {"schedulePreferences"})
   Optional<User> findWithSchedulePreferencesById(UUID id);
 }

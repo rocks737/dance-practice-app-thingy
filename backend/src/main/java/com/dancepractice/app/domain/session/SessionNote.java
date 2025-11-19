@@ -10,6 +10,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
+import jakarta.persistence.ForeignKey;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
@@ -33,11 +34,17 @@ import org.hibernate.annotations.SQLRestriction;
 public class SessionNote extends AbstractAuditableEntity {
 
   @ManyToOne(fetch = FetchType.LAZY, optional = false)
-  @JoinColumn(name = "session_id", nullable = false)
+  @JoinColumn(
+      name = "session_id",
+      nullable = false,
+      foreignKey = @ForeignKey(name = "fk_session_notes_session"))
   private Session session;
 
   @ManyToOne(fetch = FetchType.LAZY, optional = false)
-  @JoinColumn(name = "author_id", nullable = false)
+  @JoinColumn(
+      name = "author_id",
+      nullable = false,
+      foreignKey = @ForeignKey(name = "fk_session_notes_author"))
   private User author;
 
   @Column(name = "content", nullable = false, length = 4000)
@@ -48,12 +55,18 @@ public class SessionNote extends AbstractAuditableEntity {
   private Visibility visibility = Visibility.AUTHOR_ONLY;
 
   @ElementCollection
-  @CollectionTable(name = "session_note_tags", joinColumns = @JoinColumn(name = "note_id"))
+  @CollectionTable(
+      name = "session_note_tags",
+      joinColumns = @JoinColumn(name = "note_id"),
+      foreignKey = @ForeignKey(name = "fk_session_note_tags_note"))
   @Column(name = "tag", length = 64)
   private Set<String> tags = new LinkedHashSet<>();
 
   @ElementCollection
-  @CollectionTable(name = "session_note_media", joinColumns = @JoinColumn(name = "note_id"))
+  @CollectionTable(
+      name = "session_note_media",
+      joinColumns = @JoinColumn(name = "note_id"),
+      foreignKey = @ForeignKey(name = "fk_session_note_media_note"))
   @Column(name = "media_url", length = 500)
   private Set<String> mediaUrls = new LinkedHashSet<>();
 }

@@ -1,0 +1,27 @@
+spring:
+  config:
+    activate:
+      on-profile: schema-export
+  main:
+    web-application-type: none
+  jpa:
+    hibernate:
+      ddl-auto: none
+    open-in-view: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        hbm2ddl:
+          delimiter: ";"
+        boot:
+          allow_jdbc_metadata_access: false
+      jakarta:
+        persistence:
+          schema-generation:
+            database:
+              action: none
+            create-source: metadata
+            scripts:
+              action: create
+              create-target: ${SCHEMA_EXPORT_TARGET:build/schema.sql}
+

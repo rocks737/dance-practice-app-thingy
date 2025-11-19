@@ -13,6 +13,7 @@ import java.time.LocalTime;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
@@ -73,6 +74,7 @@ class SchedulePreferenceRepositoryTest {
     user.setFirstName("Sam");
     user.setLastName("Taylor");
     user.setEmail("sam@example.com");
+    user.setAuthUserId(UUID.randomUUID());
     user.setPrimaryRole(PrimaryRole.LEAD);
     user.setWsdcSkillLevel(WsdcSkillLevel.NOVICE);
     user.setAccountStatus(com.dancepractice.app.domain.common.AccountStatus.ACTIVE);

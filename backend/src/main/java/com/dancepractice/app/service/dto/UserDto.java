@@ -15,6 +15,7 @@ public record UserDto(
     String lastName,
     String displayName,
     String email,
+    UUID authUserId,
     String bio,
     String danceGoals,
     LocalDate birthDate,

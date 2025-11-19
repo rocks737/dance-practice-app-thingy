@@ -10,6 +10,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
+import jakarta.persistence.ForeignKey;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
@@ -32,15 +33,20 @@ import org.hibernate.annotations.SQLRestriction;
 public class AbuseReport extends AbstractAuditableEntity {
 
   @ManyToOne(fetch = FetchType.LAZY, optional = false)
-  @JoinColumn(name = "reporter_id", nullable = false)
+  @JoinColumn(
+      name = "reporter_id",
+      nullable = false,
+      foreignKey = @ForeignKey(name = "fk_abuse_reports_reporter"))
   private User reporter;
 
   @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "reported_user_id")
+  @JoinColumn(
+      name = "reported_user_id",
+      foreignKey = @ForeignKey(name = "fk_abuse_reports_reported_user"))
   private User reportedUser;
 
   @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "session_id")
+  @JoinColumn(name = "session_id", foreignKey = @ForeignKey(name = "fk_abuse_reports_session"))
   private Session session;
 
   @Enumerated(EnumType.STRING)

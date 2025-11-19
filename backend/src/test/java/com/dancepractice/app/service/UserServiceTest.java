@@ -39,15 +39,18 @@ class UserServiceTest {
   @InjectMocks private UserService userService;
 
   private UserRequest userRequest;
+  private UUID authUserId;
 
   @BeforeEach
   void setUp() {
+    authUserId = UUID.randomUUID();
     userRequest =
         new UserRequest(
             "Alex",
             "Doe",
             "Alex D",
             "alex@example.com",
+            authUserId,
             "Bio",
             "Goals",
             LocalDate.of(1995, 1, 1),
@@ -71,6 +74,7 @@ class UserServiceTest {
             userRequest.lastName(),
             userRequest.displayName(),
             userRequest.email(),
+            userRequest.authUserId(),
             userRequest.bio(),
             userRequest.danceGoals(),
             userRequest.birthDate(),
@@ -93,6 +97,7 @@ class UserServiceTest {
                 userRequest.lastName(),
                 userRequest.displayName(),
                 userRequest.email(),
+                userRequest.authUserId(),
                 userRequest.bio(),
                 userRequest.danceGoals(),
                 userRequest.birthDate(),
@@ -104,7 +109,7 @@ class UserServiceTest {
                 userRequest.roles(),
                 null,
                 userRequest.notificationChannels(),
-                Set.of(),
+                Set.<UUID>of(),
                 null,
                 null));
 
@@ -115,5 +120,6 @@ class UserServiceTest {
     ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
     verify(userRepository).save(userCaptor.capture());
     assertThat(userCaptor.getValue().getHomeLocation()).isEqualTo(location);
+    assertThat(userCaptor.getValue().getAuthUserId()).isEqualTo(authUserId);
   }
 }
