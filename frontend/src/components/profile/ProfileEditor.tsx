@@ -6,6 +6,9 @@ import { Loader2, UserCircle } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PersonalInfoForm } from "@/components/profile/PersonalInfoForm";
 import { DancePreferencesForm } from "@/components/profile/DancePreferencesForm";
+import { BiographyForm } from "@/components/profile/BiographyForm";
+import { PasswordChangeForm } from "@/components/profile/PasswordChangeForm";
+import { ProfileSettings } from "@/components/profile/ProfileSettings";
 
 interface ProfileEditorProps {
   user: User;
@@ -68,24 +71,15 @@ export function ProfileEditor({ user }: ProfileEditorProps) {
         </TabsContent>
 
         <TabsContent value="bio">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">Biography</h2>
-            <p className="text-gray-600 dark:text-gray-400">🚧 Coming soon</p>
-          </div>
+          <BiographyForm profile={profile} />
         </TabsContent>
 
         <TabsContent value="settings">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">Profile Settings</h2>
-            <p className="text-gray-600 dark:text-gray-400">🚧 Coming soon</p>
-          </div>
+          <ProfileSettings profile={profile} />
         </TabsContent>
 
         <TabsContent value="security">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">Security</h2>
-            <p className="text-gray-600 dark:text-gray-400">🚧 Coming soon</p>
-          </div>
+          <PasswordChangeForm />
         </TabsContent>
       </Tabs>
     </div>

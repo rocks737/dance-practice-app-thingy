@@ -14,6 +14,18 @@ jest.mock("@/lib/hooks/useUserProfile");
 jest.mock("../PersonalInfoForm", () => ({
   PersonalInfoForm: () => <div data-testid="personal-info-form">Personal Info Form</div>,
 }));
+jest.mock("../DancePreferencesForm", () => ({
+  DancePreferencesForm: () => <div data-testid="dance-preferences-form">Dance Preferences Form</div>,
+}));
+jest.mock("../BiographyForm", () => ({
+  BiographyForm: () => <div data-testid="biography-form">Biography Form</div>,
+}));
+jest.mock("../PasswordChangeForm", () => ({
+  PasswordChangeForm: () => <div data-testid="password-change-form">Password Change Form</div>,
+}));
+jest.mock("../ProfileSettings", () => ({
+  ProfileSettings: () => <div data-testid="profile-settings">Profile Settings</div>,
+}));
 
 const mockUseUserProfile = useUserProfile as jest.MockedFunction<typeof useUserProfile>;
 
@@ -139,23 +151,23 @@ describe("ProfileEditor", () => {
 
     // Click Dance tab
     await user.click(screen.getByRole("tab", { name: /dance/i }));
-    expect(screen.getByText(/dance preferences/i)).toBeInTheDocument();
+    expect(screen.getByTestId("dance-preferences-form")).toBeInTheDocument();
     expect(screen.queryByTestId("personal-info-form")).not.toBeInTheDocument();
 
     // Click Biography tab
     await user.click(screen.getByRole("tab", { name: /biography/i }));
-    expect(screen.getByText(/biography/i)).toBeInTheDocument();
+    expect(screen.getByTestId("biography-form")).toBeInTheDocument();
 
     // Click Settings tab
     await user.click(screen.getByRole("tab", { name: /settings/i }));
-    expect(screen.getByText(/profile settings/i)).toBeInTheDocument();
+    expect(screen.getByTestId("profile-settings")).toBeInTheDocument();
 
     // Click Security tab
     await user.click(screen.getByRole("tab", { name: /security/i }));
-    expect(screen.getByText(/security/i)).toBeInTheDocument();
+    expect(screen.getByTestId("password-change-form")).toBeInTheDocument();
   });
 
-  it("should show placeholder for unimplemented tabs", async () => {
+  it("should show all form components when tabs are clicked", async () => {
     const user = userEvent.setup();
     mockUseUserProfile.mockReturnValue({
       profile: mockProfile,
@@ -166,7 +178,16 @@ describe("ProfileEditor", () => {
     render(<ProfileEditor user={mockUser} />);
 
     await user.click(screen.getByRole("tab", { name: /dance/i }));
-    expect(screen.getByText(/🚧 coming soon/i)).toBeInTheDocument();
+    expect(screen.getByTestId("dance-preferences-form")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("tab", { name: /biography/i }));
+    expect(screen.getByTestId("biography-form")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("tab", { name: /settings/i }));
+    expect(screen.getByTestId("profile-settings")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("tab", { name: /security/i }));
+    expect(screen.getByTestId("password-change-form")).toBeInTheDocument();
   });
 
   it("should call useUserProfile with correct user ID", () => {
@@ -181,7 +202,7 @@ describe("ProfileEditor", () => {
     expect(mockUseUserProfile).toHaveBeenCalledWith("auth-123");
   });
 
-  it("should display user icon in header", () => {
+  it("should display profile header correctly", () => {
     mockUseUserProfile.mockReturnValue({
       profile: mockProfile,
       loading: false,
@@ -190,9 +211,9 @@ describe("ProfileEditor", () => {
 
     render(<ProfileEditor user={mockUser} />);
 
-    // Check for UserCircle icon (it renders as an svg)
-    const icon = screen.getByRole("heading", { name: /profile/i }).parentElement?.querySelector("svg");
-    expect(icon).toBeInTheDocument();
+    // Check for heading and description
+    expect(screen.getByRole("heading", { name: /profile/i })).toBeInTheDocument();
+    expect(screen.getByText(/manage your personal information/i)).toBeInTheDocument();
   });
 });
 
