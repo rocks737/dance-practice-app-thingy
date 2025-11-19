@@ -1,8 +1,17 @@
 import Header from '@/components/getting-started/header'
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import { createClient } from '@/lib/supabase/server';
+import { redirect } from 'next/navigation';
 
 export default async function Index() {
+  // If user is logged in, redirect to profile
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (user) {
+    redirect('/profile');
+  }
 
   return (
     <div className="flex-1 w-full flex flex-col gap-20 items-center">
