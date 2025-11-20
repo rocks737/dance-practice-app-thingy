@@ -14,7 +14,7 @@ export default async function SessionsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 min-w-full">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="rounded-full bg-primary/10 p-3 text-primary">

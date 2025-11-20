@@ -1,36 +1,61 @@
 /* Custom styles for react-big-calendar to make grid lines more subtle */
 
-/* Main content borders - original opacity */
+/* Main content borders */
 .rbc-time-view .rbc-time-content,
 .rbc-time-view .rbc-time-gutter {
-  border-color: hsl(var(--border)) !important;
+  border-color: hsl(var(--foreground) / 0.8);
 }
 
-/* Header borders - original opacity */
+/* Header borders */
 .rbc-time-view .rbc-header {
-  border-bottom: 1px solid hsl(var(--border)) !important;
+  border-bottom: 1px solid hsl(var(--foreground) / 0.8);
 }
 
-/* Column borders in calendar body - original opacity */
+/* Column borders in calendar body - more visible for day separation */
 .rbc-time-view .rbc-timeslot-group {
-  border-left: 1px solid hsl(var(--border)) !important;
+  border-left: 1px solid hsl(var(--foreground) / 0.8);
 }
 
 .rbc-time-view .rbc-day-slot {
-  border-left: 1px solid hsl(var(--border)) !important;
+  border-left: 1px solid hsl(var(--foreground) / 0.8);
 }
 
 .rbc-time-view .rbc-time-content > * + * > * {
-  border-left: 1px solid hsl(var(--border)) !important;
+  border-left: 1px solid hsl(var(--foreground) / 0.2);
 }
 
 /* Row borders - slightly more visible but still subtle */
 .rbc-time-view .rbc-time-slot {
-  border-top: 1px solid hsl(var(--border) / 0.4) !important;
+  border-top: 1px solid hsl(var(--foreground) / 0.15);
 }
 
 .rbc-time-view .rbc-day-slot .rbc-time-slot {
-  border-top: 1px solid hsl(var(--border) / 0.35) !important;
+  border-top: 1px solid hsl(var(--foreground) / 0.12);
+}
+
+/* Time gutter (left column with times) - hide internal slot borders, only show hour marks */
+.rbc-time-view .rbc-time-gutter .rbc-timeslot-group {
+  border-left: none;
+  display: flex;
+  align-items: center;
+}
+
+.rbc-time-view .rbc-time-gutter .rbc-time-slot {
+  border-top: none;
+}
+
+/* Show only the hour borders in the time gutter */
+.rbc-time-view .rbc-time-gutter .rbc-timeslot-group {
+  border-top: 1px solid hsl(var(--foreground) / 0.2);
+}
+
+/* Center the time label vertically */
+.rbc-time-view .rbc-label {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  height: 100%;
+  padding-right: 8px;
 }
 
 .rbc-time-view .rbc-allday-cell {

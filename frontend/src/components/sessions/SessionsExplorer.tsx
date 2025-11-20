@@ -34,7 +34,6 @@ import {
 } from "@/lib/sessions/types";
 import { useUserProfile } from "@/lib/hooks/useUserProfile";
 import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -86,6 +85,7 @@ export function SessionsExplorer({ authUserId }: SessionsExplorerProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [filtersExpanded, setFiltersExpanded] = useState(false);
   const fetchIdRef = useRef(0);
   const focusAfterFetchRef = useRef<string | null>(null);
   const { profile, loading: profileLoading, error: profileError } =
@@ -121,8 +121,9 @@ export function SessionsExplorer({ authUserId }: SessionsExplorerProps) {
       if (fetchId !== fetchIdRef.current) {
         return;
       }
+      console.error("Error loading sessions:", e);
       setError(
-        e instanceof Error ? e.message : "Unable to load sessions right now.",
+        e instanceof Error ? e.message : "Unable to load sessions. Please check your connection and try again.",
       );
     } finally {
       if (fetchId === fetchIdRef.current) {
@@ -203,6 +204,7 @@ export function SessionsExplorer({ authUserId }: SessionsExplorerProps) {
 
   return (
     <div className="space-y-6">
+      {/* Top action bar */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">
           {loading
@@ -216,11 +218,6 @@ export function SessionsExplorer({ authUserId }: SessionsExplorerProps) {
             disabledReason={createDisabledReason}
             onSessionCreated={handleSessionCreated}
           />
-          {appliedFiltersCount > 0 && (
-            <Button variant="ghost" size="sm" onClick={handleResetFilters}>
-              Clear filters ({appliedFiltersCount})
-            </Button>
-          )}
           <Button variant="outline" size="sm" onClick={handleRefresh}>
             <RefreshCcw className="mr-2 h-4 w-4" />
             Refresh
@@ -244,90 +241,150 @@ export function SessionsExplorer({ authUserId }: SessionsExplorerProps) {
         </Alert>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-[280px,minmax(0,1fr)]">
-        <aside className="rounded-lg border bg-card p-4 shadow-sm">
-          <div className="space-y-4">
-            <div>
-              <label className="text-sm font-medium text-muted-foreground">
-                Search
-              </label>
-              <div className="relative mt-1">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  value={draftFilters.searchText ?? ""}
-                  onChange={(event) =>
-                    setDraftFilters((prev) => ({
-                      ...prev,
-                      searchText: event.target.value,
-                    }))
-                  }
-                  placeholder="Title, location..."
-                  className="pl-9"
-                />
+      {/* Collapsible horizontal filters */}
+      <div className="rounded-lg border bg-card shadow-sm w-full">
+        {/* Expanded state - full filters */}
+        {filtersExpanded && (
+          <div className="p-4 w-full">
+            <button
+              onClick={() => setFiltersExpanded(false)}
+              className="w-full flex items-center justify-between mb-4 hover:opacity-70 transition-opacity"
+            >
+              <div className="flex items-center gap-2">
+                <Search className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-medium">Filters</span>
+                {appliedFiltersCount > 0 && (
+                  <Badge variant="secondary">
+                    {appliedFiltersCount} active
+                  </Badge>
+                )}
               </div>
-            </div>
+              <ChevronUp className="h-4 w-4 text-muted-foreground" />
+            </button>
 
-            <div className="grid gap-4">
-              {MULTI_FILTER_SECTIONS.map((section) => (
-                <FilterGroup
-                  key={section.key}
-                  title={section.label}
-                  options={section.options}
-                  values={new Set(
-                    (draftFilters[section.key] as string[] | undefined) ?? [],
-                  )}
-                  onChange={(value, checked) =>
-                    toggleMultiFilter(section.key, value, checked)
-                  }
-                />
-              ))}
-            </div>
+            <div className="space-y-4 w-full">
+              {/* Search and date range row */}
+              <div className="grid gap-4 md:grid-cols-[1fr,auto,auto] w-full">
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium">Search</label>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      value={draftFilters.searchText ?? ""}
+                      onChange={(event) =>
+                        setDraftFilters((prev) => ({
+                          ...prev,
+                          searchText: event.target.value,
+                        }))
+                      }
+                      placeholder="Search by title, location..."
+                      className="pl-9"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium">From date</label>
+                  <Input
+                    type="date"
+                    value={draftFilters.fromDate ?? ""}
+                    onChange={(event) =>
+                      handleDateChange("fromDate", event.target.value)
+                    }
+                  />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium">To date</label>
+                  <Input
+                    type="date"
+                    value={draftFilters.toDate ?? ""}
+                    onChange={(event) =>
+                      handleDateChange("toDate", event.target.value)
+                    }
+                  />
+                </div>
+              </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-muted-foreground">
-                Date range
-              </label>
-              <div className="space-y-2">
-                <Input
-                  type="date"
-                  value={draftFilters.fromDate ?? ""}
-                  onChange={(event) =>
-                    handleDateChange("fromDate", event.target.value)
-                  }
-                />
-                <Input
-                  type="date"
-                  value={draftFilters.toDate ?? ""}
-                  onChange={(event) =>
-                    handleDateChange("toDate", event.target.value)
-                  }
-                />
+              {/* Filter chips row */}
+              <div className="flex flex-wrap items-center gap-4">
+                {MULTI_FILTER_SECTIONS.map((section) => (
+                  <div key={section.key} className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-muted-foreground">
+                      {section.label}:
+                    </span>
+                    <div className="flex flex-wrap gap-2">
+                      {section.options.map((option) => {
+                        const isSelected = (draftFilters[section.key] as string[] | undefined)?.includes(option.value) ?? false;
+                        return (
+                          <button
+                            key={option.value}
+                            type="button"
+                            onClick={() => toggleMultiFilter(section.key, option.value, !isSelected)}
+                            className={`rounded-full border px-3 py-1 text-sm transition-colors ${
+                              isSelected
+                                ? 'bg-primary text-primary-foreground border-primary'
+                                : 'bg-background hover:bg-muted border-border'
+                            }`}
+                          >
+                            {option.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+                {appliedFiltersCount > 0 && (
+                  <Button variant="ghost" size="sm" onClick={handleResetFilters}>
+                    Clear all ({appliedFiltersCount})
+                  </Button>
+                )}
               </div>
             </div>
           </div>
-        </aside>
+        )}
 
-        <section className="space-y-4 min-w-0">
-          {error && (
-            <Alert variant="destructive">
-              <AlertTitle>Unable to load sessions</AlertTitle>
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-
-          {loading && (
-            <div className="flex items-center gap-2 rounded-lg border bg-card p-4 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Fetching sessions...
+        {/* Collapsed state - thin bar */}
+        {!filtersExpanded && (
+          <button
+            onClick={() => setFiltersExpanded(true)}
+            className="w-full px-4 py-3 flex items-center justify-between hover:bg-muted/50 transition-colors min-h-[52px]"
+          >
+            <div className="flex items-center gap-2 text-sm">
+              <Search className="h-4 w-4 text-muted-foreground" />
+              <span className="font-medium">Filters</span>
+              {appliedFiltersCount > 0 && (
+                <Badge variant="secondary" className="ml-2">
+                  {appliedFiltersCount} active
+                </Badge>
+              )}
             </div>
-          )}
+            <ChevronDown className="h-4 w-4 text-muted-foreground" />
+          </button>
+        )}
+      </div>
 
-          {!loading && sessions.length === 0 && !error && (
-            <div className="rounded-lg border bg-card p-6 text-center text-sm text-muted-foreground">
-              No sessions found matching your filters.
-            </div>
-          )}
+      {/* Sessions grid */}
+      <div className="space-y-4">
+        {error && (
+          <Alert variant="destructive">
+            <AlertTitle>Unable to load sessions</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
 
+        {loading && (
+          <div className="flex items-center gap-2 rounded-lg border bg-card p-4 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Fetching sessions...
+          </div>
+        )}
+
+        {!loading && sessions.length === 0 && !error && (
+          <div className="rounded-lg border bg-card p-6 text-center text-sm text-muted-foreground">
+            No sessions found matching your filters.
+          </div>
+        )}
+
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {sessions.map((session) => (
             <SessionCard
               key={session.id}
@@ -345,38 +402,7 @@ export function SessionsExplorer({ authUserId }: SessionsExplorerProps) {
               onSessionUpdated={handleSessionUpdated}
             />
           ))}
-        </section>
-      </div>
-    </div>
-  );
-}
-
-interface FilterGroupProps {
-  title: string;
-  options: { value: string; label: string }[];
-  values: Set<string>;
-  onChange: (value: string, checked: boolean) => void;
-}
-
-function FilterGroup({ title, options, values, onChange }: FilterGroupProps) {
-  return (
-    <div className="space-y-2">
-      <p className="text-sm font-medium text-muted-foreground">{title}</p>
-      <div className="space-y-1">
-        {options.map((option) => (
-          <label
-            key={option.value}
-            className="flex cursor-pointer items-center gap-2 text-sm"
-          >
-            <Checkbox
-              checked={values.has(option.value)}
-              onCheckedChange={(checked) =>
-                onChange(option.value, Boolean(checked))
-              }
-            />
-            <span>{option.label}</span>
-          </label>
-        ))}
+        </div>
       </div>
     </div>
   );

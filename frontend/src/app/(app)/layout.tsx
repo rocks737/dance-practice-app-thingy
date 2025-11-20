@@ -18,11 +18,11 @@ export default async function AppLayout({
   }
 
   return (
-    <div className="flex h-screen bg-gray-50 dark:bg-gray-950">
+    <div className="flex h-screen w-full bg-gray-50 dark:bg-gray-950">
       <AppSidebar user={user} />
-      <main className="flex-1 overflow-y-scroll" style={{ scrollbarGutter: "stable both-edges" }}>
+      <main className="flex-1 overflow-y-scroll w-full" style={{ scrollbarGutter: "stable both-edges" }}>
         <div className="w-full p-8 flex justify-center">
-          <div className="w-full max-w-5xl">{children}</div>
+          <div className="w-full max-w-5xl min-w-0">{children}</div>
         </div>
       </main>
     </div>
