@@ -261,76 +261,104 @@ export function PreferenceForm({
               Specify day of week and time ranges you can practice.
             </p>
           </div>
-          <Button type="button" size="sm" variant="outline" onClick={addAvailabilityWindow}>
-            <Plus className="mr-2 h-4 w-4" />
-            Add window
-          </Button>
         </div>
-        <div className="space-y-3">
-          {fields.map((field, index) => (
-            <div key={field.id} className="flex flex-wrap items-center gap-3 rounded-md border bg-background p-3">
-              <div className="w-36">
-                <Label className="text-xs text-muted-foreground">Day</Label>
-                <Select
-                  value={watch(`availabilityWindows.${index}.dayOfWeek`)}
-                  onValueChange={(value) =>
-                    setValue(`availabilityWindows.${index}.dayOfWeek`, value as typeof DAY_OF_WEEK_VALUES[number], {
-                      shouldDirty: true,
-                    })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Day" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {DAY_OF_WEEK_VALUES.map((day) => (
-                      <SelectItem key={day} value={day}>
-                        {DAY_OF_WEEK_LABELS[day]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label className="text-xs text-muted-foreground">Start</Label>
-                <Input
-                  type="time"
-                  step={900}
-                  {...register(`availabilityWindows.${index}.startTime`)}
-                />
-              </div>
-              <div>
-                <Label className="text-xs text-muted-foreground">End</Label>
-                <Input
-                  type="time"
-                  step={900}
-                  {...register(`availabilityWindows.${index}.endTime`)}
-                />
-              </div>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="ml-auto"
-                onClick={() => remove(index)}
-                aria-label="Remove window"
-              >
-                <Trash2 className="h-4 w-4" />
+
+        <Tabs value={availabilityMode} onValueChange={handleModeChange}>
+          <TabsList className="grid w-full max-w-md grid-cols-2">
+            <TabsTrigger value="list">
+              <List className="mr-2 h-4 w-4" />
+              List view
+            </TabsTrigger>
+            <TabsTrigger value="calendar">
+              <Calendar className="mr-2 h-4 w-4" />
+              Calendar view
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="list" className="space-y-3 mt-4">
+            <div className="flex justify-end">
+              <Button type="button" size="sm" variant="outline" onClick={addAvailabilityWindow}>
+                <Plus className="mr-2 h-4 w-4" />
+                Add window
               </Button>
             </div>
-          ))}
-          {fields.length === 0 && (
-            <p className="text-sm text-muted-foreground">
-              No windows yet. Add your first availability.
+            <div className="space-y-3">
+              {fields.map((field, index) => (
+                <div key={field.id} className="flex flex-wrap items-center gap-3 rounded-md border bg-background p-3">
+                  <div className="w-36">
+                    <Label className="text-xs text-muted-foreground">Day</Label>
+                    <Select
+                      value={watch(`availabilityWindows.${index}.dayOfWeek`)}
+                      onValueChange={(value) =>
+                        setValue(`availabilityWindows.${index}.dayOfWeek`, value as typeof DAY_OF_WEEK_VALUES[number], {
+                          shouldDirty: true,
+                        })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Day" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {DAY_OF_WEEK_VALUES.map((day) => (
+                          <SelectItem key={day} value={day}>
+                            {DAY_OF_WEEK_LABELS[day]}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Start</Label>
+                    <Input
+                      type="time"
+                      step={900}
+                      {...register(`availabilityWindows.${index}.startTime`)}
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">End</Label>
+                    <Input
+                      type="time"
+                      step={900}
+                      {...register(`availabilityWindows.${index}.endTime`)}
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="ml-auto"
+                    onClick={() => remove(index)}
+                    aria-label="Remove window"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+              {fields.length === 0 && (
+                <p className="text-sm text-muted-foreground">
+                  No windows yet. Add your first availability.
+                </p>
+              )}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="calendar" className="mt-4">
+            <ScheduleAvailabilityCalendar
+              windows={fields}
+              onCreateWindow={handleCalendarCreate}
+              onUpdateWindow={handleCalendarUpdate}
+              onDeleteWindow={handleCalendarDelete}
+            />
+          </TabsContent>
+        </Tabs>
+
+        {"message" in (errors.availabilityWindows ?? {}) &&
+          errors.availabilityWindows?.message && (
+            <p className="text-sm text-destructive">
+              {errors.availabilityWindows?.message}
             </p>
           )}
-          {"message" in (errors.availabilityWindows ?? {}) &&
-            errors.availabilityWindows?.message && (
-              <p className="text-sm text-destructive">
-                {errors.availabilityWindows?.message}
-              </p>
-            )}
-        </div>
       </section>
 
       <section className="space-y-4 rounded-lg border bg-muted/20 p-4">
@@ -523,9 +551,7 @@ function PreferenceCheckboxGroup({
 function toFormData(preference?: SchedulePreference): SchedulePreferenceFormData {
   if (!preference) {
     return {
-      availabilityWindows: [
-        { dayOfWeek: "MONDAY", startTime: "18:00", endTime: "20:00" },
-      ],
+      availabilityWindows: [],
       preferredRoles: [PREFERRED_ROLE_VALUES[0]],
       preferredLevels: [],
       preferredFocusAreas: [],

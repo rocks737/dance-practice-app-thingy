@@ -3,17 +3,28 @@
  * and react-big-calendar Event objects.
  */
 
-import { dateFns } from "react-big-calendar";
-import { format, parse, startOfWeek, addDays, setHours, setMinutes } from "date-fns";
+import { dateFnsLocalizer } from "react-big-calendar";
+import { format } from "date-fns";
+import { parse } from "date-fns";
+import { startOfWeek } from "date-fns";
+import { getDay } from "date-fns";
+import { addDays } from "date-fns";
+import { setHours } from "date-fns";
+import { setMinutes } from "date-fns";
+import enUS from "date-fns/locale/en-US";
 import { AvailabilityWindow, DayOfWeek, DAY_OF_WEEK_VALUES } from "./types";
 
 // Create and export the localizer
-export const localizer = dateFns({
+const locales = {
+  "en-US": enUS,
+};
+
+export const localizer = dateFnsLocalizer({
   format,
   parse,
   startOfWeek,
-  getDay: (date: Date) => date.getDay(),
-  locales: {},
+  getDay,
+  locales,
 });
 
 // Map DayOfWeek enum to JS day index (0 = Sunday, 1 = Monday, etc.)
@@ -34,9 +45,9 @@ const INDEX_DAY_MAP: Record<number, DayOfWeek> = Object.fromEntries(
 
 /**
  * Reference week anchor. We use a fixed week for consistent calendar display.
- * This anchors to the week starting Monday, Jan 1, 2024.
+ * This anchors to the week starting Sunday, Dec 31, 2023.
  */
-const REFERENCE_WEEK_START = new Date(2024, 0, 1); // Jan 1, 2024 is a Monday
+const REFERENCE_WEEK_START = new Date(2023, 11, 31); // Dec 31, 2023 is a Sunday
 
 /**
  * Calendar event representing an availability window
@@ -66,7 +77,7 @@ export interface AvailabilityEvent extends AvailabilityWindow {
 export function windowToEvent(window: AvailabilityWindow): AvailabilityEvent {
   const dayIndex = DAY_INDEX_MAP[window.dayOfWeek];
   
-  // Calculate the date for this day in the reference week
+  // Calculate the date for this day in the reference week (Sunday = 0, Monday = 1, etc.)
   const dayDate = addDays(REFERENCE_WEEK_START, dayIndex);
   
   // Parse HH:mm times

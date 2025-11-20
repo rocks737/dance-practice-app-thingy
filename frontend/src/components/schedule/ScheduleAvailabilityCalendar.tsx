@@ -1,8 +1,11 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import { Calendar, momentLocalizer, View, SlotInfo } from "react-big-calendar";
+import { Calendar as BigCalendar, View, SlotInfo } from "react-big-calendar";
+import withDragAndDrop from "react-big-calendar/lib/addons/dragAndDrop";
 import "react-big-calendar/lib/css/react-big-calendar.css";
+import "react-big-calendar/lib/addons/dragAndDrop/styles.css";
+import "./calendar-custom.css";
 import {
   AvailabilityWindow,
   DAY_OF_WEEK_LABELS,
@@ -18,9 +21,11 @@ import {
   isValidDuration,
   type AvailabilityEvent,
 } from "@/lib/schedule/calendar";
-import { Button } from "@/components/ui/button";
-import { Info, Calendar as CalendarIcon } from "lucide-react";
+import { Info } from "lucide-react";
 import { toast } from "sonner";
+
+// Enable drag and drop
+const Calendar = withDragAndDrop(BigCalendar);
 
 interface ScheduleAvailabilityCalendarProps {
   /**
@@ -48,6 +53,7 @@ export function ScheduleAvailabilityCalendar({
   onDeleteWindow,
 }: ScheduleAvailabilityCalendarProps) {
   const [view, setView] = useState<View>("week");
+  const [currentDate, setCurrentDate] = useState(() => getCalendarDateRange().start);
   const events = useMemo(() => windowsToEvents(windows), [windows]);
   const { start: minDate, end: maxDate } = useMemo(() => getCalendarDateRange(), []);
 
@@ -85,16 +91,17 @@ export function ScheduleAvailabilityCalendar({
 
   // Handle event selection (user clicks on existing event)
   const handleSelectEvent = useCallback(
-    (event: AvailabilityEvent) => {
+    (event: object) => {
+      const availEvent = event as AvailabilityEvent;
       const confirmed = window.confirm(
-        `Remove availability on ${DAY_OF_WEEK_LABELS[event.dayOfWeek]} ${event.startTime} - ${event.endTime}?`
+        `Remove availability on ${DAY_OF_WEEK_LABELS[availEvent.dayOfWeek]} ${availEvent.startTime} - ${availEvent.endTime}?`
       );
       
       if (confirmed) {
         const windowToDelete: AvailabilityWindow = {
-          dayOfWeek: event.dayOfWeek,
-          startTime: event.startTime,
-          endTime: event.endTime,
+          dayOfWeek: availEvent.dayOfWeek,
+          startTime: availEvent.startTime,
+          endTime: availEvent.endTime,
         };
         onDeleteWindow(windowToDelete);
         toast.success("Availability window removed");
@@ -105,9 +112,10 @@ export function ScheduleAvailabilityCalendar({
 
   // Handle event drag/drop
   const handleEventDrop = useCallback(
-    ({ event, start, end }: { event: AvailabilityEvent; start: Date; end: Date }) => {
-      const roundedStart = roundToQuarterHour(start);
-      const roundedEnd = roundToQuarterHour(end);
+    (data: any) => {
+      const { event, start, end } = data;
+      const roundedStart = roundToQuarterHour(new Date(start));
+      const roundedEnd = roundToQuarterHour(new Date(end));
 
       if (!isValidDuration(roundedStart, roundedEnd, 15)) {
         toast.error("Availability window must be at least 15 minutes");
@@ -129,9 +137,10 @@ export function ScheduleAvailabilityCalendar({
 
   // Handle event resize
   const handleEventResize = useCallback(
-    ({ event, start, end }: { event: AvailabilityEvent; start: Date; end: Date }) => {
-      const roundedStart = roundToQuarterHour(start);
-      const roundedEnd = roundToQuarterHour(end);
+    (data: any) => {
+      const { event, start, end } = data;
+      const roundedStart = roundToQuarterHour(new Date(start));
+      const roundedEnd = roundToQuarterHour(new Date(end));
 
       if (!isValidDuration(roundedStart, roundedEnd, 15)) {
         toast.error("Availability window must be at least 15 minutes");
@@ -176,9 +185,10 @@ export function ScheduleAvailabilityCalendar({
           onView={setView}
           views={["week"]}
           defaultView="week"
-          date={minDate}
-          min={minDate}
-          max={maxDate}
+          date={currentDate}
+          onNavigate={setCurrentDate}
+          min={new Date(2024, 0, 1, 0, 0, 0)}
+          max={new Date(2024, 0, 1, 23, 59, 59)}
           step={15}
           timeslots={4}
           selectable
@@ -189,9 +199,12 @@ export function ScheduleAvailabilityCalendar({
           onEventResize={handleEventResize}
           toolbar={false}
           formats={{
-            dayFormat: (date: Date, culture?: string, localizer?: any) => {
-              const dayIndex = date.getDay();
-              const dayOfWeek = DAY_OF_WEEK_VALUES[dayIndex === 0 ? 6 : dayIndex - 1];
+            dayFormat: (date: Date) => {
+              // getDay() returns 0-6 where 0=Sunday
+              const jsDay = date.getDay();
+              // Map to our enum: Sunday=0, Monday=1, etc.
+              const dayMap = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'] as const;
+              const dayOfWeek = dayMap[jsDay] as typeof DAY_OF_WEEK_VALUES[number];
               return DAY_OF_WEEK_LABELS[dayOfWeek];
             },
           }}

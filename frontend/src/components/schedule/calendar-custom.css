@@ -1,0 +1,39 @@
+/* Custom styles for react-big-calendar to make grid lines more subtle */
+
+/* Main content borders - original opacity */
+.rbc-time-view .rbc-time-content,
+.rbc-time-view .rbc-time-gutter {
+  border-color: hsl(var(--border)) !important;
+}
+
+/* Header borders - original opacity */
+.rbc-time-view .rbc-header {
+  border-bottom: 1px solid hsl(var(--border)) !important;
+}
+
+/* Column borders in calendar body - original opacity */
+.rbc-time-view .rbc-timeslot-group {
+  border-left: 1px solid hsl(var(--border)) !important;
+}
+
+.rbc-time-view .rbc-day-slot {
+  border-left: 1px solid hsl(var(--border)) !important;
+}
+
+.rbc-time-view .rbc-time-content > * + * > * {
+  border-left: 1px solid hsl(var(--border)) !important;
+}
+
+/* Row borders - slightly more visible but still subtle */
+.rbc-time-view .rbc-time-slot {
+  border-top: 1px solid hsl(var(--border) / 0.4) !important;
+}
+
+.rbc-time-view .rbc-day-slot .rbc-time-slot {
+  border-top: 1px solid hsl(var(--border) / 0.35) !important;
+}
+
+.rbc-time-view .rbc-allday-cell {
+  display: none;
+}
+
