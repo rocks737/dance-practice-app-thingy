@@ -17,9 +17,6 @@ jest.mock("../PersonalInfoForm", () => ({
 jest.mock("../DancePreferencesForm", () => ({
   DancePreferencesForm: () => <div data-testid="dance-preferences-form">Dance Preferences Form</div>,
 }));
-jest.mock("../BiographyForm", () => ({
-  BiographyForm: () => <div data-testid="biography-form">Biography Form</div>,
-}));
 jest.mock("../PasswordChangeForm", () => ({
   PasswordChangeForm: () => <div data-testid="password-change-form">Password Change Form</div>,
 }));
@@ -119,7 +116,6 @@ describe("ProfileEditor", () => {
     // Check tabs
     expect(screen.getByRole("tab", { name: /personal/i })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: /dance/i })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: /biography/i })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: /settings/i })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: /security/i })).toBeInTheDocument();
   });
@@ -154,10 +150,6 @@ describe("ProfileEditor", () => {
     expect(screen.getByTestId("dance-preferences-form")).toBeInTheDocument();
     expect(screen.queryByTestId("personal-info-form")).not.toBeInTheDocument();
 
-    // Click Biography tab
-    await user.click(screen.getByRole("tab", { name: /biography/i }));
-    expect(screen.getByTestId("biography-form")).toBeInTheDocument();
-
     // Click Settings tab
     await user.click(screen.getByRole("tab", { name: /settings/i }));
     expect(screen.getByTestId("profile-settings")).toBeInTheDocument();
@@ -179,9 +171,6 @@ describe("ProfileEditor", () => {
 
     await user.click(screen.getByRole("tab", { name: /dance/i }));
     expect(screen.getByTestId("dance-preferences-form")).toBeInTheDocument();
-
-    await user.click(screen.getByRole("tab", { name: /biography/i }));
-    expect(screen.getByTestId("biography-form")).toBeInTheDocument();
 
     await user.click(screen.getByRole("tab", { name: /settings/i }));
     expect(screen.getByTestId("profile-settings")).toBeInTheDocument();

@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
+import { Textarea } from "@/components/ui/textarea";
 
 interface DancePreferencesFormProps {
   profile: UserProfile;
@@ -25,6 +26,7 @@ export function DancePreferencesForm({ profile }: DancePreferencesFormProps) {
     setValue,
     watch,
     handleSubmit,
+    register,
     formState: { errors, isDirty },
     reset,
   } = useForm<DancePreferencesFormData>({
@@ -33,12 +35,16 @@ export function DancePreferencesForm({ profile }: DancePreferencesFormProps) {
       primary_role: profile.primaryRole,
       wsdc_level: profile.wsdcLevel ?? undefined,
       competitiveness_level: profile.competitivenessLevel,
+      bio: profile.bio ?? "",
+      dance_goals: profile.danceGoals ?? "",
     },
   });
 
   const primaryRole = watch("primary_role");
   const wsdcLevel = watch("wsdc_level");
   const competitivenessLevel = watch("competitiveness_level");
+  const bio = watch("bio") || "";
+  const danceGoals = watch("dance_goals") || "";
 
   const onSubmit = async (data: DancePreferencesFormData) => {
     setIsSaving(true);
@@ -47,6 +53,8 @@ export function DancePreferencesForm({ profile }: DancePreferencesFormProps) {
         primary_role: data.primary_role,
         wsdc_level: data.wsdc_level ?? null,
         competitiveness_level: data.competitiveness_level,
+        bio: data.bio || null,
+        dance_goals: data.dance_goals || null,
       });
       
       toast.success("Dance preferences updated successfully");
@@ -64,6 +72,8 @@ export function DancePreferencesForm({ profile }: DancePreferencesFormProps) {
       primary_role: profile.primaryRole,
       wsdc_level: profile.wsdcLevel ?? undefined,
       competitiveness_level: profile.competitivenessLevel,
+      bio: profile.bio ?? "",
+      dance_goals: profile.danceGoals ?? "",
     });
     setIsEditing(false);
   };
@@ -174,9 +184,54 @@ export function DancePreferencesForm({ profile }: DancePreferencesFormProps) {
             </p>
           </div>
 
+          {/* Biography Fields */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <Label htmlFor="bio">About You</Label>
+              <span className={`text-xs ${bio.length > 1000 ? "text-red-500" : "text-gray-500 dark:text-gray-400"}`}>
+                {bio.length} / 1000
+              </span>
+            </div>
+            <Textarea
+              id="bio"
+              {...register("bio")}
+              disabled={!isEditing || isSaving}
+              placeholder="Tell us about yourself, your dance journey, what you love about dancing..."
+              rows={6}
+              className={errors.bio ? "border-red-500" : ""}
+            />
+            {errors.bio && <p className="mt-1 text-sm text-red-500">{errors.bio.message}</p>}
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              Share your story, experience level, or anything you'd like potential practice partners to know
+            </p>
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <Label htmlFor="dance_goals">Dance Goals</Label>
+              <span
+                className={`text-xs ${danceGoals.length > 500 ? "text-red-500" : "text-gray-500 dark:text-gray-400"}`}
+              >
+                {danceGoals.length} / 500
+              </span>
+            </div>
+            <Textarea
+              id="dance_goals"
+              {...register("dance_goals")}
+              disabled={!isEditing || isSaving}
+              placeholder="What are your dance goals? What do you want to work on or achieve?"
+              rows={4}
+              className={errors.dance_goals ? "border-red-500" : ""}
+            />
+            {errors.dance_goals && <p className="mt-1 text-sm text-red-500">{errors.dance_goals.message}</p>}
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              What you're working towards (competitions, social dancing, technique, etc.)
+            </p>
+          </div>
+
           {/* Current Values Display (when not editing) */}
           {!isEditing && (
-            <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+            <div className="pt-4 border-t border-gray-200 dark:border-gray-700 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Primary Role</p>
@@ -189,12 +244,26 @@ export function DancePreferencesForm({ profile }: DancePreferencesFormProps) {
                 <div>
                   <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Competitiveness</p>
                   <p className="text-gray-900 dark:text-gray-100">
-                    {competitivenessLevel} / 5 
+                    {competitivenessLevel} / 5
                     <span className="text-sm text-gray-500 dark:text-gray-400 ml-2">
                       ({competitivenessLevel <= 2 ? "Social" : competitivenessLevel <= 3 ? "Balanced" : "Competitive"})
                     </span>
                   </p>
                 </div>
+              </div>
+
+              <div>
+                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">About You</p>
+                <p className="text-gray-900 dark:text-gray-100 whitespace-pre-line">
+                  {bio.trim() ? bio : "No bio added yet"}
+                </p>
+              </div>
+
+              <div>
+                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Dance Goals</p>
+                <p className="text-gray-900 dark:text-gray-100 whitespace-pre-line">
+                  {danceGoals.trim() ? danceGoals : "No goals added yet"}
+                </p>
               </div>
             </div>
           )}

@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 
 export default function NewSessionPage() {
   return (
-    <div className="max-w-4xl">
+    <div className="w-full max-w-4xl">
       <div className="mb-6">
         <Link
           href="/sessions"

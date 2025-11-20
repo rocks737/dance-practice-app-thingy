@@ -6,7 +6,6 @@ import { Loader2, UserCircle } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PersonalInfoForm } from "@/components/profile/PersonalInfoForm";
 import { DancePreferencesForm } from "@/components/profile/DancePreferencesForm";
-import { BiographyForm } from "@/components/profile/BiographyForm";
 import { PasswordChangeForm } from "@/components/profile/PasswordChangeForm";
 import { ProfileSettings } from "@/components/profile/ProfileSettings";
 
@@ -27,8 +26,13 @@ export function ProfileEditor({ user }: ProfileEditorProps) {
 
   if (error) {
     return (
-      <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6">
-        <p className="text-red-800 dark:text-red-300">Error loading profile: {error.message}</p>
+      <div
+        className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6"
+        role="alert"
+        aria-live="polite"
+      >
+        <p className="text-red-800 dark:text-red-300 font-semibold">Error loading profile</p>
+        <p className="text-red-700 dark:text-red-200 mt-1">{error.message}</p>
       </div>
     );
   }
@@ -42,7 +46,7 @@ export function ProfileEditor({ user }: ProfileEditorProps) {
   }
 
   return (
-    <div className="max-w-4xl">
+    <div className="w-full max-w-4xl">
       {/* Header */}
       <div className="flex items-center space-x-3 mb-6">
         <UserCircle className="w-8 h-8 text-gray-700 dark:text-gray-300" />
@@ -54,33 +58,30 @@ export function ProfileEditor({ user }: ProfileEditorProps) {
 
       {/* Tabs for different sections */}
       <Tabs defaultValue="personal" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="personal">Personal</TabsTrigger>
           <TabsTrigger value="dance">Dance</TabsTrigger>
-          <TabsTrigger value="bio">Biography</TabsTrigger>
           <TabsTrigger value="settings">Settings</TabsTrigger>
           <TabsTrigger value="security">Security</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="personal">
-          <PersonalInfoForm profile={profile} />
-        </TabsContent>
+        <div className="min-h-[640px]">
+          <TabsContent value="personal" className="h-full">
+            <PersonalInfoForm profile={profile} />
+          </TabsContent>
 
-        <TabsContent value="dance">
-          <DancePreferencesForm profile={profile} />
-        </TabsContent>
+          <TabsContent value="dance" className="h-full">
+            <DancePreferencesForm profile={profile} />
+          </TabsContent>
 
-        <TabsContent value="bio">
-          <BiographyForm profile={profile} />
-        </TabsContent>
+          <TabsContent value="settings" className="h-full">
+            <ProfileSettings profile={profile} />
+          </TabsContent>
 
-        <TabsContent value="settings">
-          <ProfileSettings profile={profile} />
-        </TabsContent>
-
-        <TabsContent value="security">
-          <PasswordChangeForm />
-        </TabsContent>
+          <TabsContent value="security" className="h-full">
+            <PasswordChangeForm />
+          </TabsContent>
+        </div>
       </Tabs>
     </div>
   );

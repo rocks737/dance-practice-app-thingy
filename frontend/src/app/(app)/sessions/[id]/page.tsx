@@ -7,7 +7,7 @@ export default function SessionDetailPage({
   params: { id: string };
 }) {
   return (
-    <div className="max-w-4xl">
+    <div className="w-full max-w-4xl">
       <div className="mb-6">
         <Link
           href="/sessions"

@@ -3,7 +3,7 @@ import { ThemeSettings } from "@/components/theme-settings";
 
 export default function SettingsPage() {
   return (
-    <div className="max-w-4xl">
+    <div className="w-full max-w-4xl">
       <div className="flex items-center space-x-3 mb-6">
         <Settings className="w-8 h-8 text-gray-700 dark:text-gray-300" />
         <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Settings</h1>

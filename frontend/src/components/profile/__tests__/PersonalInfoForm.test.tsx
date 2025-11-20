@@ -2,7 +2,7 @@
  * Tests for PersonalInfoForm component
  */
 
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { PersonalInfoForm } from "../PersonalInfoForm";
 import { updateProfile } from "@/lib/profiles/api";
@@ -20,6 +20,29 @@ const mockToast = {
 };
 (toast as any).success = mockToast.success;
 (toast as any).error = mockToast.error;
+
+const setupUser = () => {
+  const user = userEvent.setup();
+
+  return {
+    ...user,
+    click: async (...args: Parameters<typeof user.click>) => {
+      await act(async () => {
+        await user.click(...args);
+      });
+    },
+    type: async (...args: Parameters<typeof user.type>) => {
+      await act(async () => {
+        await user.type(...args);
+      });
+    },
+    clear: async (...args: Parameters<typeof user.clear>) => {
+      await act(async () => {
+        await user.clear(...args);
+      });
+    },
+  };
+};
 
 describe("PersonalInfoForm", () => {
   const mockProfile: UserProfile = {
@@ -69,7 +92,7 @@ describe("PersonalInfoForm", () => {
   });
 
   it("should enter edit mode when Edit button is clicked", async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     render(<PersonalInfoForm profile={mockProfile} />);
 
     const editButton = screen.getByRole("button", { name: /edit/i });
@@ -87,7 +110,7 @@ describe("PersonalInfoForm", () => {
   });
 
   it("should update profile successfully", async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     mockUpdateProfile.mockResolvedValueOnce({
       ...mockProfile,
       firstName: "Jane",
@@ -131,7 +154,7 @@ describe("PersonalInfoForm", () => {
   });
 
   it("should show validation errors for required fields", async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     render(<PersonalInfoForm profile={mockProfile} />);
 
     // Enter edit mode
@@ -154,7 +177,7 @@ describe("PersonalInfoForm", () => {
   });
 
   it("should cancel editing and revert changes", async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     render(<PersonalInfoForm profile={mockProfile} />);
 
     // Enter edit mode
@@ -176,7 +199,7 @@ describe("PersonalInfoForm", () => {
   });
 
   it("should handle empty display name (converts to null)", async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     mockUpdateProfile.mockResolvedValueOnce(mockProfile);
 
     render(<PersonalInfoForm profile={mockProfile} />);
@@ -199,7 +222,7 @@ describe("PersonalInfoForm", () => {
   });
 
   it("should show error message when update fails", async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     const errorMessage = "Network error";
     mockUpdateProfile.mockRejectedValueOnce(new Error(errorMessage));
 
@@ -222,7 +245,7 @@ describe("PersonalInfoForm", () => {
   });
 
   it("should disable save button when form is not dirty", async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     render(<PersonalInfoForm profile={mockProfile} />);
 
     await user.click(screen.getByRole("button", { name: /edit/i }));

@@ -33,6 +33,16 @@ export const dancePreferencesSchema = z.object({
   primary_role: z.number().int().min(0).max(1),
   wsdc_level: z.number().int().min(0).max(5).nullable().optional(),
   competitiveness_level: z.number().int().min(1).max(5),
+  bio: z
+    .string()
+    .max(1000, "Bio must be 1000 characters or less")
+    .nullable()
+    .optional(),
+  dance_goals: z
+    .string()
+    .max(500, "Dance goals must be 500 characters or less")
+    .nullable()
+    .optional(),
 });
 
 export type DancePreferencesFormData = z.infer<typeof dancePreferencesSchema>;

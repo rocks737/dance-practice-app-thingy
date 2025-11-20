@@ -10,6 +10,25 @@ export default function Login({
 }: {
   searchParams: { message: string, returnUrl?: string };
 }) {
+  const safeReturnUrl =
+    typeof searchParams?.returnUrl === "string" &&
+    searchParams.returnUrl &&
+    searchParams.returnUrl !== "undefined"
+      ? searchParams.returnUrl
+      : undefined;
+
+  const redirectToLogin = (message?: string) => {
+    const params = new URLSearchParams();
+    if (message) {
+      params.set("message", message);
+    }
+    if (safeReturnUrl) {
+      params.set("returnUrl", safeReturnUrl);
+    }
+    const query = params.toString();
+    return redirect(`/login${query ? `?${query}` : ""}`);
+  };
+
   const signIn = async (_prevState: any, formData: FormData) => {
     "use server";
 
@@ -23,10 +42,10 @@ export default function Login({
     });
 
     if (error) {
-      return redirect(`/login?message=Could not authenticate user&returnUrl=${searchParams.returnUrl}`);
+      return redirectToLogin("Could not authenticate user");
     }
 
-    return redirect(searchParams.returnUrl || "/dashboard");
+    return redirect(safeReturnUrl || "/profile");
   };
 
   const signUp = async (_prevState: any, formData: FormData) => {
@@ -41,15 +60,17 @@ export default function Login({
       email,
       password,
       options: {
-        emailRedirectTo: `${origin}/auth/callback?returnUrl=${searchParams.returnUrl}`,
+        emailRedirectTo: `${origin}/auth/callback${
+          safeReturnUrl ? `?returnUrl=${encodeURIComponent(safeReturnUrl)}` : ""
+        }`,
       },
     });
 
     if (error) {
-      return redirect(`/login?message=Could not authenticate user&returnUrl=${searchParams.returnUrl}`);
+      return redirectToLogin("Could not authenticate user");
     }
 
-    return redirect(`/dashboard`);
+    return redirect("/profile");
   };
 
   return (
