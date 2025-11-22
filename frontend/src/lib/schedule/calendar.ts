@@ -11,8 +11,12 @@ import { getDay } from "date-fns";
 import { addDays } from "date-fns";
 import { setHours } from "date-fns";
 import { setMinutes } from "date-fns";
+import { startOfDay } from "date-fns";
 import enUS from "date-fns/locale/en-US";
 import { AvailabilityWindow, DayOfWeek, DAY_OF_WEEK_VALUES } from "./types";
+
+// Create custom startOfWeek that always starts on Sunday (weekStartsOn: 0)
+const startOfWeekSunday = (date: Date) => startOfWeek(date, { weekStartsOn: 0 });
 
 // Create and export the localizer
 const locales = {
@@ -22,7 +26,7 @@ const locales = {
 export const localizer = dateFnsLocalizer({
   format,
   parse,
-  startOfWeek,
+  startOfWeek: startOfWeekSunday,
   getDay,
   locales,
 });
@@ -44,10 +48,13 @@ const INDEX_DAY_MAP: Record<number, DayOfWeek> = Object.fromEntries(
 ) as Record<number, DayOfWeek>;
 
 /**
- * Reference week anchor. We use a fixed week for consistent calendar display.
- * This anchors to the week starting Sunday, Dec 31, 2023.
+ * Gets the Sunday of the week containing the given date.
+ * Returns a date set to midnight (start of day).
  */
-const REFERENCE_WEEK_START = new Date(2023, 11, 31); // Dec 31, 2023 is a Sunday
+export function getWeekStart(date: Date = new Date()): Date {
+  const weekStart = startOfWeekSunday(date);
+  return startOfDay(weekStart);
+}
 
 /**
  * Calendar event representing an availability window
@@ -72,13 +79,18 @@ export interface AvailabilityEvent extends AvailabilityWindow {
 }
 
 /**
- * Converts a database availability window to a calendar event
+ * Converts a database availability window to a calendar event.
+ * @param window - The availability window to convert
+ * @param weekStart - The Sunday of the week to display (defaults to current week)
  */
-export function windowToEvent(window: AvailabilityWindow): AvailabilityEvent {
+export function windowToEvent(
+  window: AvailabilityWindow,
+  weekStart: Date = getWeekStart()
+): AvailabilityEvent {
   const dayIndex = DAY_INDEX_MAP[window.dayOfWeek];
   
-  // Calculate the date for this day in the reference week (Sunday = 0, Monday = 1, etc.)
-  const dayDate = addDays(REFERENCE_WEEK_START, dayIndex);
+  // Calculate the date for this day in the given week (Sunday = 0, Monday = 1, etc.)
+  const dayDate = addDays(weekStart, dayIndex);
   
   // Parse HH:mm times
   const [startHour, startMinute] = window.startTime.split(":").map(Number);
@@ -115,19 +127,26 @@ export function eventToWindow(
 }
 
 /**
- * Converts an array of availability windows to calendar events
+ * Converts an array of availability windows to calendar events.
+ * @param windows - Array of availability windows to convert
+ * @param weekStart - The Sunday of the week to display (defaults to current week)
  */
-export function windowsToEvents(windows: AvailabilityWindow[]): AvailabilityEvent[] {
-  return windows.map(windowToEvent);
+export function windowsToEvents(
+  windows: AvailabilityWindow[],
+  weekStart: Date = getWeekStart()
+): AvailabilityEvent[] {
+  return windows.map((window) => windowToEvent(window, weekStart));
 }
 
 /**
- * Gets the display date range for the calendar (one week view)
+ * Gets the display date range for the calendar (one week view).
+ * @param date - A date within the week to display (defaults to current date)
  */
-export function getCalendarDateRange(): { start: Date; end: Date } {
+export function getCalendarDateRange(date: Date = new Date()): { start: Date; end: Date } {
+  const weekStart = getWeekStart(date);
   return {
-    start: REFERENCE_WEEK_START,
-    end: addDays(REFERENCE_WEEK_START, 6),
+    start: weekStart,
+    end: addDays(weekStart, 6),
   };
 }
 

@@ -62,3 +62,27 @@
   display: none;
 }
 
+/* Grey out past dates */
+.rbc-time-view .rbc-header.past-date {
+  color: hsl(var(--muted-foreground));
+  opacity: 0.6;
+}
+
+.rbc-time-view .rbc-day-slot.past-date {
+  opacity: 0.5;
+  background-color: hsl(var(--muted) / 0.2);
+}
+
+/* Keep events visible in past dates but slightly dimmed */
+.rbc-time-view .rbc-day-slot.past-date .rbc-event {
+  opacity: 0.7;
+}
+
+.rbc-time-view .rbc-day-slot.past-date .rbc-event.past-date-event {
+  opacity: 0.6;
+}
+
+/* Style past date columns more subtly */
+.rbc-time-view .rbc-time-content > .rbc-day-slot.past-date {
+  background-color: hsl(var(--muted) / 0.15);
+}

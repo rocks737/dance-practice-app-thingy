@@ -17,12 +17,16 @@ import {
   eventToWindow,
   windowsToEvents,
   getCalendarDateRange,
+  getWeekStart,
   roundToQuarterHour,
   isValidDuration,
   type AvailabilityEvent,
 } from "@/lib/schedule/calendar";
-import { Info } from "lucide-react";
+import { Info, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
+import { format } from "date-fns";
+import { addWeeks, addDays, startOfToday } from "date-fns";
+import { Button } from "@/components/ui/button";
 
 // Enable drag and drop
 const Calendar = withDragAndDrop(BigCalendar);
@@ -53,9 +57,46 @@ export function ScheduleAvailabilityCalendar({
   onDeleteWindow,
 }: ScheduleAvailabilityCalendarProps) {
   const [view, setView] = useState<View>("week");
-  const [currentDate, setCurrentDate] = useState(() => getCalendarDateRange().start);
-  const events = useMemo(() => windowsToEvents(windows), [windows]);
-  const { start: minDate, end: maxDate } = useMemo(() => getCalendarDateRange(), []);
+  // Start with current date, calendar will show the week containing this date
+  const [currentDate, setCurrentDate] = useState(() => new Date());
+  
+  // Calculate the Sunday of the current week being displayed
+  const currentWeekStart = useMemo(() => getWeekStart(currentDate), [currentDate]);
+  
+  // Calculate events for the current week
+  const events = useMemo(() => windowsToEvents(windows, currentWeekStart), [windows, currentWeekStart]);
+  
+  // Calculate date range for the current week
+  const { start: minDate, end: maxDate } = useMemo(() => getCalendarDateRange(currentDate), [currentDate]);
+  
+  // Today's date for comparison (start of day)
+  const today = useMemo(() => startOfToday(), []);
+  
+  // Navigation handlers
+  const goToPreviousWeek = useCallback(() => {
+    setCurrentDate((prev) => addWeeks(prev, -1));
+  }, []);
+  
+  const goToNextWeek = useCallback(() => {
+    setCurrentDate((prev) => addWeeks(prev, 1));
+  }, []);
+  
+  const goToToday = useCallback(() => {
+    setCurrentDate(new Date());
+  }, []);
+  
+  // Format week range for display
+  const weekRangeText = useMemo(() => {
+    const endDate = addDays(currentWeekStart, 6); // Saturday
+    return `${format(currentWeekStart, "MMM d")} - ${format(endDate, "MMM d, yyyy")}`;
+  }, [currentWeekStart]);
+  
+  // Check if a date is in the past (before today)
+  const isPastDate = useCallback((date: Date) => {
+    const dateStart = new Date(date);
+    dateStart.setHours(0, 0, 0, 0);
+    return dateStart < today;
+  }, [today]);
 
   // Handle slot selection (user clicks/drags on empty calendar space)
   const handleSelectSlot = useCallback(
@@ -177,6 +218,24 @@ export function ScheduleAvailabilityCalendar({
         </div>
       </div>
 
+      {/* Navigation Controls */}
+      <div className="flex items-center justify-between rounded-lg border bg-background p-3">
+        <Button onClick={goToPreviousWeek} variant="outline" size="sm">
+          <ChevronLeft className="h-4 w-4 mr-1" />
+          Previous Week
+        </Button>
+        <div className="flex flex-col items-center gap-1">
+          <Button onClick={goToToday} variant="ghost" size="sm">
+            Today
+          </Button>
+          <p className="text-sm font-medium text-foreground">{weekRangeText}</p>
+        </div>
+        <Button onClick={goToNextWeek} variant="outline" size="sm">
+          Next Week
+          <ChevronRight className="h-4 w-4 ml-1" />
+        </Button>
+      </div>
+
       <div className="rounded-lg border bg-background p-4" style={{ height: "600px" }}>
         <Calendar
           localizer={localizer}
@@ -185,8 +244,11 @@ export function ScheduleAvailabilityCalendar({
           onView={setView}
           views={["week"]}
           defaultView="week"
-          date={currentDate}
-          onNavigate={setCurrentDate}
+          date={currentWeekStart}
+          onNavigate={(newDate: Date) => {
+            // Ensure we store the week start for consistency
+            setCurrentDate(getWeekStart(newDate));
+          }}
           min={new Date(2024, 0, 1, 0, 0, 0)}
           max={new Date(2024, 0, 1, 23, 59, 59)}
           step={15}
@@ -200,21 +262,55 @@ export function ScheduleAvailabilityCalendar({
           toolbar={false}
           formats={{
             dayFormat: (date: Date) => {
-              // getDay() returns 0-6 where 0=Sunday
-              const jsDay = date.getDay();
-              // Map to our enum: Sunday=0, Monday=1, etc.
-              const dayMap = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'] as const;
-              const dayOfWeek = dayMap[jsDay] as typeof DAY_OF_WEEK_VALUES[number];
-              return DAY_OF_WEEK_LABELS[dayOfWeek];
+              // Show day name and date: "Sunday, Jan 14"
+              return format(date, "EEEE, MMM d");
+            },
+            dayHeaderFormat: (date: Date) => {
+              // Same format for header
+              return format(date, "EEEE, MMM d");
             },
           }}
-          eventPropGetter={() => ({
-            style: {
+          dayPropGetter={(date: Date) => {
+            // Add 'past-date' class to past dates for styling
+            if (isPastDate(date)) {
+              return {
+                className: "past-date",
+              };
+            }
+            return {};
+          }}
+          slotPropGetter={(date: Date) => {
+            // Also style time slots in past dates
+            if (isPastDate(date)) {
+              return {
+                className: "past-date",
+              };
+            }
+            return {};
+          }}
+          eventPropGetter={(event: object) => {
+            const availEvent = event as AvailabilityEvent;
+            const baseStyle = {
               backgroundColor: "hsl(var(--primary))",
               borderColor: "hsl(var(--primary))",
               color: "hsl(var(--primary-foreground))",
-            },
-          })}
+            };
+            
+            // Dim events in past dates slightly
+            if (isPastDate(availEvent.start)) {
+              return {
+                style: {
+                  ...baseStyle,
+                  opacity: 0.7,
+                },
+                className: "past-date-event",
+              };
+            }
+            
+            return {
+              style: baseStyle,
+            };
+          }}
         />
       </div>
 
