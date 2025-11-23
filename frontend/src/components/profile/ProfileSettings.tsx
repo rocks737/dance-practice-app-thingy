@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Eye, EyeOff, Loader2, Save, Settings as SettingsIcon, X } from "lucide-react";
+import { Eye, EyeOff, Loader2, Save, Settings as SettingsIcon } from "lucide-react";
 import { toast } from "sonner";
 import { UserProfile } from "@/lib/profiles/types";
 import { profileSettingsSchema, type ProfileSettingsFormData } from "@/lib/profiles/validation";
@@ -14,10 +14,10 @@ import { Switch } from "@/components/ui/switch";
 
 interface ProfileSettingsProps {
   profile: UserProfile;
+  onUpdate?: () => void;
 }
 
-export function ProfileSettings({ profile }: ProfileSettingsProps) {
-  const [isEditing, setIsEditing] = useState(false);
+export function ProfileSettings({ profile, onUpdate }: ProfileSettingsProps) {
   const [isSaving, setIsSaving] = useState(false);
 
   const {
@@ -36,6 +36,14 @@ export function ProfileSettings({ profile }: ProfileSettingsProps) {
 
   const profileVisible = watch("profile_visible");
 
+  // Update form values when profile changes (e.g., after refetch)
+  useEffect(() => {
+    reset({
+      profile_visible: profile.profileVisible,
+      home_location_id: profile.homeLocationId,
+    });
+  }, [profile.profileVisible, profile.homeLocationId, reset]);
+
   const onSubmit = async (data: ProfileSettingsFormData) => {
     setIsSaving(true);
     try {
@@ -45,8 +53,12 @@ export function ProfileSettings({ profile }: ProfileSettingsProps) {
       });
       
       toast.success("Settings updated successfully");
-      setIsEditing(false);
       reset(data);
+      
+      // Refetch profile to get latest data
+      if (onUpdate) {
+        onUpdate();
+      }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to update settings");
     } finally {
@@ -54,13 +66,6 @@ export function ProfileSettings({ profile }: ProfileSettingsProps) {
     }
   };
 
-  const handleCancel = () => {
-    reset({
-      profile_visible: profile.profileVisible,
-      home_location_id: profile.homeLocationId,
-    });
-    setIsEditing(false);
-  };
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
@@ -75,11 +80,6 @@ export function ProfileSettings({ profile }: ProfileSettingsProps) {
               Control your profile visibility and preferences
             </p>
           </div>
-          {!isEditing && (
-            <Button onClick={() => setIsEditing(true)} variant="outline" size="sm">
-              Edit
-            </Button>
-          )}
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -100,7 +100,7 @@ export function ProfileSettings({ profile }: ProfileSettingsProps) {
               id="profile_visible"
               checked={profileVisible}
               onCheckedChange={(checked) => setValue("profile_visible", checked, { shouldDirty: true })}
-              disabled={!isEditing || isSaving}
+              disabled={isSaving}
             />
           </div>
 
@@ -139,33 +139,22 @@ export function ProfileSettings({ profile }: ProfileSettingsProps) {
             </div>
           </div>
 
-          {/* Action Buttons */}
-          {isEditing && (
-            <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200 dark:border-gray-700">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleCancel}
-                disabled={isSaving}
-              >
-                <X className="w-4 h-4 mr-2" />
-                Cancel
-              </Button>
-              <Button type="submit" disabled={!isDirty || isSaving}>
-                {isSaving ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <Save className="w-4 h-4 mr-2" />
-                    Save Changes
-                  </>
-                )}
-              </Button>
-            </div>
-          )}
+          {/* Save Button */}
+          <div className="flex justify-end pt-4 border-t border-gray-200 dark:border-gray-700">
+            <Button type="submit" disabled={!isDirty || isSaving}>
+              {isSaving ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4 mr-2" />
+                  Save Changes
+                </>
+              )}
+            </Button>
+          </div>
         </form>
       </div>
     </div>

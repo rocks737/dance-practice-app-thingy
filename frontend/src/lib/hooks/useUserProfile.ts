@@ -1,61 +1,38 @@
 "use client";
 
-import { createClient } from "@/lib/supabase/client";
-import { useEffect, useState } from "react";
-
-export interface UserProfile {
-  id: string;
-  auth_user_id: string;
-  first_name: string;
-  last_name: string;
-  display_name: string | null;
-  email: string;
-  bio: string | null;
-  dance_goals: string | null;
-  birth_date: string | null;
-  profile_visible: boolean;
-  primary_role: string;
-  wsdc_level: string | null;
-  competitiveness_level: number;
-  account_status: string;
-  created_at: string;
-  updated_at: string;
-}
+import { useEffect, useState, useCallback } from "react";
+import { getProfileByAuthUserId } from "@/lib/profiles/api";
+import type { UserProfile } from "@/lib/profiles/types";
 
 export function useUserProfile(authUserId?: string) {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
-  useEffect(() => {
+  const fetchProfile = useCallback(async () => {
     if (!authUserId) {
       setLoading(false);
       return;
     }
 
-    const fetchProfile = async () => {
-      const supabase = createClient();
+    setLoading(true);
+    setError(null);
 
-      const { data, error } = await supabase
-        .from("user_profiles")
-        .select("*")
-        .eq("auth_user_id", authUserId)
-        .single();
-
-      if (error) {
-        console.error("Error fetching user profile:", error);
-        setError(error);
-        setLoading(false);
-        return;
-      }
-
-      setProfile(data);
+    try {
+      const profileData = await getProfileByAuthUserId(authUserId);
+      setProfile(profileData);
+    } catch (fetchError) {
+      console.error("Error fetching user profile:", fetchError);
+      setError(fetchError instanceof Error ? fetchError : new Error(String(fetchError)));
+    } finally {
       setLoading(false);
-    };
-
-    fetchProfile();
+    }
   }, [authUserId]);
 
-  return { profile, loading, error };
+  useEffect(() => {
+    fetchProfile();
+  }, [fetchProfile]);
+
+  return { profile, loading, error, refetch: fetchProfile };
 }
 

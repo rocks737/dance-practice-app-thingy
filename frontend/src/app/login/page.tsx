@@ -2,8 +2,20 @@ import Link from "next/link";
 import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { SubmitButton } from "@/components/ui/submit-button";
 import { Input } from "@/components/ui/input";
+import { LoginButton } from "./login-buttons";
+
+// Helper to check if error is a Next.js redirect (which should not be caught)
+function isRedirectError(error: unknown): boolean {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+  const err = error as Error & { digest?: string };
+  return (
+    error.message === "NEXT_REDIRECT" || 
+    (err.digest?.startsWith("NEXT_REDIRECT") ?? false)
+  );
+}
 
 export default function Login({
   searchParams,
@@ -17,60 +29,167 @@ export default function Login({
       ? searchParams.returnUrl
       : undefined;
 
-  const redirectToLogin = (message?: string) => {
-    const params = new URLSearchParams();
-    if (message) {
-      params.set("message", message);
-    }
-    if (safeReturnUrl) {
-      params.set("returnUrl", safeReturnUrl);
-    }
-    const query = params.toString();
-    return redirect(`/login${query ? `?${query}` : ""}`);
-  };
-
-  const signIn = async (_prevState: any, formData: FormData) => {
+  const signIn = async (formData: FormData) => {
     "use server";
 
     const email = formData.get("email") as string;
     const password = formData.get("password") as string;
-    const supabase = createClient();
-
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password
-    });
-
-    if (error) {
-      return redirectToLogin("Could not authenticate user");
+    const returnUrl = formData.get("returnUrl") as string | null;
+    
+    if (!email || !password) {
+      const params = new URLSearchParams();
+      params.set("message", "Email and password are required");
+      if (returnUrl) {
+        params.set("returnUrl", returnUrl);
+      }
+      redirect(`/login?${params.toString()}`);
     }
 
-    return redirect(safeReturnUrl || "/profile");
+    try {
+      const supabase = createClient();
+
+      console.log("[LOGIN] Attempting sign in for:", email);
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      if (error) {
+        console.error("[LOGIN ERROR] Supabase auth error:", {
+          message: error.message,
+          status: error.status,
+          code: (error as any).code,
+          fullError: error,
+        });
+        
+        const params = new URLSearchParams();
+        // Show user-friendly error messages based on error code
+        let errorMessage = "Could not authenticate user";
+        if ((error as any).code === "invalid_credentials") {
+          errorMessage = "Invalid email or password";
+        } else if (error.message) {
+          errorMessage = error.message;
+        }
+        
+        params.set("message", errorMessage);
+        if (returnUrl) {
+          params.set("returnUrl", returnUrl);
+        }
+        redirect(`/login?${params.toString()}`);
+      }
+
+      if (!data.user) {
+        console.error("[LOGIN ERROR] No user returned from sign in");
+        const params = new URLSearchParams();
+        params.set("message", "Authentication failed: No user returned");
+        if (returnUrl) {
+          params.set("returnUrl", returnUrl);
+        }
+        redirect(`/login?${params.toString()}`);
+      }
+
+      console.log("[LOGIN SUCCESS] User signed in:", data.user.email);
+      redirect(returnUrl || "/profile");
+    } catch (err) {
+      // Don't catch redirect errors - let them propagate
+      if (isRedirectError(err)) {
+        throw err;
+      }
+      
+      console.error("[LOGIN ERROR] Unexpected error:", {
+        error: err,
+        message: err instanceof Error ? err.message : String(err),
+        stack: err instanceof Error ? err.stack : undefined,
+      });
+      
+      const params = new URLSearchParams();
+      params.set("message", err instanceof Error ? err.message : "An unexpected error occurred");
+      if (returnUrl) {
+        params.set("returnUrl", returnUrl);
+      }
+      redirect(`/login?${params.toString()}`);
+    }
   };
 
-  const signUp = async (_prevState: any, formData: FormData) => {
+  const signUp = async (formData: FormData) => {
     "use server";
 
     const origin = headers().get("origin");
     const email = formData.get("email") as string;
     const password = formData.get("password") as string;
-    const supabase = createClient();
-
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: `${origin}/auth/callback${
-          safeReturnUrl ? `?returnUrl=${encodeURIComponent(safeReturnUrl)}` : ""
-        }`,
-      },
-    });
-
-    if (error) {
-      return redirectToLogin("Could not authenticate user");
+    const returnUrl = formData.get("returnUrl") as string | null;
+    
+    if (!email || !password) {
+      const params = new URLSearchParams();
+      params.set("message", "Email and password are required");
+      if (returnUrl) {
+        params.set("returnUrl", returnUrl);
+      }
+      redirect(`/login?${params.toString()}`);
     }
 
-    return redirect("/profile");
+    try {
+      const supabase = createClient();
+
+      console.log("[SIGNUP] Attempting sign up for:", email);
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${origin}/auth/callback${
+            returnUrl ? `?returnUrl=${encodeURIComponent(returnUrl)}` : ""
+          }`,
+        },
+      });
+
+      if (error) {
+        console.error("[SIGNUP ERROR] Supabase auth error:", {
+          message: error.message,
+          status: error.status,
+          code: (error as any).code,
+          fullError: error,
+        });
+        
+        const params = new URLSearchParams();
+        params.set("message", error.message || "Could not create account");
+        if (returnUrl) {
+          params.set("returnUrl", returnUrl);
+        }
+        redirect(`/login?${params.toString()}`);
+      }
+
+      // Check if email confirmation is required
+      if (data.user && !data.session) {
+        console.log("[SIGNUP] User created, email confirmation required");
+        const params = new URLSearchParams();
+        params.set("message", "Please check your email to confirm your account");
+        if (returnUrl) {
+          params.set("returnUrl", returnUrl);
+        }
+        redirect(`/login?${params.toString()}`);
+      }
+
+      console.log("[SIGNUP SUCCESS] User signed up:", data.user?.email);
+      redirect("/profile");
+    } catch (err) {
+      // Don't catch redirect errors - let them propagate
+      if (isRedirectError(err)) {
+        throw err;
+      }
+      
+      console.error("[SIGNUP ERROR] Unexpected error:", {
+        error: err,
+        message: err instanceof Error ? err.message : String(err),
+        stack: err instanceof Error ? err.stack : undefined,
+      });
+      
+      const params = new URLSearchParams();
+      params.set("message", err instanceof Error ? err.message : "An unexpected error occurred");
+      if (returnUrl) {
+        params.set("returnUrl", returnUrl);
+      }
+      redirect(`/login?${params.toString()}`);
+    }
   };
 
   return (
@@ -97,6 +216,9 @@ export default function Login({
       </Link>
 
       <form className="animate-in flex-1 flex flex-col w-full justify-center gap-2 text-foreground">
+        {safeReturnUrl && (
+          <input type="hidden" name="returnUrl" value={safeReturnUrl} />
+        )}
         <label className="text-md" htmlFor="email">
           Email
         </label>
@@ -114,23 +236,25 @@ export default function Login({
           placeholder="••••••••"
           required
         />
-        <SubmitButton
+        <LoginButton
           formAction={signIn}
           pendingText="Signing In..."
         >
           Sign In
-        </SubmitButton>
-        <SubmitButton
+        </LoginButton>
+        <LoginButton
           formAction={signUp}
           variant="outline"
           pendingText="Signing Up..."
         >
           Sign Up
-        </SubmitButton>
+        </LoginButton>
         {searchParams?.message && (
-          <p className="mt-4 p-4 bg-foreground/10 text-foreground text-center">
-            {searchParams.message}
-          </p>
+          <div className="mt-4 p-4 bg-destructive/10 border border-destructive/20 rounded-md">
+            <p className="text-destructive text-center font-medium">
+              {searchParams.message}
+            </p>
+          </div>
         )}
       </form>
     </div>

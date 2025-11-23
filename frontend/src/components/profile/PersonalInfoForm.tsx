@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2, Save, X } from "lucide-react";
+import { Loader2, Save } from "lucide-react";
 import { toast } from "sonner";
 import { UserProfile } from "@/lib/profiles/types";
 import { personalInfoSchema, type PersonalInfoFormData } from "@/lib/profiles/validation";
@@ -14,10 +14,10 @@ import { Label } from "@/components/ui/label";
 
 interface PersonalInfoFormProps {
   profile: UserProfile;
+  onUpdate?: () => void;
 }
 
-export function PersonalInfoForm({ profile }: PersonalInfoFormProps) {
-  const [isEditing, setIsEditing] = useState(false);
+export function PersonalInfoForm({ profile, onUpdate }: PersonalInfoFormProps) {
   const [isSaving, setIsSaving] = useState(false);
 
   const {
@@ -35,6 +35,16 @@ export function PersonalInfoForm({ profile }: PersonalInfoFormProps) {
     },
   });
 
+  // Update form values when profile changes (e.g., after refetch)
+  useEffect(() => {
+    reset({
+      first_name: profile.firstName,
+      last_name: profile.lastName,
+      display_name: profile.displayName || "",
+      birth_date: profile.birthDate || "",
+    });
+  }, [profile.firstName, profile.lastName, profile.displayName, profile.birthDate, reset]);
+
   const onSubmit = async (data: PersonalInfoFormData) => {
     setIsSaving(true);
     try {
@@ -46,25 +56,19 @@ export function PersonalInfoForm({ profile }: PersonalInfoFormProps) {
       });
       
       toast.success("Personal information updated successfully");
-      setIsEditing(false);
       
       // Update the form with new values
       reset(data);
+      
+      // Refetch profile to get latest data
+      if (onUpdate) {
+        onUpdate();
+      }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to update profile");
     } finally {
       setIsSaving(false);
     }
-  };
-
-  const handleCancel = () => {
-    reset({
-      first_name: profile.firstName,
-      last_name: profile.lastName,
-      display_name: profile.displayName || "",
-      birth_date: profile.birthDate || "",
-    });
-    setIsEditing(false);
   };
 
   return (
@@ -74,11 +78,6 @@ export function PersonalInfoForm({ profile }: PersonalInfoFormProps) {
           <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
             Personal Information
           </h2>
-          {!isEditing && (
-            <Button onClick={() => setIsEditing(true)} variant="outline" size="sm">
-              Edit
-            </Button>
-          )}
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -90,7 +89,7 @@ export function PersonalInfoForm({ profile }: PersonalInfoFormProps) {
             <Input
               id="first_name"
               {...register("first_name")}
-              disabled={!isEditing || isSaving}
+              disabled={isSaving}
               className={errors.first_name ? "border-red-500" : ""}
             />
             {errors.first_name && (
@@ -106,7 +105,7 @@ export function PersonalInfoForm({ profile }: PersonalInfoFormProps) {
             <Input
               id="last_name"
               {...register("last_name")}
-              disabled={!isEditing || isSaving}
+              disabled={isSaving}
               className={errors.last_name ? "border-red-500" : ""}
             />
             {errors.last_name && (
@@ -120,7 +119,7 @@ export function PersonalInfoForm({ profile }: PersonalInfoFormProps) {
             <Input
               id="display_name"
               {...register("display_name")}
-              disabled={!isEditing || isSaving}
+              disabled={isSaving}
               placeholder="How you'd like to be called"
               className={errors.display_name ? "border-red-500" : ""}
             />
@@ -153,7 +152,7 @@ export function PersonalInfoForm({ profile }: PersonalInfoFormProps) {
               id="birth_date"
               type="date"
               {...register("birth_date")}
-              disabled={!isEditing || isSaving}
+              disabled={isSaving}
               className={errors.birth_date ? "border-red-500" : ""}
             />
             {errors.birth_date && (
@@ -161,33 +160,22 @@ export function PersonalInfoForm({ profile }: PersonalInfoFormProps) {
             )}
           </div>
 
-          {/* Action Buttons */}
-          {isEditing && (
-            <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200 dark:border-gray-700">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleCancel}
-                disabled={isSaving}
-              >
-                <X className="w-4 h-4 mr-2" />
-                Cancel
-              </Button>
-              <Button type="submit" disabled={!isDirty || isSaving}>
-                {isSaving ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <Save className="w-4 h-4 mr-2" />
-                    Save Changes
-                  </>
-                )}
-              </Button>
-            </div>
-          )}
+          {/* Save Button */}
+          <div className="flex justify-end pt-4 border-t border-gray-200 dark:border-gray-700">
+            <Button type="submit" disabled={!isDirty || isSaving}>
+              {isSaving ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4 mr-2" />
+                  Save Changes
+                </>
+              )}
+            </Button>
+          </div>
         </form>
       </div>
     </div>

@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2, Save, X } from "lucide-react";
+import { Loader2, Save } from "lucide-react";
 import { toast } from "sonner";
 import { UserProfile, PrimaryRole, WsdcSkillLevel, PRIMARY_ROLE_OPTIONS, WSDC_SKILL_LEVEL_OPTIONS } from "@/lib/profiles/types";
 import { dancePreferencesSchema, type DancePreferencesFormData } from "@/lib/profiles/validation";
@@ -16,10 +16,10 @@ import { Textarea } from "@/components/ui/textarea";
 
 interface DancePreferencesFormProps {
   profile: UserProfile;
+  onUpdate?: () => void;
 }
 
-export function DancePreferencesForm({ profile }: DancePreferencesFormProps) {
-  const [isEditing, setIsEditing] = useState(false);
+export function DancePreferencesForm({ profile, onUpdate }: DancePreferencesFormProps) {
   const [isSaving, setIsSaving] = useState(false);
 
   const {
@@ -46,6 +46,17 @@ export function DancePreferencesForm({ profile }: DancePreferencesFormProps) {
   const bio = watch("bio") || "";
   const danceGoals = watch("dance_goals") || "";
 
+  // Update form values when profile changes (e.g., after refetch)
+  useEffect(() => {
+    reset({
+      primary_role: profile.primaryRole,
+      wsdc_level: profile.wsdcLevel ?? undefined,
+      competitiveness_level: profile.competitivenessLevel,
+      bio: profile.bio ?? "",
+      dance_goals: profile.danceGoals ?? "",
+    });
+  }, [profile.primaryRole, profile.wsdcLevel, profile.competitivenessLevel, profile.bio, profile.danceGoals, reset]);
+
   const onSubmit = async (data: DancePreferencesFormData) => {
     setIsSaving(true);
     try {
@@ -58,8 +69,12 @@ export function DancePreferencesForm({ profile }: DancePreferencesFormProps) {
       });
       
       toast.success("Dance preferences updated successfully");
-      setIsEditing(false);
       reset(data);
+      
+      // Refetch profile to get latest data
+      if (onUpdate) {
+        onUpdate();
+      }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to update preferences");
     } finally {
@@ -67,16 +82,6 @@ export function DancePreferencesForm({ profile }: DancePreferencesFormProps) {
     }
   };
 
-  const handleCancel = () => {
-    reset({
-      primary_role: profile.primaryRole,
-      wsdc_level: profile.wsdcLevel ?? undefined,
-      competitiveness_level: profile.competitivenessLevel,
-      bio: profile.bio ?? "",
-      dance_goals: profile.danceGoals ?? "",
-    });
-    setIsEditing(false);
-  };
 
   const roleOption = PRIMARY_ROLE_OPTIONS.find(opt => opt.value === primaryRole);
   const levelOption = WSDC_SKILL_LEVEL_OPTIONS.find(opt => opt.value === wsdcLevel);
@@ -88,11 +93,6 @@ export function DancePreferencesForm({ profile }: DancePreferencesFormProps) {
           <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
             Dance Preferences
           </h2>
-          {!isEditing && (
-            <Button onClick={() => setIsEditing(true)} variant="outline" size="sm">
-              Edit
-            </Button>
-          )}
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -102,7 +102,7 @@ export function DancePreferencesForm({ profile }: DancePreferencesFormProps) {
             <Select
               value={primaryRole?.toString()}
               onValueChange={(value) => setValue("primary_role", parseInt(value) as PrimaryRole, { shouldDirty: true })}
-              disabled={!isEditing || isSaving}
+              disabled={isSaving}
             >
               <SelectTrigger id="primary_role" className={errors.primary_role ? "border-red-500" : ""}>
                 <SelectValue placeholder="Select your primary role" />
@@ -132,7 +132,7 @@ export function DancePreferencesForm({ profile }: DancePreferencesFormProps) {
                 const level = value === "unranked" ? undefined : parseInt(value);
                 setValue("wsdc_level", level as WsdcSkillLevel, { shouldDirty: true });
               }}
-              disabled={!isEditing || isSaving}
+              disabled={isSaving}
             >
               <SelectTrigger id="wsdc_level" className={errors.wsdc_level ? "border-red-500" : ""}>
                 <SelectValue placeholder="Select your skill level" />
@@ -167,7 +167,7 @@ export function DancePreferencesForm({ profile }: DancePreferencesFormProps) {
                 step={1}
                 value={[competitivenessLevel]}
                 onValueChange={(value) => setValue("competitiveness_level", value[0], { shouldDirty: true })}
-                disabled={!isEditing || isSaving}
+                disabled={isSaving}
                 className={errors.competitiveness_level ? "border-red-500" : ""}
               />
             </div>
@@ -179,9 +179,6 @@ export function DancePreferencesForm({ profile }: DancePreferencesFormProps) {
               <span>3 - Balanced</span>
               <span>5 - Competitive</span>
             </div>
-            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-              How competitive you are when dancing
-            </p>
           </div>
 
           {/* Biography Fields */}
@@ -195,8 +192,8 @@ export function DancePreferencesForm({ profile }: DancePreferencesFormProps) {
             <Textarea
               id="bio"
               {...register("bio")}
-              disabled={!isEditing || isSaving}
-              placeholder="Tell us about yourself, your dance journey, what you love about dancing..."
+              disabled={isSaving}
+              placeholder="Tell us about yourself"
               rows={6}
               className={errors.bio ? "border-red-500" : ""}
             />
@@ -218,7 +215,7 @@ export function DancePreferencesForm({ profile }: DancePreferencesFormProps) {
             <Textarea
               id="dance_goals"
               {...register("dance_goals")}
-              disabled={!isEditing || isSaving}
+              disabled={isSaving}
               placeholder="What are your dance goals? What do you want to work on or achieve?"
               rows={4}
               className={errors.dance_goals ? "border-red-500" : ""}
@@ -229,72 +226,22 @@ export function DancePreferencesForm({ profile }: DancePreferencesFormProps) {
             </p>
           </div>
 
-          {/* Current Values Display (when not editing) */}
-          {!isEditing && (
-            <div className="pt-4 border-t border-gray-200 dark:border-gray-700 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Primary Role</p>
-                  <p className="text-gray-900 dark:text-gray-100">{roleOption?.label ?? "Not set"}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Skill Level</p>
-                  <p className="text-gray-900 dark:text-gray-100">{levelOption?.label ?? "Unranked"}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Competitiveness</p>
-                  <p className="text-gray-900 dark:text-gray-100">
-                    {competitivenessLevel} / 5
-                    <span className="text-sm text-gray-500 dark:text-gray-400 ml-2">
-                      ({competitivenessLevel <= 2 ? "Social" : competitivenessLevel <= 3 ? "Balanced" : "Competitive"})
-                    </span>
-                  </p>
-                </div>
-              </div>
-
-              <div>
-                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">About You</p>
-                <p className="text-gray-900 dark:text-gray-100 whitespace-pre-line">
-                  {bio.trim() ? bio : "No bio added yet"}
-                </p>
-              </div>
-
-              <div>
-                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Dance Goals</p>
-                <p className="text-gray-900 dark:text-gray-100 whitespace-pre-line">
-                  {danceGoals.trim() ? danceGoals : "No goals added yet"}
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* Action Buttons */}
-          {isEditing && (
-            <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200 dark:border-gray-700">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleCancel}
-                disabled={isSaving}
-              >
-                <X className="w-4 h-4 mr-2" />
-                Cancel
-              </Button>
-              <Button type="submit" disabled={!isDirty || isSaving}>
-                {isSaving ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <Save className="w-4 h-4 mr-2" />
-                    Save Changes
-                  </>
-                )}
-              </Button>
-            </div>
-          )}
+          {/* Save Button */}
+          <div className="flex justify-end pt-4 border-t border-gray-200 dark:border-gray-700">
+            <Button type="submit" disabled={!isDirty || isSaving}>
+              {isSaving ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4 mr-2" />
+                  Save Changes
+                </>
+              )}
+            </Button>
+          </div>
         </form>
       </div>
     </div>

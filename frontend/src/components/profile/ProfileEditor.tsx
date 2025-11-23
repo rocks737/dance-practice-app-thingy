@@ -14,7 +14,7 @@ interface ProfileEditorProps {
 }
 
 export function ProfileEditor({ user }: ProfileEditorProps) {
-  const { profile, loading, error } = useUserProfile(user.id);
+  const { profile, loading, error, refetch } = useUserProfile(user.id);
 
   if (loading) {
     return (
@@ -67,15 +67,15 @@ export function ProfileEditor({ user }: ProfileEditorProps) {
 
         <div className="min-h-[640px]">
           <TabsContent value="personal" className="h-full">
-            <PersonalInfoForm profile={profile} />
+            <PersonalInfoForm profile={profile} onUpdate={refetch} />
           </TabsContent>
 
           <TabsContent value="dance" className="h-full">
-            <DancePreferencesForm profile={profile} />
+            <DancePreferencesForm profile={profile} onUpdate={refetch} />
           </TabsContent>
 
           <TabsContent value="settings" className="h-full">
-            <ProfileSettings profile={profile} />
+            <ProfileSettings profile={profile} onUpdate={refetch} />
           </TabsContent>
 
           <TabsContent value="security" className="h-full">

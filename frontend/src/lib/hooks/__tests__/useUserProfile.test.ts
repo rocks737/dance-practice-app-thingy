@@ -1,56 +1,35 @@
 import { renderHook, waitFor } from '@testing-library/react'
 import { useUserProfile } from '@/lib/hooks/useUserProfile'
+import { getProfileByAuthUserId } from '@/lib/profiles/api'
+import type { UserProfile } from '@/lib/profiles/types'
 
-// Mock the Supabase responses for this test
-const mockFrom = jest.fn()
-const mockSelect = jest.fn()
-const mockEq = jest.fn()
-const mockSingle = jest.fn()
+jest.mock('@/lib/profiles/api')
 
-// Mock createClient before importing
-jest.mock('@/lib/supabase/client', () => ({
-  createClient: jest.fn(() => ({
-    from: mockFrom,
-  })),
-}))
+const mockGetProfileByAuthUserId = getProfileByAuthUserId as jest.MockedFunction<typeof getProfileByAuthUserId>
 
-const mockProfileData = {
+const mockProfileData: UserProfile = {
   id: 'profile-123',
-  auth_user_id: 'user-123',
-  first_name: 'John',
-  last_name: 'Doe',
-  display_name: 'JohnD',
+  authUserId: 'user-123',
+  firstName: 'John',
+  lastName: 'Doe',
+  displayName: 'JohnD',
   email: 'john@example.com',
   bio: 'Test bio',
-  dance_goals: 'Improve technique',
-  birth_date: '1990-01-01',
-  profile_visible: true,
-  primary_role: 'LEADER',
-  wsdc_level: 'INTERMEDIATE',
-  competitiveness_level: 3,
-  account_status: 'ACTIVE',
-  created_at: '2024-01-01T00:00:00.000Z',
-  updated_at: '2024-01-01T00:00:00.000Z',
+  danceGoals: 'Improve technique',
+  birthDate: '1990-01-01',
+  profileVisible: true,
+  primaryRole: 0,
+  wsdcLevel: 2,
+  competitivenessLevel: 3,
+  accountStatus: 0,
+  homeLocationId: null,
+  createdAt: '2024-01-01T00:00:00.000Z',
+  updatedAt: '2024-01-01T00:00:00.000Z',
 }
 
 describe('useUserProfile', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    
-    // Setup default mock chain
-    mockSingle.mockReturnValue({
-      data: mockProfileData,
-      error: null,
-    })
-    mockEq.mockReturnValue({
-      single: mockSingle,
-    })
-    mockSelect.mockReturnValue({
-      eq: mockEq,
-    })
-    mockFrom.mockReturnValue({
-      select: mockSelect,
-    })
   })
 
   it('returns initial state when no authUserId provided', () => {
@@ -62,6 +41,8 @@ describe('useUserProfile', () => {
   })
 
   it('fetches and sets user profile', async () => {
+    mockGetProfileByAuthUserId.mockResolvedValueOnce(mockProfileData)
+    
     const { result } = renderHook(() => useUserProfile('user-123'))
     
     await waitFor(() => {
@@ -70,15 +51,12 @@ describe('useUserProfile', () => {
     
     expect(result.current.profile).toEqual(mockProfileData)
     expect(result.current.error).toBeNull()
-    expect(mockFrom).toHaveBeenCalledWith('user_profiles')
+    expect(mockGetProfileByAuthUserId).toHaveBeenCalledWith('user-123')
   })
 
   it('handles errors gracefully', async () => {
     const error = new Error('Database error')
-    mockSingle.mockReturnValue({
-      data: null,
-      error,
-    })
+    mockGetProfileByAuthUserId.mockRejectedValueOnce(error)
     
     const consoleSpy = jest.spyOn(console, 'error').mockImplementation()
     
@@ -95,12 +73,28 @@ describe('useUserProfile', () => {
     consoleSpy.mockRestore()
   })
 
-  it('calls supabase with correct parameters', async () => {
-    renderHook(() => useUserProfile('user-123'))
+  it('provides refetch function', async () => {
+    mockGetProfileByAuthUserId.mockResolvedValueOnce(mockProfileData)
+    
+    const { result } = renderHook(() => useUserProfile('user-123'))
     
     await waitFor(() => {
-      expect(mockFrom).toHaveBeenCalledWith('user_profiles')
+      expect(result.current.loading).toBe(false)
+    })
+    
+    expect(result.current.refetch).toBeDefined()
+    expect(typeof result.current.refetch).toBe('function')
+    
+    // Test refetch
+    mockGetProfileByAuthUserId.mockResolvedValueOnce({
+      ...mockProfileData,
+      firstName: 'Jane',
+    })
+    
+    await result.current.refetch()
+    
+    await waitFor(() => {
+      expect(result.current.profile?.firstName).toBe('Jane')
     })
   })
 })
-

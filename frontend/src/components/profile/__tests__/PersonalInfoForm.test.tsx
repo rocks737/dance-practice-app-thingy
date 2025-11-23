@@ -69,15 +69,15 @@ describe("PersonalInfoForm", () => {
     jest.clearAllMocks();
   });
 
-  it("should render in view mode by default", () => {
+  it("should render with fields always editable", () => {
     render(<PersonalInfoForm profile={mockProfile} />);
 
     expect(screen.getByText("Personal Information")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /edit/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /save changes/i })).toBeInTheDocument();
     
-    // Fields should be disabled
+    // Fields should be enabled (editable)
     const firstNameInput = screen.getByLabelText(/first name/i) as HTMLInputElement;
-    expect(firstNameInput).toBeDisabled();
+    expect(firstNameInput).not.toBeDisabled();
     expect(firstNameInput.value).toBe("John");
   });
 
@@ -91,17 +91,14 @@ describe("PersonalInfoForm", () => {
     expect(screen.getByLabelText(/birth date/i)).toHaveValue("1990-01-01");
   });
 
-  it("should enter edit mode when Edit button is clicked", async () => {
-    const user = setupUser();
+  it("should have save button always visible", () => {
     render(<PersonalInfoForm profile={mockProfile} />);
 
-    const editButton = screen.getByRole("button", { name: /edit/i });
-    await user.click(editButton);
-
-    // Should show Save and Cancel buttons
+    // Save button should always be visible
     expect(screen.getByRole("button", { name: /save changes/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /cancel/i })).toBeInTheDocument();
+    // No Edit or Cancel buttons should exist
     expect(screen.queryByRole("button", { name: /edit/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /cancel/i })).not.toBeInTheDocument();
 
     // Fields should be enabled (except email)
     expect(screen.getByLabelText(/first name/i)).toBeEnabled();
@@ -119,10 +116,7 @@ describe("PersonalInfoForm", () => {
 
     render(<PersonalInfoForm profile={mockProfile} />);
 
-    // Enter edit mode
-    await user.click(screen.getByRole("button", { name: /edit/i }));
-
-    // Change values
+    // Change values (no need to click Edit - fields are already editable)
     const firstNameInput = screen.getByLabelText(/first name/i);
     const lastNameInput = screen.getByLabelText(/last name/i);
     
@@ -132,7 +126,9 @@ describe("PersonalInfoForm", () => {
     await user.type(lastNameInput, "Smith");
 
     // Submit form
-    await user.click(screen.getByRole("button", { name: /save changes/i }));
+    const saveButton = screen.getByRole("button", { name: /save changes/i });
+    expect(saveButton).not.toBeDisabled(); // Should be enabled when form is dirty
+    await user.click(saveButton);
 
     await waitFor(() => {
       expect(mockUpdateProfile).toHaveBeenCalledWith("profile-123", {
@@ -147,20 +143,15 @@ describe("PersonalInfoForm", () => {
       expect(mockToast.success).toHaveBeenCalledWith("Personal information updated successfully");
     });
 
-    // Should exit edit mode
-    await waitFor(() => {
-      expect(screen.getByRole("button", { name: /edit/i })).toBeInTheDocument();
-    });
+    // Save button should still be visible (always editable)
+    expect(screen.getByRole("button", { name: /save changes/i })).toBeInTheDocument();
   });
 
   it("should show validation errors for required fields", async () => {
     const user = setupUser();
     render(<PersonalInfoForm profile={mockProfile} />);
 
-    // Enter edit mode
-    await user.click(screen.getByRole("button", { name: /edit/i }));
-
-    // Clear required fields
+    // Clear required fields (fields are already editable)
     const firstNameInput = screen.getByLabelText(/first name/i);
     await user.clear(firstNameInput);
 
@@ -176,26 +167,11 @@ describe("PersonalInfoForm", () => {
     expect(mockUpdateProfile).not.toHaveBeenCalled();
   });
 
-  it("should cancel editing and revert changes", async () => {
-    const user = setupUser();
+  it("should have save button disabled when form is not dirty", () => {
     render(<PersonalInfoForm profile={mockProfile} />);
 
-    // Enter edit mode
-    await user.click(screen.getByRole("button", { name: /edit/i }));
-
-    // Change value
-    const firstNameInput = screen.getByLabelText(/first name/i);
-    await user.clear(firstNameInput);
-    await user.type(firstNameInput, "Changed");
-
-    // Cancel
-    await user.click(screen.getByRole("button", { name: /cancel/i }));
-
-    // Should revert to original value
-    expect(firstNameInput).toHaveValue("John");
-    
-    // Should exit edit mode
-    expect(screen.getByRole("button", { name: /edit/i })).toBeInTheDocument();
+    const saveButton = screen.getByRole("button", { name: /save changes/i });
+    expect(saveButton).toBeDisabled();
   });
 
   it("should handle empty display name (converts to null)", async () => {
@@ -203,8 +179,6 @@ describe("PersonalInfoForm", () => {
     mockUpdateProfile.mockResolvedValueOnce(mockProfile);
 
     render(<PersonalInfoForm profile={mockProfile} />);
-
-    await user.click(screen.getByRole("button", { name: /edit/i }));
 
     const displayNameInput = screen.getByLabelText(/display name/i);
     await user.clear(displayNameInput);
@@ -227,8 +201,6 @@ describe("PersonalInfoForm", () => {
     mockUpdateProfile.mockRejectedValueOnce(new Error(errorMessage));
 
     render(<PersonalInfoForm profile={mockProfile} />);
-
-    await user.click(screen.getByRole("button", { name: /edit/i }));
     
     // Make form dirty
     const firstNameInput = screen.getByLabelText(/first name/i);
@@ -240,19 +212,10 @@ describe("PersonalInfoForm", () => {
       expect(mockToast.error).toHaveBeenCalledWith(errorMessage);
     });
 
-    // Should stay in edit mode
+    // Save button should still be visible (always editable)
     expect(screen.getByRole("button", { name: /save changes/i })).toBeInTheDocument();
   });
 
-  it("should disable save button when form is not dirty", async () => {
-    const user = setupUser();
-    render(<PersonalInfoForm profile={mockProfile} />);
-
-    await user.click(screen.getByRole("button", { name: /edit/i }));
-
-    const saveButton = screen.getByRole("button", { name: /save changes/i });
-    expect(saveButton).toBeDisabled();
-  });
 
   it("should show helper text for display name", () => {
     render(<PersonalInfoForm profile={mockProfile} />);
