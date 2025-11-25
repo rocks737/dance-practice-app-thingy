@@ -13,13 +13,10 @@ interface UseSchedulePreferencesResult {
 export function useSchedulePreferences(userId?: string): UseSchedulePreferencesResult {
   const key = userId ? ["schedule-preferences", userId] : null;
 
-  const {
-    data,
-    error,
-    isLoading,
-    isValidating,
-    mutate,
-  } = useSWR<SchedulePreference[]>(key, () => fetchSchedulePreferences(userId!));
+  const { data, error, isLoading, isValidating, mutate } = useSWR<SchedulePreference[]>(
+    key,
+    () => fetchSchedulePreferences(userId!),
+  );
 
   return {
     preferences: data ?? [],
@@ -29,5 +26,3 @@ export function useSchedulePreferences(userId?: string): UseSchedulePreferencesR
     refresh: () => mutate(),
   };
 }
-
-

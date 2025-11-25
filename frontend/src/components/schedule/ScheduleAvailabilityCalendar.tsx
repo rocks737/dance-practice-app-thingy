@@ -59,44 +59,53 @@ export function ScheduleAvailabilityCalendar({
   const [view, setView] = useState<View>("week");
   // Start with current date, calendar will show the week containing this date
   const [currentDate, setCurrentDate] = useState(() => new Date());
-  
+
   // Calculate the Sunday of the current week being displayed
   const currentWeekStart = useMemo(() => getWeekStart(currentDate), [currentDate]);
-  
+
   // Calculate events for the current week
-  const events = useMemo(() => windowsToEvents(windows, currentWeekStart), [windows, currentWeekStart]);
-  
+  const events = useMemo(
+    () => windowsToEvents(windows, currentWeekStart),
+    [windows, currentWeekStart],
+  );
+
   // Calculate date range for the current week
-  const { start: minDate, end: maxDate } = useMemo(() => getCalendarDateRange(currentDate), [currentDate]);
-  
+  const { start: minDate, end: maxDate } = useMemo(
+    () => getCalendarDateRange(currentDate),
+    [currentDate],
+  );
+
   // Today's date for comparison (start of day)
   const today = useMemo(() => startOfToday(), []);
-  
+
   // Navigation handlers
   const goToPreviousWeek = useCallback(() => {
     setCurrentDate((prev) => addWeeks(prev, -1));
   }, []);
-  
+
   const goToNextWeek = useCallback(() => {
     setCurrentDate((prev) => addWeeks(prev, 1));
   }, []);
-  
+
   const goToToday = useCallback(() => {
     setCurrentDate(new Date());
   }, []);
-  
+
   // Format week range for display
   const weekRangeText = useMemo(() => {
     const endDate = addDays(currentWeekStart, 6); // Saturday
     return `${format(currentWeekStart, "MMM d")} - ${format(endDate, "MMM d, yyyy")}`;
   }, [currentWeekStart]);
-  
+
   // Check if a date is in the past (before today)
-  const isPastDate = useCallback((date: Date) => {
-    const dateStart = new Date(date);
-    dateStart.setHours(0, 0, 0, 0);
-    return dateStart < today;
-  }, [today]);
+  const isPastDate = useCallback(
+    (date: Date) => {
+      const dateStart = new Date(date);
+      dateStart.setHours(0, 0, 0, 0);
+      return dateStart < today;
+    },
+    [today],
+  );
 
   // Handle slot selection (user clicks/drags on empty calendar space)
   const handleSelectSlot = useCallback(
@@ -110,15 +119,15 @@ export function ScheduleAvailabilityCalendar({
       }
 
       const newWindow = eventToWindow(start, end);
-      
+
       // Check for duplicate
       const isDuplicate = windows.some(
         (w) =>
           w.dayOfWeek === newWindow.dayOfWeek &&
           w.startTime === newWindow.startTime &&
-          w.endTime === newWindow.endTime
+          w.endTime === newWindow.endTime,
       );
-      
+
       if (isDuplicate) {
         toast.error("This time slot is already added");
         return;
@@ -127,7 +136,7 @@ export function ScheduleAvailabilityCalendar({
       onCreateWindow(newWindow);
       toast.success("Availability window added");
     },
-    [windows, onCreateWindow]
+    [windows, onCreateWindow],
   );
 
   // Handle event selection (user clicks on existing event)
@@ -135,9 +144,9 @@ export function ScheduleAvailabilityCalendar({
     (event: object) => {
       const availEvent = event as AvailabilityEvent;
       const confirmed = window.confirm(
-        `Remove availability on ${DAY_OF_WEEK_LABELS[availEvent.dayOfWeek]} ${availEvent.startTime} - ${availEvent.endTime}?`
+        `Remove availability on ${DAY_OF_WEEK_LABELS[availEvent.dayOfWeek]} ${availEvent.startTime} - ${availEvent.endTime}?`,
       );
-      
+
       if (confirmed) {
         const windowToDelete: AvailabilityWindow = {
           dayOfWeek: availEvent.dayOfWeek,
@@ -148,7 +157,7 @@ export function ScheduleAvailabilityCalendar({
         toast.success("Availability window removed");
       }
     },
-    [onDeleteWindow]
+    [onDeleteWindow],
   );
 
   // Handle event drag/drop
@@ -173,7 +182,7 @@ export function ScheduleAvailabilityCalendar({
       onUpdateWindow(oldWindow, newWindow);
       toast.success("Availability window updated");
     },
-    [onUpdateWindow]
+    [onUpdateWindow],
   );
 
   // Handle event resize
@@ -198,7 +207,7 @@ export function ScheduleAvailabilityCalendar({
       onUpdateWindow(oldWindow, newWindow);
       toast.success("Availability window updated");
     },
-    [onUpdateWindow]
+    [onUpdateWindow],
   );
 
   return (
@@ -207,13 +216,16 @@ export function ScheduleAvailabilityCalendar({
         <Info className="h-4 w-4 mt-0.5 flex-shrink-0 text-muted-foreground" />
         <div className="space-y-1 text-muted-foreground">
           <p>
-            <strong className="text-foreground">Click and drag</strong> on empty slots to add availability windows.
+            <strong className="text-foreground">Click and drag</strong> on empty slots to
+            add availability windows.
           </p>
           <p>
-            <strong className="text-foreground">Click existing blocks</strong> to remove them.
+            <strong className="text-foreground">Click existing blocks</strong> to remove
+            them.
           </p>
           <p>
-            <strong className="text-foreground">Drag blocks</strong> to change day/time, or resize to adjust duration.
+            <strong className="text-foreground">Drag blocks</strong> to change day/time,
+            or resize to adjust duration.
           </p>
         </div>
       </div>
@@ -295,7 +307,7 @@ export function ScheduleAvailabilityCalendar({
               borderColor: "hsl(var(--primary))",
               color: "hsl(var(--primary-foreground))",
             };
-            
+
             // Dim events in past dates slightly
             if (isPastDate(availEvent.start)) {
               return {
@@ -306,7 +318,7 @@ export function ScheduleAvailabilityCalendar({
                 className: "past-date-event",
               };
             }
-            
+
             return {
               style: baseStyle,
             };
@@ -320,4 +332,3 @@ export function ScheduleAvailabilityCalendar({
     </div>
   );
 }
-

@@ -7,7 +7,7 @@ import { Loader2, Save } from "lucide-react";
 import { toast } from "sonner";
 import { UserProfile } from "@/lib/profiles/types";
 import { personalInfoSchema, type PersonalInfoFormData } from "@/lib/profiles/validation";
-import { updateProfile } from "@/lib/profiles/api";
+import { updateProfile } from "@/lib/profiles/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -43,7 +43,13 @@ export function PersonalInfoForm({ profile, onUpdate }: PersonalInfoFormProps) {
       display_name: profile.displayName || "",
       birth_date: profile.birthDate || "",
     });
-  }, [profile.firstName, profile.lastName, profile.displayName, profile.birthDate, reset]);
+  }, [
+    profile.firstName,
+    profile.lastName,
+    profile.displayName,
+    profile.birthDate,
+    reset,
+  ]);
 
   const onSubmit = async (data: PersonalInfoFormData) => {
     setIsSaving(true);
@@ -54,12 +60,12 @@ export function PersonalInfoForm({ profile, onUpdate }: PersonalInfoFormProps) {
         display_name: data.display_name || null,
         birth_date: data.birth_date || null,
       });
-      
+
       toast.success("Personal information updated successfully");
-      
+
       // Update the form with new values
       reset(data);
-      
+
       // Refetch profile to get latest data
       if (onUpdate) {
         onUpdate();
@@ -181,4 +187,3 @@ export function PersonalInfoForm({ profile, onUpdate }: PersonalInfoFormProps) {
     </div>
   );
 }
-

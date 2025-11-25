@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { getProfileByAuthUserId } from "@/lib/profiles/api";
+import { getProfileByAuthUserId } from "@/lib/profiles/client";
 import type { UserProfile } from "@/lib/profiles/types";
 
 export function useUserProfile(authUserId?: string) {
@@ -35,4 +35,3 @@ export function useUserProfile(authUserId?: string) {
 
   return { profile, loading, error, refetch: fetchProfile };
 }
-

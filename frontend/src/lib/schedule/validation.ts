@@ -16,20 +16,13 @@ const focusAreaEnum = z.enum(FOCUS_AREA_VALUES);
 export const availabilityWindowSchema = z
   .object({
     dayOfWeek: dayOfWeekEnum,
-    startTime: z
-      .string()
-      .regex(timePattern, "Start time must be in HH:MM format"),
-    endTime: z
-      .string()
-      .regex(timePattern, "End time must be in HH:MM format"),
+    startTime: z.string().regex(timePattern, "Start time must be in HH:MM format"),
+    endTime: z.string().regex(timePattern, "End time must be in HH:MM format"),
   })
-  .refine(
-    (window) => window.startTime < window.endTime,
-    {
-      message: "Start time must be before end time",
-      path: ["endTime"],
-    },
-  );
+  .refine((window) => window.startTime < window.endTime, {
+    message: "Start time must be before end time",
+    path: ["endTime"],
+  });
 
 export const schedulePreferenceSchema = z.object({
   availabilityWindows: z
@@ -75,5 +68,3 @@ export const schedulePreferenceSchema = z.object({
 
 export type AvailabilityWindowFormData = z.infer<typeof availabilityWindowSchema>;
 export type SchedulePreferenceFormData = z.infer<typeof schedulePreferenceSchema>;
-
-

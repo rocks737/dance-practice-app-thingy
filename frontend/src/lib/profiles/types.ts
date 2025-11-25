@@ -48,12 +48,27 @@ export const PRIMARY_ROLE_OPTIONS = [
 ];
 
 export const WSDC_SKILL_LEVEL_OPTIONS = [
-  { value: WsdcSkillLevel.NEWCOMER, label: WSDC_SKILL_LEVEL_LABELS[WsdcSkillLevel.NEWCOMER] },
+  {
+    value: WsdcSkillLevel.NEWCOMER,
+    label: WSDC_SKILL_LEVEL_LABELS[WsdcSkillLevel.NEWCOMER],
+  },
   { value: WsdcSkillLevel.NOVICE, label: WSDC_SKILL_LEVEL_LABELS[WsdcSkillLevel.NOVICE] },
-  { value: WsdcSkillLevel.INTERMEDIATE, label: WSDC_SKILL_LEVEL_LABELS[WsdcSkillLevel.INTERMEDIATE] },
-  { value: WsdcSkillLevel.ADVANCED, label: WSDC_SKILL_LEVEL_LABELS[WsdcSkillLevel.ADVANCED] },
-  { value: WsdcSkillLevel.ALLSTAR, label: WSDC_SKILL_LEVEL_LABELS[WsdcSkillLevel.ALLSTAR] },
-  { value: WsdcSkillLevel.CHAMPION, label: WSDC_SKILL_LEVEL_LABELS[WsdcSkillLevel.CHAMPION] },
+  {
+    value: WsdcSkillLevel.INTERMEDIATE,
+    label: WSDC_SKILL_LEVEL_LABELS[WsdcSkillLevel.INTERMEDIATE],
+  },
+  {
+    value: WsdcSkillLevel.ADVANCED,
+    label: WSDC_SKILL_LEVEL_LABELS[WsdcSkillLevel.ADVANCED],
+  },
+  {
+    value: WsdcSkillLevel.ALLSTAR,
+    label: WSDC_SKILL_LEVEL_LABELS[WsdcSkillLevel.ALLSTAR],
+  },
+  {
+    value: WsdcSkillLevel.CHAMPION,
+    label: WSDC_SKILL_LEVEL_LABELS[WsdcSkillLevel.CHAMPION],
+  },
 ];
 
 /**
@@ -117,4 +132,3 @@ export interface PasswordChangeData {
   newPassword: string;
   confirmPassword: string;
 }
-

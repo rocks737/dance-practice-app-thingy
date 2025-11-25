@@ -94,10 +94,9 @@ export const SESSION_TYPE_OPTIONS = Object.entries(SESSION_TYPE_LABELS).map(
   ([value, label]) => ({ value: value as SessionType, label }),
 );
 
-export const SESSION_VISIBILITY_OPTIONS = Object.entries(
-  SESSION_VISIBILITY_LABELS,
-).map(([value, label]) => ({
-  value: value as SessionVisibility,
-  label,
-}));
-
+export const SESSION_VISIBILITY_OPTIONS = Object.entries(SESSION_VISIBILITY_LABELS).map(
+  ([value, label]) => ({
+    value: value as SessionVisibility,
+    label,
+  }),
+);

@@ -130,5 +130,3 @@ export function formatLocationSummary(location: LocationSummary): string {
   }
   return parts.join(", ");
 }
-
-

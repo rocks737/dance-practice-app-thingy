@@ -31,7 +31,9 @@ export function ProfileEditor({ user }: ProfileEditorProps) {
         role="alert"
         aria-live="polite"
       >
-        <p className="text-red-800 dark:text-red-300 font-semibold">Error loading profile</p>
+        <p className="text-red-800 dark:text-red-300 font-semibold">
+          Error loading profile
+        </p>
         <p className="text-red-700 dark:text-red-200 mt-1">{error.message}</p>
       </div>
     );
@@ -52,7 +54,9 @@ export function ProfileEditor({ user }: ProfileEditorProps) {
         <UserCircle className="w-8 h-8 text-gray-700 dark:text-gray-300" />
         <div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Profile</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400">Manage your personal information and preferences</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            Manage your personal information and preferences
+          </p>
         </div>
       </div>
 
@@ -86,4 +90,3 @@ export function ProfileEditor({ user }: ProfileEditorProps) {
     </div>
   );
 }
-

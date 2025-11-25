@@ -40,7 +40,7 @@ describe("Database-TypeScript Enum Alignment", () => {
 
     it("should have labels for all enum values", () => {
       const enumValues = Object.values(PrimaryRole).filter(
-        (v) => typeof v === "number"
+        (v) => typeof v === "number",
       ) as PrimaryRole[];
       enumValues.forEach((value) => {
         expect(PRIMARY_ROLE_LABELS[value]).toBeDefined();
@@ -51,9 +51,7 @@ describe("Database-TypeScript Enum Alignment", () => {
 
   describe("WsdcSkillLevel enum", () => {
     it("should have values within database constraint (0-5)", () => {
-      const values = Object.values(WsdcSkillLevel).filter(
-        (v) => typeof v === "number"
-      );
+      const values = Object.values(WsdcSkillLevel).filter((v) => typeof v === "number");
       values.forEach((value) => {
         expect(value).toBeGreaterThanOrEqual(0);
         expect(value).toBeLessThanOrEqual(5);
@@ -61,9 +59,7 @@ describe("Database-TypeScript Enum Alignment", () => {
     });
 
     it("should have exactly 6 values (matching WSDC divisions)", () => {
-      const values = Object.values(WsdcSkillLevel).filter(
-        (v) => typeof v === "number"
-      );
+      const values = Object.values(WsdcSkillLevel).filter((v) => typeof v === "number");
       expect(values).toHaveLength(6);
     });
 
@@ -78,7 +74,7 @@ describe("Database-TypeScript Enum Alignment", () => {
 
     it("should have labels for all enum values", () => {
       const enumValues = Object.values(WsdcSkillLevel).filter(
-        (v) => typeof v === "number"
+        (v) => typeof v === "number",
       ) as WsdcSkillLevel[];
       enumValues.forEach((value) => {
         expect(WSDC_SKILL_LEVEL_LABELS[value]).toBeDefined();
@@ -106,9 +102,7 @@ describe("Database-TypeScript Enum Alignment", () => {
 
   describe("AccountStatus enum", () => {
     it("should have values within database constraint (0-2)", () => {
-      const values = Object.values(AccountStatus).filter(
-        (v) => typeof v === "number"
-      );
+      const values = Object.values(AccountStatus).filter((v) => typeof v === "number");
       values.forEach((value) => {
         expect(value).toBeGreaterThanOrEqual(0);
         expect(value).toBeLessThanOrEqual(2);
@@ -116,9 +110,7 @@ describe("Database-TypeScript Enum Alignment", () => {
     });
 
     it("should have exactly 3 values", () => {
-      const values = Object.values(AccountStatus).filter(
-        (v) => typeof v === "number"
-      );
+      const values = Object.values(AccountStatus).filter((v) => typeof v === "number");
       expect(values).toHaveLength(3);
     });
 
@@ -130,7 +122,7 @@ describe("Database-TypeScript Enum Alignment", () => {
 
     it("should have labels for all enum values", () => {
       const enumValues = Object.values(AccountStatus).filter(
-        (v) => typeof v === "number"
+        (v) => typeof v === "number",
       ) as AccountStatus[];
       enumValues.forEach((value) => {
         expect(ACCOUNT_STATUS_LABELS[value]).toBeDefined();
@@ -164,26 +156,14 @@ describe("Database-TypeScript Enum Alignment", () => {
       };
 
       // Verify TypeScript enums respect these constraints
-      expect(PrimaryRole.LEADER).toBeGreaterThanOrEqual(
-        constraints.primary_role.min
-      );
-      expect(PrimaryRole.FOLLOWER).toBeLessThanOrEqual(
-        constraints.primary_role.max
-      );
+      expect(PrimaryRole.LEADER).toBeGreaterThanOrEqual(constraints.primary_role.min);
+      expect(PrimaryRole.FOLLOWER).toBeLessThanOrEqual(constraints.primary_role.max);
 
-      expect(WsdcSkillLevel.NEWCOMER).toBeGreaterThanOrEqual(
-        constraints.wsdc_level.min
-      );
-      expect(WsdcSkillLevel.CHAMPION).toBeLessThanOrEqual(
-        constraints.wsdc_level.max
-      );
+      expect(WsdcSkillLevel.NEWCOMER).toBeGreaterThanOrEqual(constraints.wsdc_level.min);
+      expect(WsdcSkillLevel.CHAMPION).toBeLessThanOrEqual(constraints.wsdc_level.max);
 
-      expect(AccountStatus.ACTIVE).toBeGreaterThanOrEqual(
-        constraints.account_status.min
-      );
-      expect(AccountStatus.DELETED).toBeLessThanOrEqual(
-        constraints.account_status.max
-      );
+      expect(AccountStatus.ACTIVE).toBeGreaterThanOrEqual(constraints.account_status.min);
+      expect(AccountStatus.DELETED).toBeLessThanOrEqual(constraints.account_status.max);
     });
   });
 
@@ -215,4 +195,3 @@ describe("Database-TypeScript Enum Alignment", () => {
     });
   });
 });
-

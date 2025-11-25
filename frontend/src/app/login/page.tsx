@@ -12,7 +12,7 @@ function isRedirectError(error: unknown): boolean {
   }
   const err = error as Error & { digest?: string };
   return (
-    error.message === "NEXT_REDIRECT" || 
+    error.message === "NEXT_REDIRECT" ||
     (err.digest?.startsWith("NEXT_REDIRECT") ?? false)
   );
 }
@@ -20,7 +20,7 @@ function isRedirectError(error: unknown): boolean {
 export default function Login({
   searchParams,
 }: {
-  searchParams: { message: string, returnUrl?: string };
+  searchParams: { message: string; returnUrl?: string };
 }) {
   const safeReturnUrl =
     typeof searchParams?.returnUrl === "string" &&
@@ -35,7 +35,7 @@ export default function Login({
     const email = formData.get("email") as string;
     const password = formData.get("password") as string;
     const returnUrl = formData.get("returnUrl") as string | null;
-    
+
     if (!email || !password) {
       const params = new URLSearchParams();
       params.set("message", "Email and password are required");
@@ -51,7 +51,7 @@ export default function Login({
       console.log("[LOGIN] Attempting sign in for:", email);
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
-        password
+        password,
       });
 
       if (error) {
@@ -61,7 +61,7 @@ export default function Login({
           code: (error as any).code,
           fullError: error,
         });
-        
+
         const params = new URLSearchParams();
         // Show user-friendly error messages based on error code
         let errorMessage = "Could not authenticate user";
@@ -70,7 +70,7 @@ export default function Login({
         } else if (error.message) {
           errorMessage = error.message;
         }
-        
+
         params.set("message", errorMessage);
         if (returnUrl) {
           params.set("returnUrl", returnUrl);
@@ -95,15 +95,18 @@ export default function Login({
       if (isRedirectError(err)) {
         throw err;
       }
-      
+
       console.error("[LOGIN ERROR] Unexpected error:", {
         error: err,
         message: err instanceof Error ? err.message : String(err),
         stack: err instanceof Error ? err.stack : undefined,
       });
-      
+
       const params = new URLSearchParams();
-      params.set("message", err instanceof Error ? err.message : "An unexpected error occurred");
+      params.set(
+        "message",
+        err instanceof Error ? err.message : "An unexpected error occurred",
+      );
       if (returnUrl) {
         params.set("returnUrl", returnUrl);
       }
@@ -118,7 +121,7 @@ export default function Login({
     const email = formData.get("email") as string;
     const password = formData.get("password") as string;
     const returnUrl = formData.get("returnUrl") as string | null;
-    
+
     if (!email || !password) {
       const params = new URLSearchParams();
       params.set("message", "Email and password are required");
@@ -149,7 +152,7 @@ export default function Login({
           code: (error as any).code,
           fullError: error,
         });
-        
+
         const params = new URLSearchParams();
         params.set("message", error.message || "Could not create account");
         if (returnUrl) {
@@ -176,15 +179,18 @@ export default function Login({
       if (isRedirectError(err)) {
         throw err;
       }
-      
+
       console.error("[SIGNUP ERROR] Unexpected error:", {
         error: err,
         message: err instanceof Error ? err.message : String(err),
         stack: err instanceof Error ? err.stack : undefined,
       });
-      
+
       const params = new URLSearchParams();
-      params.set("message", err instanceof Error ? err.message : "An unexpected error occurred");
+      params.set(
+        "message",
+        err instanceof Error ? err.message : "An unexpected error occurred",
+      );
       if (returnUrl) {
         params.set("returnUrl", returnUrl);
       }
@@ -216,37 +222,19 @@ export default function Login({
       </Link>
 
       <form className="animate-in flex-1 flex flex-col w-full justify-center gap-2 text-foreground">
-        {safeReturnUrl && (
-          <input type="hidden" name="returnUrl" value={safeReturnUrl} />
-        )}
+        {safeReturnUrl && <input type="hidden" name="returnUrl" value={safeReturnUrl} />}
         <label className="text-md" htmlFor="email">
           Email
         </label>
-        <Input
-          name="email"
-          placeholder="you@example.com"
-          required
-        />
+        <Input name="email" placeholder="you@example.com" required />
         <label className="text-md" htmlFor="password">
           Password
         </label>
-        <Input
-          type="password"
-          name="password"
-          placeholder="••••••••"
-          required
-        />
-        <LoginButton
-          formAction={signIn}
-          pendingText="Signing In..."
-        >
+        <Input type="password" name="password" placeholder="••••••••" required />
+        <LoginButton formAction={signIn} pendingText="Signing In...">
           Sign In
         </LoginButton>
-        <LoginButton
-          formAction={signUp}
-          variant="outline"
-          pendingText="Signing Up..."
-        >
+        <LoginButton formAction={signUp} variant="outline" pendingText="Signing Up...">
           Sign Up
         </LoginButton>
         {searchParams?.message && (

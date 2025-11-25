@@ -8,15 +8,12 @@ jest.mock("@/lib/supabase/server", () => ({
   createClient: jest.fn(),
 }));
 
-const mockSessionsExplorer = jest.fn(
-  (props: { authUserId: string }) => (
-    <div data-testid="sessions-explorer" data-auth-user={props.authUserId} />
-  ),
-);
+const mockSessionsExplorer = jest.fn((props: { authUserId: string }) => (
+  <div data-testid="sessions-explorer" data-auth-user={props.authUserId} />
+));
 
 jest.mock("@/components/sessions/SessionsExplorer", () => ({
-  SessionsExplorer: (props: { authUserId: string }) =>
-    mockSessionsExplorer(props),
+  SessionsExplorer: (props: { authUserId: string }) => mockSessionsExplorer(props),
 }));
 
 describe("SessionsPage", () => {
@@ -35,9 +32,7 @@ describe("SessionsPage", () => {
     const Page = await SessionsPage();
     render(Page);
 
-    expect(
-      screen.getByRole("heading", { name: /sessions/i }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /sessions/i })).toBeInTheDocument();
     expect(
       screen.getByText(/search, filter, and manage your practice sessions/i),
     ).toBeInTheDocument();
@@ -46,5 +41,4 @@ describe("SessionsPage", () => {
       expect.objectContaining({ authUserId: "test-user-123" }),
     );
   });
-})
-
+});

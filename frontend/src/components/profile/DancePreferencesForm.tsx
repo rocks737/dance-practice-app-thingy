@@ -5,12 +5,27 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2, Save } from "lucide-react";
 import { toast } from "sonner";
-import { UserProfile, PrimaryRole, WsdcSkillLevel, PRIMARY_ROLE_OPTIONS, WSDC_SKILL_LEVEL_OPTIONS } from "@/lib/profiles/types";
-import { dancePreferencesSchema, type DancePreferencesFormData } from "@/lib/profiles/validation";
+import {
+  UserProfile,
+  PrimaryRole,
+  WsdcSkillLevel,
+  PRIMARY_ROLE_OPTIONS,
+  WSDC_SKILL_LEVEL_OPTIONS,
+} from "@/lib/profiles/types";
+import {
+  dancePreferencesSchema,
+  type DancePreferencesFormData,
+} from "@/lib/profiles/validation";
 import { updateProfile } from "@/lib/profiles/api";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -55,7 +70,14 @@ export function DancePreferencesForm({ profile, onUpdate }: DancePreferencesForm
       bio: profile.bio ?? "",
       dance_goals: profile.danceGoals ?? "",
     });
-  }, [profile.primaryRole, profile.wsdcLevel, profile.competitivenessLevel, profile.bio, profile.danceGoals, reset]);
+  }, [
+    profile.primaryRole,
+    profile.wsdcLevel,
+    profile.competitivenessLevel,
+    profile.bio,
+    profile.danceGoals,
+    reset,
+  ]);
 
   const onSubmit = async (data: DancePreferencesFormData) => {
     setIsSaving(true);
@@ -67,24 +89,25 @@ export function DancePreferencesForm({ profile, onUpdate }: DancePreferencesForm
         bio: data.bio || null,
         dance_goals: data.dance_goals || null,
       });
-      
+
       toast.success("Dance preferences updated successfully");
       reset(data);
-      
+
       // Refetch profile to get latest data
       if (onUpdate) {
         onUpdate();
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to update preferences");
+      toast.error(
+        error instanceof Error ? error.message : "Failed to update preferences",
+      );
     } finally {
       setIsSaving(false);
     }
   };
 
-
-  const roleOption = PRIMARY_ROLE_OPTIONS.find(opt => opt.value === primaryRole);
-  const levelOption = WSDC_SKILL_LEVEL_OPTIONS.find(opt => opt.value === wsdcLevel);
+  const roleOption = PRIMARY_ROLE_OPTIONS.find((opt) => opt.value === primaryRole);
+  const levelOption = WSDC_SKILL_LEVEL_OPTIONS.find((opt) => opt.value === wsdcLevel);
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
@@ -101,10 +124,17 @@ export function DancePreferencesForm({ profile, onUpdate }: DancePreferencesForm
             <Label htmlFor="primary_role">Primary Dance Role</Label>
             <Select
               value={primaryRole?.toString()}
-              onValueChange={(value) => setValue("primary_role", parseInt(value) as PrimaryRole, { shouldDirty: true })}
+              onValueChange={(value) =>
+                setValue("primary_role", parseInt(value) as PrimaryRole, {
+                  shouldDirty: true,
+                })
+              }
               disabled={isSaving}
             >
-              <SelectTrigger id="primary_role" className={errors.primary_role ? "border-red-500" : ""}>
+              <SelectTrigger
+                id="primary_role"
+                className={errors.primary_role ? "border-red-500" : ""}
+              >
                 <SelectValue placeholder="Select your primary role" />
               </SelectTrigger>
               <SelectContent>
@@ -134,7 +164,10 @@ export function DancePreferencesForm({ profile, onUpdate }: DancePreferencesForm
               }}
               disabled={isSaving}
             >
-              <SelectTrigger id="wsdc_level" className={errors.wsdc_level ? "border-red-500" : ""}>
+              <SelectTrigger
+                id="wsdc_level"
+                className={errors.wsdc_level ? "border-red-500" : ""}
+              >
                 <SelectValue placeholder="Select your skill level" />
               </SelectTrigger>
               <SelectContent>
@@ -166,13 +199,17 @@ export function DancePreferencesForm({ profile, onUpdate }: DancePreferencesForm
                 max={5}
                 step={1}
                 value={[competitivenessLevel]}
-                onValueChange={(value) => setValue("competitiveness_level", value[0], { shouldDirty: true })}
+                onValueChange={(value) =>
+                  setValue("competitiveness_level", value[0], { shouldDirty: true })
+                }
                 disabled={isSaving}
                 className={errors.competitiveness_level ? "border-red-500" : ""}
               />
             </div>
             {errors.competitiveness_level && (
-              <p className="mt-1 text-sm text-red-500">{errors.competitiveness_level.message}</p>
+              <p className="mt-1 text-sm text-red-500">
+                {errors.competitiveness_level.message}
+              </p>
             )}
             <div className="mt-2 flex justify-between text-xs text-gray-500 dark:text-gray-400">
               <span>1 - Social</span>
@@ -185,7 +222,9 @@ export function DancePreferencesForm({ profile, onUpdate }: DancePreferencesForm
           <div>
             <div className="flex items-center justify-between mb-2">
               <Label htmlFor="bio">About You</Label>
-              <span className={`text-xs ${bio.length > 1000 ? "text-red-500" : "text-gray-500 dark:text-gray-400"}`}>
+              <span
+                className={`text-xs ${bio.length > 1000 ? "text-red-500" : "text-gray-500 dark:text-gray-400"}`}
+              >
                 {bio.length} / 1000
               </span>
             </div>
@@ -197,9 +236,12 @@ export function DancePreferencesForm({ profile, onUpdate }: DancePreferencesForm
               rows={6}
               className={errors.bio ? "border-red-500" : ""}
             />
-            {errors.bio && <p className="mt-1 text-sm text-red-500">{errors.bio.message}</p>}
+            {errors.bio && (
+              <p className="mt-1 text-sm text-red-500">{errors.bio.message}</p>
+            )}
             <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-              Share your story, experience level, or anything you'd like potential practice partners to know
+              Share your story, experience level, or anything you'd like potential
+              practice partners to know
             </p>
           </div>
 
@@ -220,7 +262,9 @@ export function DancePreferencesForm({ profile, onUpdate }: DancePreferencesForm
               rows={4}
               className={errors.dance_goals ? "border-red-500" : ""}
             />
-            {errors.dance_goals && <p className="mt-1 text-sm text-red-500">{errors.dance_goals.message}</p>}
+            {errors.dance_goals && (
+              <p className="mt-1 text-sm text-red-500">{errors.dance_goals.message}</p>
+            )}
             <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
               What you're working towards (competitions, social dancing, technique, etc.)
             </p>
@@ -247,4 +291,3 @@ export function DancePreferencesForm({ profile, onUpdate }: DancePreferencesForm
     </div>
   );
 }
-

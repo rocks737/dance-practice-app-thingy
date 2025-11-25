@@ -5,15 +5,7 @@ import dynamic from "next/dynamic";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import {
-  CalendarPlus,
-  Loader2,
-  Plus,
-  Trash2,
-  X,
-  List,
-  Calendar,
-} from "lucide-react";
+import { CalendarPlus, Loader2, Plus, Trash2, X, List, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -47,22 +39,19 @@ import {
   schedulePreferenceSchema,
   type SchedulePreferenceFormData,
 } from "@/lib/schedule/validation";
-import {
-  createSchedulePreference,
-  updateSchedulePreference,
-} from "@/lib/schedule/api";
+import { createSchedulePreference, updateSchedulePreference } from "@/lib/schedule/api";
 
 // Dynamically import the calendar to avoid SSR issues
 const ScheduleAvailabilityCalendar = dynamic(
   () =>
     import("@/components/schedule/ScheduleAvailabilityCalendar").then(
-      (mod) => mod.ScheduleAvailabilityCalendar
+      (mod) => mod.ScheduleAvailabilityCalendar,
     ),
-  { ssr: false }
+  { ssr: false },
 );
 
 interface PreferenceFormProps {
-  authUserId: string;
+  profileId: string;
   mode: "create" | "edit";
   preference?: SchedulePreference;
   onSuccess: (preference: SchedulePreference) => void;
@@ -70,16 +59,13 @@ interface PreferenceFormProps {
 }
 
 export function PreferenceForm({
-  authUserId,
+  profileId,
   mode,
   preference,
   onSuccess,
   onClose,
 }: PreferenceFormProps) {
-  const defaultValues = useMemo(
-    () => toFormData(preference),
-    [preference],
-  );
+  const defaultValues = useMemo(() => toFormData(preference), [preference]);
 
   const {
     control,
@@ -129,13 +115,13 @@ export function PreferenceForm({
 
   const handleCalendarUpdate = (
     oldWindow: AvailabilityWindow,
-    newWindow: AvailabilityWindow
+    newWindow: AvailabilityWindow,
   ) => {
     const index = fields.findIndex(
       (f) =>
         f.dayOfWeek === oldWindow.dayOfWeek &&
         f.startTime === oldWindow.startTime &&
-        f.endTime === oldWindow.endTime
+        f.endTime === oldWindow.endTime,
     );
     if (index >= 0) {
       setValue(`availabilityWindows.${index}`, newWindow, { shouldDirty: true });
@@ -147,7 +133,7 @@ export function PreferenceForm({
       (f) =>
         f.dayOfWeek === window.dayOfWeek &&
         f.startTime === window.startTime &&
-        f.endTime === window.endTime
+        f.endTime === window.endTime,
     );
     if (index >= 0) {
       remove(index);
@@ -158,29 +144,26 @@ export function PreferenceForm({
     try {
       const result =
         mode === "create"
-          ? await createSchedulePreference({ userId: authUserId, data: formData })
+          ? await createSchedulePreference({ userId: profileId, data: formData })
           : await updateSchedulePreference({
-              userId: authUserId,
+              userId: profileId,
               preferenceId: preference!.id,
               data: formData,
             });
       toast.success(
-        mode === "create"
-          ? "Schedule preference created"
-          : "Schedule preference updated",
+        mode === "create" ? "Schedule preference created" : "Schedule preference updated",
       );
       onSuccess(result);
       onClose();
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Unable to save preference",
-      );
+      toast.error(error instanceof Error ? error.message : "Unable to save preference");
     }
   };
 
   const addAvailabilityWindow = () => {
     append({
-      dayOfWeek: DAY_OF_WEEK_VALUES[Math.min(fields.length, DAY_OF_WEEK_VALUES.length - 1)],
+      dayOfWeek:
+        DAY_OF_WEEK_VALUES[Math.min(fields.length, DAY_OF_WEEK_VALUES.length - 1)],
       startTime: "18:00",
       endTime: "20:00",
     });
@@ -244,7 +227,9 @@ export function PreferenceForm({
           </div>
           <div>
             <p className="text-lg font-semibold">
-              {mode === "create" ? "Create schedule preference" : "Edit schedule preference"}
+              {mode === "create"
+                ? "Create schedule preference"
+                : "Edit schedule preference"}
             </p>
             <p className="text-sm text-muted-foreground">
               Add availability windows, partner preferences, and travel notes.
@@ -277,22 +262,34 @@ export function PreferenceForm({
 
           <TabsContent value="list" className="space-y-3 mt-4">
             <div className="flex justify-end">
-              <Button type="button" size="sm" variant="outline" onClick={addAvailabilityWindow}>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={addAvailabilityWindow}
+              >
                 <Plus className="mr-2 h-4 w-4" />
                 Add window
               </Button>
             </div>
             <div className="space-y-3">
               {fields.map((field, index) => (
-                <div key={field.id} className="flex flex-wrap items-center gap-3 rounded-md border bg-background p-3">
+                <div
+                  key={field.id}
+                  className="flex flex-wrap items-center gap-3 rounded-md border bg-background p-3"
+                >
                   <div className="w-36">
                     <Label className="text-xs text-muted-foreground">Day</Label>
                     <Select
                       value={watch(`availabilityWindows.${index}.dayOfWeek`)}
                       onValueChange={(value) =>
-                        setValue(`availabilityWindows.${index}.dayOfWeek`, value as typeof DAY_OF_WEEK_VALUES[number], {
-                          shouldDirty: true,
-                        })
+                        setValue(
+                          `availabilityWindows.${index}.dayOfWeek`,
+                          value as (typeof DAY_OF_WEEK_VALUES)[number],
+                          {
+                            shouldDirty: true,
+                          },
+                        )
                       }
                     >
                       <SelectTrigger>
@@ -397,9 +394,7 @@ export function PreferenceForm({
             label: FOCUS_AREA_LABELS[value],
           }))}
           selected={preferredFocusAreas ?? []}
-          onToggle={(value, checked) =>
-            handleFocusToggle(value as FocusArea, checked)
-          }
+          onToggle={(value, checked) => handleFocusToggle(value as FocusArea, checked)}
         />
       </section>
 
@@ -435,7 +430,9 @@ export function PreferenceForm({
         </div>
 
         <div>
-          <Label className="text-sm font-semibold">Preferred location IDs (optional)</Label>
+          <Label className="text-sm font-semibold">
+            Preferred location IDs (optional)
+          </Label>
           <p className="text-xs text-muted-foreground mb-2">
             Paste Supabase location UUIDs to narrow down matches.
           </p>
@@ -482,9 +479,7 @@ export function PreferenceForm({
           {...register("notes")}
         />
         {errors.notes && (
-          <p className="text-xs text-destructive">
-            {errors.notes.message}
-          </p>
+          <p className="text-xs text-destructive">{errors.notes.message}</p>
         )}
       </section>
 
@@ -528,9 +523,7 @@ function PreferenceCheckboxGroup({
     <div className="space-y-2 rounded-md border bg-background p-3">
       <div>
         <p className="text-sm font-semibold">{title}</p>
-        {description && (
-          <p className="text-xs text-muted-foreground">{description}</p>
-        )}
+        {description && <p className="text-xs text-muted-foreground">{description}</p>}
       </div>
       <div className="space-y-2">
         {options.map((option) => (
@@ -581,5 +574,3 @@ function toFormData(preference?: SchedulePreference): SchedulePreferenceFormData
 function isValidUuid(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 }
-
-

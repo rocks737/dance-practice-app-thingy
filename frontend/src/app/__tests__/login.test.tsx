@@ -16,11 +16,7 @@ describe("Login Page Logic", () => {
 
     testCases.forEach(({ input, expected }) => {
       const safeReturnUrl =
-        typeof input === "string" &&
-        input &&
-        input !== "undefined"
-          ? input
-          : undefined;
+        typeof input === "string" && input && input !== "undefined" ? input : undefined;
       expect(safeReturnUrl).toBe(expected);
     });
   });
@@ -32,7 +28,7 @@ describe("Login Page Logic", () => {
     params.set("message", "Could not authenticate user");
     params.set("returnUrl", "/dashboard");
     const query = params.toString();
-    
+
     expect(query).toContain("message=Could+not+authenticate+user");
     expect(query).toContain("returnUrl=%2Fdashboard");
   });
@@ -42,7 +38,7 @@ describe("Login Page Logic", () => {
     params.set("message", "Could not authenticate user");
     const query = params.toString();
     const redirectUrl = `/login${query ? `?${query}` : ""}`;
-    
+
     expect(redirectUrl).toBe("/login?message=Could+not+authenticate+user");
   });
 
@@ -52,7 +48,7 @@ describe("Login Page Logic", () => {
     params.set("returnUrl", "/profile");
     const query = params.toString();
     const redirectUrl = `/login${query ? `?${query}` : ""}`;
-    
+
     expect(redirectUrl).toContain("message=Error");
     expect(redirectUrl).toContain("returnUrl=%2Fprofile");
   });

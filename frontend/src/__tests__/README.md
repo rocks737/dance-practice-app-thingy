@@ -5,6 +5,7 @@ This directory contains tests for the Dance Practice App frontend.
 ## Test Setup
 
 We use:
+
 - **Jest** - Test runner
 - **React Testing Library** - Component testing
 - **@testing-library/user-event** - User interaction simulation
@@ -50,20 +51,24 @@ src/
 Current test coverage includes:
 
 ### Components
+
 - ✅ AppSidebar - Navigation, user display, admin visibility
 - ✅ ThemeToggle - Theme switching functionality
 - ✅ ThemeSettings - Theme preference UI
 
 ### Hooks
+
 - ✅ useUserProfile - User profile data fetching
 - ✅ useUserRoles - User role and permissions
 
 ### Pages
+
 - ✅ Profile - Page rendering
 - ✅ Sessions - Page rendering and create button
 - ✅ Settings - Theme settings and page structure
 
 ### Integration
+
 - ✅ Navigation - Complete sidebar navigation flow
 
 ## Writing New Tests
@@ -86,30 +91,34 @@ describe('MyComponent', () => {
 ### Hook Test Example
 
 ```typescript
-import { renderHook, waitFor } from '@testing-library/react'
-import { useMyHook } from './useMyHook'
+import { renderHook, waitFor } from "@testing-library/react";
+import { useMyHook } from "./useMyHook";
 
-describe('useMyHook', () => {
-  it('returns expected data', async () => {
-    const { result } = renderHook(() => useMyHook())
-    
+describe("useMyHook", () => {
+  it("returns expected data", async () => {
+    const { result } = renderHook(() => useMyHook());
+
     await waitFor(() => {
-      expect(result.current.data).toBeDefined()
-    })
-  })
-})
+      expect(result.current.data).toBeDefined();
+    });
+  });
+});
 ```
 
 ## Test Utilities
 
 ### Mock Data
+
 Use the mock data from `test-utils.tsx`:
+
 - `mockUser` - Mock authenticated user
 - `mockUserProfile` - Mock user profile data
 - `mockAdminRole` - Mock admin role
 
 ### Custom Render
+
 The custom `render` function includes theme provider:
+
 ```typescript
 import { render } from '@/test/test-utils'
 
@@ -119,6 +128,7 @@ render(<MyComponent />)
 ## Mocked Dependencies
 
 The following are mocked globally in `jest.setup.ts`:
+
 - Next.js navigation (`useRouter`, `usePathname`, `redirect`)
 - Supabase client
 - next-themes
@@ -126,9 +136,9 @@ The following are mocked globally in `jest.setup.ts`:
 ## CI/CD Integration
 
 Tests run automatically on:
+
 - Pull requests
 - Push to main branch
 - Manual workflow dispatch
 
 See `.github/workflows/frontend-tests.yml` for CI configuration.
-

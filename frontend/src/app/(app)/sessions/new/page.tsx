@@ -18,7 +18,7 @@ export default function NewSessionPage() {
           <h1 className="text-3xl font-bold text-gray-900">Create New Session</h1>
         </div>
       </div>
-      
+
       <div className="bg-white rounded-lg shadow p-6">
         <p className="text-gray-600">
           Create a new practice session by filling in details like date, time, location,
@@ -33,4 +33,3 @@ export default function NewSessionPage() {
     </div>
   );
 }
-

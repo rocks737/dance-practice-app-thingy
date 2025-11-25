@@ -2,12 +2,7 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
-import type {
-  Database,
-  Tables,
-  TablesInsert,
-  TablesUpdate,
-} from "@/lib/supabase/types";
+import type { Database, Tables, TablesInsert, TablesUpdate } from "@/lib/supabase/types";
 import {
   SessionFilters,
   SessionListItem,
@@ -101,11 +96,7 @@ export async function fetchSessions(
   options: FetchSessionsOptions = {},
 ): Promise<FetchSessionsResult> {
   const supabase = createClient();
-  const {
-    filters = defaultSessionFilters,
-    limit = 20,
-    offset = 0,
-  } = options;
+  const { filters = defaultSessionFilters, limit = 20, offset = 0 } = options;
 
   let query = supabase
     .from("sessions")
@@ -131,10 +122,7 @@ export async function fetchSessions(
   };
 }
 
-function applySessionFilters(
-  query: SessionQueryBuilder,
-  filters: SessionFilters,
-) {
+function applySessionFilters(query: SessionQueryBuilder, filters: SessionFilters) {
   const normalized = { ...defaultSessionFilters, ...filters };
 
   if (normalized.searchText?.trim()) {
@@ -196,9 +184,7 @@ function mapSessionRecord(record: RawSessionRecord): SessionListItem {
   };
 }
 
-export async function createSession(
-  input: CreateSessionInput,
-): Promise<SessionListItem> {
+export async function createSession(input: CreateSessionInput): Promise<SessionListItem> {
   const supabase = createClient();
   const payload: TablesInsert<"sessions"> = {
     id: crypto.randomUUID(),
@@ -226,15 +212,12 @@ export async function createSession(
   return mapSessionRecord(data as RawSessionRecord);
 }
 
-export async function updateSession(
-  input: UpdateSessionInput,
-): Promise<SessionListItem> {
+export async function updateSession(input: UpdateSessionInput): Promise<SessionListItem> {
   const supabase = createClient();
   const patch: TablesUpdate<"sessions"> = {
     status: input.patch.status,
     visibility: input.patch.visibility,
-    capacity:
-      input.patch.capacity === undefined ? undefined : input.patch.capacity,
+    capacity: input.patch.capacity === undefined ? undefined : input.patch.capacity,
   };
 
   const { data, error } = await supabase
@@ -250,4 +233,3 @@ export async function updateSession(
 
   return mapSessionRecord(data as RawSessionRecord);
 }
-

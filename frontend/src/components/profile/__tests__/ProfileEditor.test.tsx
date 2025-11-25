@@ -15,10 +15,14 @@ jest.mock("../PersonalInfoForm", () => ({
   PersonalInfoForm: () => <div data-testid="personal-info-form">Personal Info Form</div>,
 }));
 jest.mock("../DancePreferencesForm", () => ({
-  DancePreferencesForm: () => <div data-testid="dance-preferences-form">Dance Preferences Form</div>,
+  DancePreferencesForm: () => (
+    <div data-testid="dance-preferences-form">Dance Preferences Form</div>
+  ),
 }));
 jest.mock("../PasswordChangeForm", () => ({
-  PasswordChangeForm: () => <div data-testid="password-change-form">Password Change Form</div>,
+  PasswordChangeForm: () => (
+    <div data-testid="password-change-form">Password Change Form</div>
+  ),
 }));
 jest.mock("../ProfileSettings", () => ({
   ProfileSettings: () => <div data-testid="profile-settings">Profile Settings</div>,
@@ -112,7 +116,7 @@ describe("ProfileEditor", () => {
 
     expect(screen.getByText("Profile")).toBeInTheDocument();
     expect(screen.getByText(/manage your personal information/i)).toBeInTheDocument();
-    
+
     // Check tabs
     expect(screen.getByRole("tab", { name: /personal/i })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: /dance/i })).toBeInTheDocument();
@@ -205,4 +209,3 @@ describe("ProfileEditor", () => {
     expect(screen.getByText(/manage your personal information/i)).toBeInTheDocument();
   });
 });
-

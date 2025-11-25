@@ -76,4 +76,3 @@ describe("Root Error Page", () => {
     process.env.NODE_ENV = originalEnv;
   });
 });
-

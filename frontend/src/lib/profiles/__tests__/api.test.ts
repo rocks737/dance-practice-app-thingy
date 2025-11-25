@@ -1,3 +1,41 @@
+import { describe, it, expect, jest, beforeEach } from "@jest/globals";
+import { fetchProfileIdByAuthUserId } from "../api";
+
+describe("profiles/api", () => {
+  const mockSupabase: any = {
+    from: jest.fn(),
+  };
+
+  const table = {
+    select: jest.fn().mockReturnThis(),
+    eq: jest.fn().mockReturnThis(),
+    maybeSingle: jest.fn(),
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockSupabase.from.mockReturnValue(table);
+  });
+
+  it("queries user_profiles by auth_user_id and returns profile id", async () => {
+    table.maybeSingle.mockResolvedValue({ data: { id: "profile-123" }, error: null });
+
+    const result = await fetchProfileIdByAuthUserId(mockSupabase, "auth-abc");
+
+    expect(mockSupabase.from).toHaveBeenCalledWith("user_profiles");
+    expect(table.select).toHaveBeenCalledWith("id");
+    expect(table.eq).toHaveBeenCalledWith("auth_user_id", "auth-abc");
+    expect(result).toBe("profile-123");
+  });
+
+  it("returns null on error", async () => {
+    table.maybeSingle.mockResolvedValue({ data: null, error: { message: "boom" } });
+
+    const result = await fetchProfileIdByAuthUserId(mockSupabase, "auth-abc");
+    expect(result).toBeNull();
+  });
+});
+
 /**
  * Tests for profiles API
  */
@@ -10,7 +48,7 @@ import {
   createDefaultUserProfile,
   ensureUserProfile,
   updatePassword,
-} from "../api";
+} from "../client";
 import type { UserProfile, CreateProfileParams, ProfileUpdateData } from "../types";
 
 // Mock Supabase client
@@ -110,9 +148,7 @@ describe("profiles/api", () => {
         error: { code: "SOME_ERROR", message: "Database error" },
       });
 
-      await expect(getProfileByAuthUserId("auth-456")).rejects.toThrow(
-        "Database error"
-      );
+      await expect(getProfileByAuthUserId("auth-456")).rejects.toThrow("Database error");
     });
   });
 
@@ -215,7 +251,7 @@ describe("profiles/api", () => {
           bio: "New bio",
           competitiveness_level: 5,
           updated_at: expect.any(String),
-        })
+        }),
       );
       expect(mockSupabase.eq).toHaveBeenCalledWith("id", "profile-123");
       expect(result.firstName).toBe("Updated");
@@ -229,9 +265,9 @@ describe("profiles/api", () => {
         error: { message: "Update failed" },
       });
 
-      await expect(
-        updateProfile("profile-123", { first_name: "Test" })
-      ).rejects.toThrow("Update failed");
+      await expect(updateProfile("profile-123", { first_name: "Test" })).rejects.toThrow(
+        "Update failed",
+      );
     });
   });
 
@@ -297,7 +333,7 @@ describe("profiles/api", () => {
           competitiveness_level: 3,
           profile_visible: true,
           account_status: 0,
-        })
+        }),
       );
       expect(result.authUserId).toBe("auth-new");
       expect(result.firstName).toBe("New");
@@ -487,4 +523,3 @@ describe("profiles/api", () => {
     });
   });
 });
-

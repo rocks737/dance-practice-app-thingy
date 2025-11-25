@@ -1,11 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
-import type {
-  Database,
-  Tables,
-  TablesInsert,
-  TablesUpdate,
-} from "@/lib/supabase/types";
+import type { Database, Tables, TablesInsert, TablesUpdate } from "@/lib/supabase/types";
 import {
   FOCUS_AREA_VALUES,
   PREFERRED_ROLE_VALUES,
@@ -60,7 +55,10 @@ type SchedulePreferenceRoleRow = Tables<"schedule_preference_roles">;
 type SchedulePreferenceLevelRow = Tables<"schedule_preference_levels">;
 type SchedulePreferenceFocusRow = Tables<"schedule_preference_focus">;
 type SchedulePreferenceLocationRow = Tables<"schedule_preference_locations"> & {
-  location: Pick<Tables<"locations">, "id" | "name" | "city" | "state" | "country"> | null;
+  location: Pick<
+    Tables<"locations">,
+    "id" | "name" | "city" | "state" | "country"
+  > | null;
 };
 
 type RawSchedulePreferenceRow = SchedulePreferenceRow & {
@@ -212,9 +210,7 @@ async function fetchPreferenceById(
   return mapPreference(data as RawSchedulePreferenceRow);
 }
 
-function normalizePayload(
-  data: SchedulePreferenceFormData,
-): SchedulePreferencePayload {
+function normalizePayload(data: SchedulePreferenceFormData): SchedulePreferencePayload {
   return {
     availabilityWindows: data.availabilityWindows ?? [],
     preferredRoles: data.preferredRoles ?? [],
@@ -249,9 +245,7 @@ function mapPreference(row: RawSchedulePreferenceRow): SchedulePreference {
   };
 }
 
-function mapLocations(
-  rows: SchedulePreferenceLocationRow[] | null,
-): LocationSummary[] {
+function mapLocations(rows: SchedulePreferenceLocationRow[] | null): LocationSummary[] {
   if (!rows) {
     return [];
   }
@@ -275,9 +269,7 @@ function mapLocations(
   return Array.from(byId.values());
 }
 
-function mapWindows(
-  rows: SchedulePreferenceWindowRow[] | null,
-): AvailabilityWindow[] {
+function mapWindows(rows: SchedulePreferenceWindowRow[] | null): AvailabilityWindow[] {
   if (!rows) {
     return [];
   }
@@ -417,11 +409,20 @@ async function deleteChildRows(
   preferenceId: string,
 ): Promise<void> {
   const responses = await Promise.all([
-    supabase.from("schedule_preference_windows").delete().eq("preference_id", preferenceId),
+    supabase
+      .from("schedule_preference_windows")
+      .delete()
+      .eq("preference_id", preferenceId),
     supabase.from("schedule_preference_roles").delete().eq("preference_id", preferenceId),
-    supabase.from("schedule_preference_levels").delete().eq("preference_id", preferenceId),
+    supabase
+      .from("schedule_preference_levels")
+      .delete()
+      .eq("preference_id", preferenceId),
     supabase.from("schedule_preference_focus").delete().eq("preference_id", preferenceId),
-    supabase.from("schedule_preference_locations").delete().eq("preference_id", preferenceId),
+    supabase
+      .from("schedule_preference_locations")
+      .delete()
+      .eq("preference_id", preferenceId),
   ]);
 
   for (const response of responses) {
@@ -431,5 +432,3 @@ async function deleteChildRows(
     }
   }
 }
-
-

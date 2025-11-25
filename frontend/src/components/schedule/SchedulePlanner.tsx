@@ -14,12 +14,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useSchedulePreferences } from "@/lib/hooks/useSchedulePreferences";
 import {
   DAY_OF_WEEK_LABELS,
@@ -35,12 +30,12 @@ import { PreferenceForm } from "@/components/schedule/PreferenceForm";
 import { deleteSchedulePreference } from "@/lib/schedule/api";
 
 interface SchedulePlannerProps {
-  authUserId: string;
+  profileId: string;
 }
 
-export function SchedulePlanner({ authUserId }: SchedulePlannerProps) {
+export function SchedulePlanner({ profileId }: SchedulePlannerProps) {
   const { preferences, loading, refreshing, error, refresh } =
-    useSchedulePreferences(authUserId);
+    useSchedulePreferences(profileId);
   const [editorState, setEditorState] = useState<{
     mode: "create" | "edit";
     preference?: SchedulePreference;
@@ -55,15 +50,13 @@ export function SchedulePlanner({ authUserId }: SchedulePlannerProps) {
     setDeletingId(preference.id);
     try {
       await deleteSchedulePreference({
-        userId: authUserId,
+        userId: profileId,
         preferenceId: preference.id,
       });
       toast.success("Schedule preference deleted");
       await refresh();
     } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : "Unable to delete preference",
-      );
+      toast.error(err instanceof Error ? err.message : "Unable to delete preference");
     } finally {
       setDeletingId(null);
     }
@@ -71,28 +64,15 @@ export function SchedulePlanner({ authUserId }: SchedulePlannerProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 className="text-xl font-semibold tracking-tight text-foreground">
-            Your schedule preferences
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            Define availability and matching settings to find compatible partners.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing}>
-            <RefreshCcw className="mr-2 h-4 w-4" />
-            Refresh
-          </Button>
-          <Button
-            size="sm"
-            onClick={() => setEditorState({ mode: "create" })}
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            New preference
-          </Button>
-        </div>
+      <div className="flex items-center gap-2 justify-end">
+        <Button variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing}>
+          <RefreshCcw className="mr-2 h-4 w-4" />
+          Refresh
+        </Button>
+        <Button size="sm" onClick={() => setEditorState({ mode: "create" })}>
+          <Plus className="mr-2 h-4 w-4" />
+          New preference
+        </Button>
       </div>
 
       {error && (
@@ -160,7 +140,7 @@ export function SchedulePlanner({ authUserId }: SchedulePlannerProps) {
           </DialogHeader>
           {editorState && (
             <PreferenceForm
-              authUserId={authUserId}
+              profileId={profileId}
               mode={editorState.mode}
               preference={editorState.preference}
               onSuccess={async (_saved) => {
@@ -227,25 +207,29 @@ function PreferenceCard({ preference, onEdit, onDelete, deleting }: PreferenceCa
         <div className="space-y-2">
           <p className="text-xs uppercase text-muted-foreground">Preferred roles</p>
           <div className="flex flex-wrap gap-2">
-            {preference.preferredRoles.length === 0
-              ? <Badge variant="secondary">Any role</Badge>
-              : preference.preferredRoles.map((role) => (
-                  <Badge key={role} variant="secondary">
-                    {PREFERRED_ROLE_LABELS[role]}
-                  </Badge>
-                ))}
+            {preference.preferredRoles.length === 0 ? (
+              <Badge variant="secondary">Any role</Badge>
+            ) : (
+              preference.preferredRoles.map((role) => (
+                <Badge key={role} variant="secondary">
+                  {PREFERRED_ROLE_LABELS[role]}
+                </Badge>
+              ))
+            )}
           </div>
         </div>
         <div className="space-y-2">
           <p className="text-xs uppercase text-muted-foreground">Skill levels</p>
           <div className="flex flex-wrap gap-2">
-            {preference.preferredLevels.length === 0
-              ? <Badge variant="secondary">All levels</Badge>
-              : preference.preferredLevels.map((level) => (
-                  <Badge key={level} variant="secondary">
-                    {WSDC_SKILL_LEVEL_LABELS[level]}
-                  </Badge>
-                ))}
+            {preference.preferredLevels.length === 0 ? (
+              <Badge variant="secondary">All levels</Badge>
+            ) : (
+              preference.preferredLevels.map((level) => (
+                <Badge key={level} variant="secondary">
+                  {WSDC_SKILL_LEVEL_LABELS[level]}
+                </Badge>
+              ))
+            )}
           </div>
         </div>
       </div>
@@ -254,13 +238,15 @@ function PreferenceCard({ preference, onEdit, onDelete, deleting }: PreferenceCa
         <div className="space-y-2">
           <p className="text-xs uppercase text-muted-foreground">Focus areas</p>
           <div className="flex flex-wrap gap-2">
-            {preference.preferredFocusAreas.length === 0
-              ? <Badge variant="outline">General practice</Badge>
-              : preference.preferredFocusAreas.map((focus) => (
-                  <Badge key={focus} variant="outline">
-                    {FOCUS_AREA_LABELS[focus]}
-                  </Badge>
-                ))}
+            {preference.preferredFocusAreas.length === 0 ? (
+              <Badge variant="outline">General practice</Badge>
+            ) : (
+              preference.preferredFocusAreas.map((focus) => (
+                <Badge key={focus} variant="outline">
+                  {FOCUS_AREA_LABELS[focus]}
+                </Badge>
+              ))
+            )}
           </div>
         </div>
         <div className="space-y-2">
@@ -340,7 +326,12 @@ interface PreferenceActionsProps {
   deleting?: boolean;
 }
 
-function PreferenceActions({ preference, onEdit, onDelete, deleting }: PreferenceActionsProps) {
+function PreferenceActions({
+  preference,
+  onEdit,
+  onDelete,
+  deleting,
+}: PreferenceActionsProps) {
   const handleEdit = () => {
     onEdit?.(preference);
   };
@@ -351,7 +342,12 @@ function PreferenceActions({ preference, onEdit, onDelete, deleting }: Preferenc
 
   return (
     <div className="flex items-center gap-2">
-      <Button size="icon" variant="ghost" onClick={handleEdit} aria-label="Edit preference">
+      <Button
+        size="icon"
+        variant="ghost"
+        onClick={handleEdit}
+        aria-label="Edit preference"
+      >
         <Edit3 className="h-4 w-4" />
       </Button>
       <Button
@@ -361,10 +357,12 @@ function PreferenceActions({ preference, onEdit, onDelete, deleting }: Preferenc
         disabled={deleting}
         aria-label="Delete preference"
       >
-        {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4 text-destructive" />}
+        {deleting ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        ) : (
+          <Trash2 className="h-4 w-4 text-destructive" />
+        )}
       </Button>
     </div>
   );
 }
-
-

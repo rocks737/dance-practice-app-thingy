@@ -19,7 +19,7 @@ describe("calendar utilities", () => {
     it("returns Sunday for a Monday", () => {
       const monday = new Date(2024, 0, 15, 12, 0, 0); // Monday, Jan 15, 2024
       const weekStart = getWeekStart(monday);
-      
+
       expect(weekStart.getDay()).toBe(0); // Sunday
       expect(weekStart.getHours()).toBe(0);
       expect(weekStart.getMinutes()).toBe(0);
@@ -28,7 +28,7 @@ describe("calendar utilities", () => {
     it("returns Sunday for a Sunday", () => {
       const sunday = new Date(2024, 0, 14, 12, 0, 0); // Sunday, Jan 14, 2024
       const weekStart = getWeekStart(sunday);
-      
+
       expect(weekStart.getDay()).toBe(0); // Sunday
       expect(weekStart.getDate()).toBe(14);
     });
@@ -36,7 +36,7 @@ describe("calendar utilities", () => {
     it("returns Sunday for a Saturday", () => {
       const saturday = new Date(2024, 0, 20, 12, 0, 0); // Saturday, Jan 20, 2024
       const weekStart = getWeekStart(saturday);
-      
+
       expect(weekStart.getDay()).toBe(0); // Sunday
       expect(weekStart.getDate()).toBe(14); // Jan 14 (Sunday of that week)
     });
@@ -51,7 +51,7 @@ describe("calendar utilities", () => {
     it("resets time to midnight", () => {
       const dateWithTime = new Date(2024, 0, 15, 14, 30, 45);
       const weekStart = getWeekStart(dateWithTime);
-      
+
       expect(weekStart.getHours()).toBe(0);
       expect(weekStart.getMinutes()).toBe(0);
       expect(weekStart.getSeconds()).toBe(0);
@@ -63,7 +63,7 @@ describe("calendar utilities", () => {
     it("returns week range starting from Sunday", () => {
       const monday = new Date(2024, 0, 15, 12, 0, 0); // Monday, Jan 15, 2024
       const range = getCalendarDateRange(monday);
-      
+
       expect(range.start.getDay()).toBe(0); // Sunday
       expect(range.end.getDay()).toBe(6); // Saturday
       expect(range.start.getDate()).toBe(14); // Jan 14 (Sunday)
@@ -295,7 +295,9 @@ describe("calendar utilities", () => {
       const start2 = getWeekStart(week2);
 
       // Should be exactly 7 days apart
-      const diffDays = Math.round((start2.getTime() - start1.getTime()) / (1000 * 60 * 60 * 24));
+      const diffDays = Math.round(
+        (start2.getTime() - start1.getTime()) / (1000 * 60 * 60 * 24),
+      );
       expect(diffDays).toBe(7);
     });
 
@@ -362,4 +364,3 @@ describe("calendar utilities", () => {
     });
   });
 });
-

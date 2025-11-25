@@ -49,4 +49,3 @@ describe("App Error Page", () => {
     expect(profileLink).toHaveAttribute("href", "/profile");
   });
 });
-

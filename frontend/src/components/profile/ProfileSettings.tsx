@@ -6,8 +6,11 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Eye, EyeOff, Loader2, Save, Settings as SettingsIcon } from "lucide-react";
 import { toast } from "sonner";
 import { UserProfile } from "@/lib/profiles/types";
-import { profileSettingsSchema, type ProfileSettingsFormData } from "@/lib/profiles/validation";
-import { updateProfile } from "@/lib/profiles/api";
+import {
+  profileSettingsSchema,
+  type ProfileSettingsFormData,
+} from "@/lib/profiles/validation";
+import { updateProfile } from "@/lib/profiles/client";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -51,10 +54,10 @@ export function ProfileSettings({ profile, onUpdate }: ProfileSettingsProps) {
         profile_visible: data.profile_visible,
         home_location_id: data.home_location_id,
       });
-      
+
       toast.success("Settings updated successfully");
       reset(data);
-      
+
       // Refetch profile to get latest data
       if (onUpdate) {
         onUpdate();
@@ -65,7 +68,6 @@ export function ProfileSettings({ profile, onUpdate }: ProfileSettingsProps) {
       setIsSaving(false);
     }
   };
-
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
@@ -87,11 +89,15 @@ export function ProfileSettings({ profile, onUpdate }: ProfileSettingsProps) {
           <div className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
             <div className="flex-1">
               <Label htmlFor="profile_visible" className="text-base font-medium">
-                {profileVisible ? <Eye className="w-4 h-4 inline mr-2" /> : <EyeOff className="w-4 h-4 inline mr-2" />}
+                {profileVisible ? (
+                  <Eye className="w-4 h-4 inline mr-2" />
+                ) : (
+                  <EyeOff className="w-4 h-4 inline mr-2" />
+                )}
                 Profile Visibility
               </Label>
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                {profileVisible 
+                {profileVisible
                   ? "Your profile is visible to other users. They can see your information and send you practice requests."
                   : "Your profile is hidden. Other users won't be able to find or view your profile."}
               </p>
@@ -99,7 +105,9 @@ export function ProfileSettings({ profile, onUpdate }: ProfileSettingsProps) {
             <Switch
               id="profile_visible"
               checked={profileVisible}
-              onCheckedChange={(checked) => setValue("profile_visible", checked, { shouldDirty: true })}
+              onCheckedChange={(checked) =>
+                setValue("profile_visible", checked, { shouldDirty: true })
+              }
               disabled={isSaving}
             />
           </div>
@@ -123,7 +131,9 @@ export function ProfileSettings({ profile, onUpdate }: ProfileSettingsProps) {
                     Receive emails about practice requests and messages
                   </p>
                 </div>
-                <span className="text-xs text-gray-500 dark:text-gray-400">Coming soon</span>
+                <span className="text-xs text-gray-500 dark:text-gray-400">
+                  Coming soon
+                </span>
               </div>
               <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900 rounded-md">
                 <div>
@@ -134,7 +144,9 @@ export function ProfileSettings({ profile, onUpdate }: ProfileSettingsProps) {
                     Set your primary dance location for better matches
                   </p>
                 </div>
-                <span className="text-xs text-gray-500 dark:text-gray-400">Coming soon</span>
+                <span className="text-xs text-gray-500 dark:text-gray-400">
+                  Coming soon
+                </span>
               </div>
             </div>
           </div>
@@ -160,4 +172,3 @@ export function ProfileSettings({ profile, onUpdate }: ProfileSettingsProps) {
     </div>
   );
 }
-

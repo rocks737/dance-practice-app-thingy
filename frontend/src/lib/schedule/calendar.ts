@@ -44,7 +44,7 @@ const DAY_INDEX_MAP: Record<DayOfWeek, number> = {
 
 // Reverse map for quick lookup
 const INDEX_DAY_MAP: Record<number, DayOfWeek> = Object.fromEntries(
-  Object.entries(DAY_INDEX_MAP).map(([day, idx]) => [idx, day as DayOfWeek])
+  Object.entries(DAY_INDEX_MAP).map(([day, idx]) => [idx, day as DayOfWeek]),
 ) as Record<number, DayOfWeek>;
 
 /**
@@ -85,21 +85,21 @@ export interface AvailabilityEvent extends AvailabilityWindow {
  */
 export function windowToEvent(
   window: AvailabilityWindow,
-  weekStart: Date = getWeekStart()
+  weekStart: Date = getWeekStart(),
 ): AvailabilityEvent {
   const dayIndex = DAY_INDEX_MAP[window.dayOfWeek];
-  
+
   // Calculate the date for this day in the given week (Sunday = 0, Monday = 1, etc.)
   const dayDate = addDays(weekStart, dayIndex);
-  
+
   // Parse HH:mm times
   const [startHour, startMinute] = window.startTime.split(":").map(Number);
   const [endHour, endMinute] = window.endTime.split(":").map(Number);
-  
+
   // Create Date objects
   const start = setMinutes(setHours(dayDate, startHour), startMinute);
   const end = setMinutes(setHours(dayDate, endHour), endMinute);
-  
+
   return {
     id: `${window.dayOfWeek}-${window.startTime}-${window.endTime}`,
     ...window,
@@ -115,10 +115,10 @@ export function windowToEvent(
 export function eventToWindow(
   start: Date,
   end: Date,
-  dayOfWeek?: DayOfWeek
+  dayOfWeek?: DayOfWeek,
 ): AvailabilityWindow {
   const day = dayOfWeek ?? INDEX_DAY_MAP[start.getDay()];
-  
+
   return {
     dayOfWeek: day,
     startTime: format(start, "HH:mm"),
@@ -133,7 +133,7 @@ export function eventToWindow(
  */
 export function windowsToEvents(
   windows: AvailabilityWindow[],
-  weekStart: Date = getWeekStart()
+  weekStart: Date = getWeekStart(),
 ): AvailabilityEvent[] {
   return windows.map((window) => windowToEvent(window, weekStart));
 }
@@ -142,7 +142,10 @@ export function windowsToEvents(
  * Gets the display date range for the calendar (one week view).
  * @param date - A date within the week to display (defaults to current date)
  */
-export function getCalendarDateRange(date: Date = new Date()): { start: Date; end: Date } {
+export function getCalendarDateRange(date: Date = new Date()): {
+  start: Date;
+  end: Date;
+} {
   const weekStart = getWeekStart(date);
   return {
     start: weekStart,
@@ -174,4 +177,3 @@ export function roundToQuarterHour(date: Date): Date {
   const roundedMinutes = Math.round(minutes / 15) * 15;
   return setMinutes(date, roundedMinutes);
 }
-

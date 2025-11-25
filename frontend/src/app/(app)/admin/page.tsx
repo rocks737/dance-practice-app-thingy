@@ -60,7 +60,9 @@ export default function AdminPage() {
             >
               <Users className="w-6 h-6 mb-2" />
               <h3 className="font-medium">Manage Users</h3>
-              <p className="text-sm text-muted-foreground">View and manage user accounts</p>
+              <p className="text-sm text-muted-foreground">
+                View and manage user accounts
+              </p>
             </Link>
             <Link
               href="/admin/reports"
@@ -68,7 +70,9 @@ export default function AdminPage() {
             >
               <AlertTriangle className="w-6 h-6 mb-2" />
               <h3 className="font-medium">Review Reports</h3>
-              <p className="text-sm text-muted-foreground">Handle abuse reports and moderation</p>
+              <p className="text-sm text-muted-foreground">
+                Handle abuse reports and moderation
+              </p>
             </Link>
           </div>
 
@@ -82,4 +86,3 @@ export default function AdminPage() {
     </div>
   );
 }
-

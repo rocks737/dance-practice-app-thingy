@@ -32,4 +32,3 @@ export default function SessionsError({
     </div>
   );
 }
-

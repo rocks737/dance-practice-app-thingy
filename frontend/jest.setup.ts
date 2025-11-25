@@ -1,29 +1,29 @@
-import '@testing-library/jest-dom'
+import "@testing-library/jest-dom";
 
 // Mock Next.js router
-jest.mock('next/navigation', () => ({
+jest.mock("next/navigation", () => ({
   useRouter() {
     return {
       push: jest.fn(),
       replace: jest.fn(),
       prefetch: jest.fn(),
       back: jest.fn(),
-      pathname: '/',
+      pathname: "/",
       query: {},
-      asPath: '/',
-    }
+      asPath: "/",
+    };
   },
   usePathname() {
-    return '/'
+    return "/";
   },
   useSearchParams() {
-    return new URLSearchParams()
+    return new URLSearchParams();
   },
   redirect: jest.fn(),
-}))
+}));
 
 // Mock Supabase client
-jest.mock('@/lib/supabase/client', () => ({
+jest.mock("@/lib/supabase/client", () => ({
   createClient: jest.fn(() => ({
     auth: {
       getUser: jest.fn(),
@@ -37,18 +37,17 @@ jest.mock('@/lib/supabase/client', () => ({
       })),
     })),
   })),
-}))
+}));
 
 // Mock next-themes
-jest.mock('next-themes', () => {
-  const React = require('react')
+jest.mock("next-themes", () => {
+  const React = require("react");
   return {
-    ThemeProvider: ({ children }: { children: React.ReactNode }) => 
-      React.createElement('div', null, children),
+    ThemeProvider: ({ children }: { children: React.ReactNode }) =>
+      React.createElement("div", null, children),
     useTheme: () => ({
-      theme: 'light',
+      theme: "light",
       setTheme: jest.fn(),
     }),
-  }
-})
-
+  };
+});

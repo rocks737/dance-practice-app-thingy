@@ -13,7 +13,7 @@ function ThrowError({ shouldThrow = false }: { shouldThrow?: boolean }) {
 
 describe("ErrorBoundary", () => {
   const originalError = console.error;
-  
+
   beforeEach(() => {
     // Suppress error output in tests
     console.error = jest.fn();
@@ -30,7 +30,7 @@ describe("ErrorBoundary", () => {
     render(
       <ErrorBoundary>
         <div>Test content</div>
-      </ErrorBoundary>
+      </ErrorBoundary>,
     );
 
     expect(screen.getByText("Test content")).toBeInTheDocument();
@@ -43,12 +43,14 @@ describe("ErrorBoundary", () => {
     render(
       <ErrorBoundary>
         <ThrowError shouldThrow={true} />
-      </ErrorBoundary>
+      </ErrorBoundary>,
     );
 
     expect(screen.getByText("Something went wrong")).toBeInTheDocument();
     // Error message should be displayed (either custom or default)
-    expect(screen.getByText(/Test error|An unexpected error occurred/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Test error|An unexpected error occurred/i),
+    ).toBeInTheDocument();
     expect(screen.getByText(/Try again/i)).toBeInTheDocument();
 
     spy.mockRestore();
@@ -64,7 +66,7 @@ describe("ErrorBoundary", () => {
     render(
       <ErrorBoundary>
         <CustomError />
-      </ErrorBoundary>
+      </ErrorBoundary>,
     );
 
     expect(screen.getByText("Custom error message")).toBeInTheDocument();
@@ -78,7 +80,7 @@ describe("ErrorBoundary", () => {
     render(
       <ErrorBoundary onError={onError}>
         <ThrowError shouldThrow={true} />
-      </ErrorBoundary>
+      </ErrorBoundary>,
     );
 
     expect(onError).toHaveBeenCalled();
@@ -86,7 +88,7 @@ describe("ErrorBoundary", () => {
       expect.any(Error),
       expect.objectContaining({
         componentStack: expect.any(String),
-      })
+      }),
     );
 
     spy.mockRestore();
@@ -99,7 +101,7 @@ describe("ErrorBoundary", () => {
     render(
       <ErrorBoundary fallback={customFallback}>
         <ThrowError shouldThrow={true} />
-      </ErrorBoundary>
+      </ErrorBoundary>,
     );
 
     expect(screen.getByText("Custom error fallback")).toBeInTheDocument();
@@ -115,21 +117,20 @@ describe("ErrorBoundary", () => {
     render(
       <ErrorBoundary>
         <ThrowError shouldThrow={true} />
-      </ErrorBoundary>
+      </ErrorBoundary>,
     );
 
     expect(screen.getByText("Something went wrong")).toBeInTheDocument();
 
     const resetButton = screen.getByText(/Try again/i);
     expect(resetButton).toBeInTheDocument();
-    
+
     // Verify button is clickable
     await user.click(resetButton);
-    
+
     // After clicking reset, the error boundary state is cleared
     // (The component would need to be remounted to test full reset behavior)
 
     spy.mockRestore();
   });
 });
-

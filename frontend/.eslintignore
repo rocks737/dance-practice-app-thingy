@@ -1,0 +1,10 @@
+node_modules
+.next
+out
+dist
+coverage
+*.config.js
+*.config.cjs
+*.config.mjs
+src/components/basejump
+

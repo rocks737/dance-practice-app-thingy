@@ -12,7 +12,9 @@ export function ThemeSettings() {
   }, []);
 
   if (!mounted) {
-    return <div className="animate-pulse h-24 bg-gray-100 dark:bg-gray-800 rounded-lg"></div>;
+    return (
+      <div className="animate-pulse h-24 bg-gray-100 dark:bg-gray-800 rounded-lg"></div>
+    );
   }
 
   return (
@@ -35,9 +37,7 @@ export function ThemeSettings() {
             className="w-4 h-4 text-blue-600 focus:ring-blue-500"
           />
           <div>
-            <div className="font-medium text-gray-900 dark:text-gray-100">
-              Light
-            </div>
+            <div className="font-medium text-gray-900 dark:text-gray-100">Light</div>
             <div className="text-sm text-gray-500 dark:text-gray-400">
               Clean and bright interface
             </div>
@@ -54,9 +54,7 @@ export function ThemeSettings() {
             className="w-4 h-4 text-blue-600 focus:ring-blue-500"
           />
           <div>
-            <div className="font-medium text-gray-900 dark:text-gray-100">
-              Dark
-            </div>
+            <div className="font-medium text-gray-900 dark:text-gray-100">Dark</div>
             <div className="text-sm text-gray-500 dark:text-gray-400">
               Easy on the eyes in low light
             </div>
@@ -73,9 +71,7 @@ export function ThemeSettings() {
             className="w-4 h-4 text-blue-600 focus:ring-blue-500"
           />
           <div>
-            <div className="font-medium text-gray-900 dark:text-gray-100">
-              System
-            </div>
+            <div className="font-medium text-gray-900 dark:text-gray-100">System</div>
             <div className="text-sm text-gray-500 dark:text-gray-400">
               Matches your device theme
             </div>
@@ -85,4 +81,3 @@ export function ThemeSettings() {
     </div>
   );
 }
-

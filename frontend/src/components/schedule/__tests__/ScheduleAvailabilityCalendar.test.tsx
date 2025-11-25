@@ -52,7 +52,7 @@ describe("ScheduleAvailabilityCalendar", () => {
         onCreateWindow={mockOnCreateWindow}
         onUpdateWindow={mockOnUpdateWindow}
         onDeleteWindow={mockOnDeleteWindow}
-      />
+      />,
     );
 
     // Check for instruction text
@@ -66,7 +66,7 @@ describe("ScheduleAvailabilityCalendar", () => {
         onCreateWindow={mockOnCreateWindow}
         onUpdateWindow={mockOnUpdateWindow}
         onDeleteWindow={mockOnDeleteWindow}
-      />
+      />,
     );
 
     // The calendar should render with events - just verify it doesn't crash
@@ -80,7 +80,7 @@ describe("ScheduleAvailabilityCalendar", () => {
         onCreateWindow={mockOnCreateWindow}
         onUpdateWindow={mockOnUpdateWindow}
         onDeleteWindow={mockOnDeleteWindow}
-      />
+      />,
     );
 
     // Should render without errors
@@ -94,7 +94,7 @@ describe("ScheduleAvailabilityCalendar", () => {
         onCreateWindow={mockOnCreateWindow}
         onUpdateWindow={mockOnUpdateWindow}
         onDeleteWindow={mockOnDeleteWindow}
-      />
+      />,
     );
 
     // Check for navigation buttons
@@ -110,7 +110,7 @@ describe("ScheduleAvailabilityCalendar", () => {
         onCreateWindow={mockOnCreateWindow}
         onUpdateWindow={mockOnUpdateWindow}
         onDeleteWindow={mockOnDeleteWindow}
-      />
+      />,
     );
 
     // Check for week range text (format: "MMM d - MMM d, yyyy")
@@ -126,7 +126,7 @@ describe("ScheduleAvailabilityCalendar", () => {
         onCreateWindow={mockOnCreateWindow}
         onUpdateWindow={mockOnUpdateWindow}
         onDeleteWindow={mockOnDeleteWindow}
-      />
+      />,
     );
 
     const previousButton = screen.getByText(/Previous Week/i);
@@ -144,7 +144,7 @@ describe("ScheduleAvailabilityCalendar", () => {
         onCreateWindow={mockOnCreateWindow}
         onUpdateWindow={mockOnUpdateWindow}
         onDeleteWindow={mockOnDeleteWindow}
-      />
+      />,
     );
 
     const nextButton = screen.getByText(/Next Week/i);
@@ -162,7 +162,7 @@ describe("ScheduleAvailabilityCalendar", () => {
         onCreateWindow={mockOnCreateWindow}
         onUpdateWindow={mockOnUpdateWindow}
         onDeleteWindow={mockOnDeleteWindow}
-      />
+      />,
     );
 
     const todayButton = screen.getByText(/Today/i);
@@ -179,7 +179,7 @@ describe("ScheduleAvailabilityCalendar", () => {
         onCreateWindow={mockOnCreateWindow}
         onUpdateWindow={mockOnUpdateWindow}
         onDeleteWindow={mockOnDeleteWindow}
-      />
+      />,
     );
 
     // The calendar should format dates - we can't easily test the exact format
@@ -195,7 +195,7 @@ describe("ScheduleAvailabilityCalendar", () => {
         onCreateWindow={mockOnCreateWindow}
         onUpdateWindow={mockOnUpdateWindow}
         onDeleteWindow={mockOnDeleteWindow}
-      />
+      />,
     );
 
     // Navigate to next week
@@ -221,7 +221,7 @@ describe("ScheduleAvailabilityCalendar", () => {
         onCreateWindow={mockOnCreateWindow}
         onUpdateWindow={mockOnUpdateWindow}
         onDeleteWindow={mockOnDeleteWindow}
-      />
+      />,
     );
 
     // Get initial week range
@@ -248,11 +248,11 @@ describe("ScheduleAvailabilityCalendar", () => {
         onCreateWindow={mockOnCreateWindow}
         onUpdateWindow={mockOnUpdateWindow}
         onDeleteWindow={mockOnDeleteWindow}
-      />
+      />,
     );
 
     const nextButton = screen.getByText(/Next Week/i);
-    
+
     // Click multiple times rapidly
     await user.click(nextButton);
     await user.click(nextButton);
@@ -270,7 +270,7 @@ describe("ScheduleAvailabilityCalendar", () => {
         onCreateWindow={mockOnCreateWindow}
         onUpdateWindow={mockOnUpdateWindow}
         onDeleteWindow={mockOnDeleteWindow}
-      />
+      />,
     );
 
     // Verify all navigation elements are present
@@ -280,4 +280,3 @@ describe("ScheduleAvailabilityCalendar", () => {
     expect(screen.getByText(/\w{3} \d+ - \w{3} \d+, \d{4}/)).toBeInTheDocument();
   });
 });
-

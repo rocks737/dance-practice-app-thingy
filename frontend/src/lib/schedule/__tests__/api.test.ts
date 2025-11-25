@@ -52,8 +52,7 @@ const createUpdateBuilder = (response: any) => ({
 
 const createDeleteBuilder = (response: any) => ({
   eq: jest.fn().mockReturnThis(),
-  then: (resolve: any, reject?: any) =>
-    Promise.resolve(response).then(resolve, reject),
+  then: (resolve: any, reject?: any) => Promise.resolve(response).then(resolve, reject),
 });
 
 const sampleRawPreference = {
@@ -116,9 +115,7 @@ describe("schedule/api", () => {
   });
 
   const formData: SchedulePreferenceFormData = {
-    availabilityWindows: [
-      { dayOfWeek: "MONDAY", startTime: "10:00", endTime: "12:00" },
-    ],
+    availabilityWindows: [{ dayOfWeek: "MONDAY", startTime: "10:00", endTime: "12:00" }],
     preferredRoles: ["LEAD"],
     preferredLevels: ["NOVICE"],
     preferredFocusAreas: ["TECHNIQUE"],
@@ -252,12 +249,9 @@ describe("schedule/api", () => {
         expect(mockSupabase[table].delete).toHaveBeenCalled();
       });
       expect(schedulePreferencesTable.delete).toHaveBeenCalled();
-      const deleteBuilder = schedulePreferencesTable.delete.mock.results[0]
-        .value;
+      const deleteBuilder = schedulePreferencesTable.delete.mock.results[0].value;
       expect(deleteBuilder.eq).toHaveBeenNthCalledWith(1, "id", "pref-1");
       expect(deleteBuilder.eq).toHaveBeenNthCalledWith(2, "user_id", "user-1");
     });
   });
 });
-
-

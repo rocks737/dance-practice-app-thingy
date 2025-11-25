@@ -8,10 +8,10 @@ export default function SettingsPage() {
         <Settings className="w-8 h-8 text-gray-700 dark:text-gray-300" />
         <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Settings</h1>
       </div>
-      
+
       <div className="space-y-6">
         <ThemeSettings />
-        
+
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
           <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
             Account Settings
@@ -29,4 +29,3 @@ export default function SettingsPage() {
     </div>
   );
 }
-

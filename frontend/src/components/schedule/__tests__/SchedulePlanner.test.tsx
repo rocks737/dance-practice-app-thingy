@@ -24,17 +24,9 @@ jest.mock("sonner", () => ({
   },
 }));
 jest.mock("@/components/ui/dialog", () => {
-  const passthrough = ({ children }: { children?: ReactNode }) => (
-    <div>{children}</div>
-  );
+  const passthrough = ({ children }: { children?: ReactNode }) => <div>{children}</div>;
 
-  const Dialog = ({
-    open,
-    children,
-  }: {
-    open?: boolean;
-    children?: ReactNode;
-  }) => (
+  const Dialog = ({ open, children }: { open?: boolean; children?: ReactNode }) => (
     <div data-testid="dialog-root" data-open={open}>
       {open ? children : null}
     </div>
@@ -68,9 +60,7 @@ const samplePreference = {
   preferredLocations: [
     { id: "loc-1", name: "Studio HQ", city: "Austin", state: "TX", country: "USA" },
   ],
-  availabilityWindows: [
-    { dayOfWeek: "MONDAY", startTime: "10:00", endTime: "12:00" },
-  ],
+  availabilityWindows: [{ dayOfWeek: "MONDAY", startTime: "10:00", endTime: "12:00" }],
   preferredRoles: ["LEAD"],
   preferredLevels: ["NOVICE"],
   preferredFocusAreas: ["TECHNIQUE"],
@@ -87,17 +77,15 @@ describe("SchedulePlanner", () => {
   it("renders empty state when no preferences exist", () => {
     mockUseSchedulePreferences.mockReturnValue(baseHookState());
 
-    render(<SchedulePlanner authUserId="user-1" />);
+    render(<SchedulePlanner profileId="profile-1" />);
 
-    expect(
-      screen.getByText(/No preferences yet/i),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/No preferences yet/i)).toBeInTheDocument();
   });
 
   it("opens the preference dialog when clicking new preference", async () => {
     mockUseSchedulePreferences.mockReturnValue(baseHookState());
 
-    render(<SchedulePlanner authUserId="user-1" />);
+    render(<SchedulePlanner profileId="profile-1" />);
 
     await userEvent.click(screen.getByRole("button", { name: /New preference/i }));
 
@@ -107,20 +95,18 @@ describe("SchedulePlanner", () => {
   it("deletes a preference and refreshes data", async () => {
     const hookState = {
       ...baseHookState(),
-      preferences: [samplePreference],
+      preferences: [{ ...samplePreference, userId: "profile-1" }],
     };
     mockUseSchedulePreferences.mockReturnValue(hookState);
     (deleteSchedulePreference as jest.Mock).mockResolvedValue(undefined);
 
-    render(<SchedulePlanner authUserId="user-1" />);
+    render(<SchedulePlanner profileId="profile-1" />);
 
-    await userEvent.click(
-      screen.getByRole("button", { name: /Delete preference/i }),
-    );
+    await userEvent.click(screen.getByRole("button", { name: /Delete preference/i }));
 
     await waitFor(() => {
       expect(deleteSchedulePreference).toHaveBeenCalledWith({
-        userId: "user-1",
+        userId: "profile-1",
         preferenceId: "pref-1",
       });
     });
@@ -128,5 +114,3 @@ describe("SchedulePlanner", () => {
     expect(toast.success).toHaveBeenCalledWith("Schedule preference deleted");
   });
 });
-
-

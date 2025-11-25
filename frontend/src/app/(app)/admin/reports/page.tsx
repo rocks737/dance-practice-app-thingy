@@ -19,7 +19,7 @@ export default function AdminReportsPage() {
           <h1 className="text-3xl font-bold">Abuse Reports</h1>
         </div>
       </div>
-      
+
       <Card>
         <CardContent className="p-6">
           <p className="text-muted-foreground mb-4">
@@ -36,4 +36,3 @@ export default function AdminReportsPage() {
     </div>
   );
 }
-

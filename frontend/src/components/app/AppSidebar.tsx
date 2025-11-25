@@ -10,6 +10,7 @@ import {
   Shield,
   Users,
   UserCircle,
+  MapPin,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -40,6 +41,11 @@ const navItems: NavItem[] = [
     href: "/schedule",
     label: "Schedule",
     icon: Calendar,
+  },
+  {
+    href: "/locations",
+    label: "Locations",
+    icon: MapPin,
   },
   {
     href: "/matches",
@@ -80,7 +86,9 @@ export function AppSidebar({ user }: AppSidebarProps) {
     <aside className="w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 flex flex-col">
       {/* Logo/Header */}
       <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-        <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">Dance Practice</h1>
+        <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+          Dance Practice
+        </h1>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">situation</p>
       </div>
 
@@ -94,7 +102,9 @@ export function AppSidebar({ user }: AppSidebarProps) {
             <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
               {displayName}
             </p>
-            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user.email}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+              {user.email}
+            </p>
           </div>
         </div>
       </div>
@@ -118,7 +128,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
                 "flex items-center space-x-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
                 isActive
                   ? "bg-blue-50 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300"
-                  : "text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100"
+                  : "text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100",
               )}
             >
               <Icon className="w-5 h-5" />
@@ -152,4 +162,3 @@ export function AppSidebar({ user }: AppSidebarProps) {
     </aside>
   );
 }
-

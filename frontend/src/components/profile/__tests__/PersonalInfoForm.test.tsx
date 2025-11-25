@@ -5,12 +5,12 @@
 import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { PersonalInfoForm } from "../PersonalInfoForm";
-import { updateProfile } from "@/lib/profiles/api";
+import { updateProfile } from "@/lib/profiles/client";
 import { toast } from "sonner";
 import type { UserProfile } from "@/lib/profiles/types";
 
 // Mock dependencies
-jest.mock("@/lib/profiles/api");
+jest.mock("@/lib/profiles/client");
 jest.mock("sonner");
 
 const mockUpdateProfile = updateProfile as jest.MockedFunction<typeof updateProfile>;
@@ -74,7 +74,7 @@ describe("PersonalInfoForm", () => {
 
     expect(screen.getByText("Personal Information")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /save changes/i })).toBeInTheDocument();
-    
+
     // Fields should be enabled (editable)
     const firstNameInput = screen.getByLabelText(/first name/i) as HTMLInputElement;
     expect(firstNameInput).not.toBeDisabled();
@@ -119,7 +119,7 @@ describe("PersonalInfoForm", () => {
     // Change values (no need to click Edit - fields are already editable)
     const firstNameInput = screen.getByLabelText(/first name/i);
     const lastNameInput = screen.getByLabelText(/last name/i);
-    
+
     await user.clear(firstNameInput);
     await user.type(firstNameInput, "Jane");
     await user.clear(lastNameInput);
@@ -140,7 +140,9 @@ describe("PersonalInfoForm", () => {
     });
 
     await waitFor(() => {
-      expect(mockToast.success).toHaveBeenCalledWith("Personal information updated successfully");
+      expect(mockToast.success).toHaveBeenCalledWith(
+        "Personal information updated successfully",
+      );
     });
 
     // Save button should still be visible (always editable)
@@ -201,11 +203,11 @@ describe("PersonalInfoForm", () => {
     mockUpdateProfile.mockRejectedValueOnce(new Error(errorMessage));
 
     render(<PersonalInfoForm profile={mockProfile} />);
-    
+
     // Make form dirty
     const firstNameInput = screen.getByLabelText(/first name/i);
     await user.type(firstNameInput, "x");
-    
+
     await user.click(screen.getByRole("button", { name: /save changes/i }));
 
     await waitFor(() => {
@@ -215,7 +217,6 @@ describe("PersonalInfoForm", () => {
     // Save button should still be visible (always editable)
     expect(screen.getByRole("button", { name: /save changes/i })).toBeInTheDocument();
   });
-
 
   it("should show helper text for display name", () => {
     render(<PersonalInfoForm profile={mockProfile} />);
@@ -229,4 +230,3 @@ describe("PersonalInfoForm", () => {
     expect(screen.getByText(/email cannot be changed here/i)).toBeInTheDocument();
   });
 });
-

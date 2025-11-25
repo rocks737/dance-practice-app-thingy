@@ -82,5 +82,3 @@ describe("useSchedulePreferences", () => {
     expect(mutate).toHaveBeenCalled();
   });
 });
-
-

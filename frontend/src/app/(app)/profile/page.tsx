@@ -14,4 +14,3 @@ export default async function ProfilePage() {
 
   return <ProfileEditor user={user} />;
 }
-

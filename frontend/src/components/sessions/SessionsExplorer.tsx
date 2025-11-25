@@ -76,8 +76,7 @@ const DEFAULT_SESSION_STATUS: SessionStatus = "PROPOSED";
 const DEFAULT_SESSION_VISIBILITY: SessionVisibility = "PARTICIPANTS_ONLY";
 
 export function SessionsExplorer({ authUserId }: SessionsExplorerProps) {
-  const [draftFilters, setDraftFilters] =
-    useState<SessionFilters>(defaultSessionFilters);
+  const [draftFilters, setDraftFilters] = useState<SessionFilters>(defaultSessionFilters);
   const [activeFilters, setActiveFilters] =
     useState<SessionFilters>(defaultSessionFilters);
   const [sessions, setSessions] = useState<SessionListItem[]>([]);
@@ -88,8 +87,11 @@ export function SessionsExplorer({ authUserId }: SessionsExplorerProps) {
   const [filtersExpanded, setFiltersExpanded] = useState(false);
   const fetchIdRef = useRef(0);
   const focusAfterFetchRef = useRef<string | null>(null);
-  const { profile, loading: profileLoading, error: profileError } =
-    useUserProfile(authUserId);
+  const {
+    profile,
+    loading: profileLoading,
+    error: profileError,
+  } = useUserProfile(authUserId);
   const organizerId = profile?.id ?? null;
 
   useEffect(() => {
@@ -109,9 +111,7 @@ export function SessionsExplorer({ authUserId }: SessionsExplorerProps) {
       setSessions(data);
       setTotal(count);
       if (focusAfterFetchRef.current) {
-        const match = data.find(
-          (session) => session.id === focusAfterFetchRef.current,
-        );
+        const match = data.find((session) => session.id === focusAfterFetchRef.current);
         if (match) {
           setExpandedId(match.id);
           focusAfterFetchRef.current = null;
@@ -123,7 +123,9 @@ export function SessionsExplorer({ authUserId }: SessionsExplorerProps) {
       }
       console.error("Error loading sessions:", e);
       setError(
-        e instanceof Error ? e.message : "Unable to load sessions. Please check your connection and try again.",
+        e instanceof Error
+          ? e.message
+          : "Unable to load sessions. Please check your connection and try again.",
       );
     } finally {
       if (fetchId === fetchIdRef.current) {
@@ -187,14 +189,11 @@ export function SessionsExplorer({ authUserId }: SessionsExplorerProps) {
     [handleRefresh],
   );
 
-  const handleSessionUpdated = useCallback(
-    (updated: SessionListItem) => {
-      setSessions((prev) =>
-        prev.map((session) => (session.id === updated.id ? updated : session)),
-      );
-    },
-    [],
-  );
+  const handleSessionUpdated = useCallback((updated: SessionListItem) => {
+    setSessions((prev) =>
+      prev.map((session) => (session.id === updated.id ? updated : session)),
+    );
+  }, []);
 
   const createDisabledReason = !organizerId
     ? "Complete your profile to create sessions."
@@ -254,9 +253,7 @@ export function SessionsExplorer({ authUserId }: SessionsExplorerProps) {
                 <Search className="h-4 w-4 text-muted-foreground" />
                 <span className="text-sm font-medium">Filters</span>
                 {appliedFiltersCount > 0 && (
-                  <Badge variant="secondary">
-                    {appliedFiltersCount} active
-                  </Badge>
+                  <Badge variant="secondary">{appliedFiltersCount} active</Badge>
                 )}
               </div>
               <ChevronUp className="h-4 w-4 text-muted-foreground" />
@@ -287,9 +284,7 @@ export function SessionsExplorer({ authUserId }: SessionsExplorerProps) {
                   <Input
                     type="date"
                     value={draftFilters.fromDate ?? ""}
-                    onChange={(event) =>
-                      handleDateChange("fromDate", event.target.value)
-                    }
+                    onChange={(event) => handleDateChange("fromDate", event.target.value)}
                   />
                 </div>
                 <div>
@@ -297,9 +292,7 @@ export function SessionsExplorer({ authUserId }: SessionsExplorerProps) {
                   <Input
                     type="date"
                     value={draftFilters.toDate ?? ""}
-                    onChange={(event) =>
-                      handleDateChange("toDate", event.target.value)
-                    }
+                    onChange={(event) => handleDateChange("toDate", event.target.value)}
                   />
                 </div>
               </div>
@@ -313,16 +306,21 @@ export function SessionsExplorer({ authUserId }: SessionsExplorerProps) {
                     </span>
                     <div className="flex flex-wrap gap-2">
                       {section.options.map((option) => {
-                        const isSelected = (draftFilters[section.key] as string[] | undefined)?.includes(option.value) ?? false;
+                        const isSelected =
+                          (draftFilters[section.key] as string[] | undefined)?.includes(
+                            option.value,
+                          ) ?? false;
                         return (
                           <button
                             key={option.value}
                             type="button"
-                            onClick={() => toggleMultiFilter(section.key, option.value, !isSelected)}
+                            onClick={() =>
+                              toggleMultiFilter(section.key, option.value, !isSelected)
+                            }
                             className={`rounded-full border px-3 py-1 text-sm transition-colors ${
                               isSelected
-                                ? 'bg-primary text-primary-foreground border-primary'
-                                : 'bg-background hover:bg-muted border-border'
+                                ? "bg-primary text-primary-foreground border-primary"
+                                : "bg-background hover:bg-muted border-border"
                             }`}
                           >
                             {option.label}
@@ -391,14 +389,9 @@ export function SessionsExplorer({ authUserId }: SessionsExplorerProps) {
               session={session}
               expanded={expandedId === session.id}
               onToggle={() =>
-                setExpandedId((current) =>
-                  current === session.id ? null : session.id,
-                )
+                setExpandedId((current) => (current === session.id ? null : session.id))
               }
-              canEdit={
-                Boolean(organizerId) &&
-                session.organizer?.id === organizerId
-              }
+              canEdit={Boolean(organizerId) && session.organizer?.id === organizerId}
               onSessionUpdated={handleSessionUpdated}
             />
           ))}
@@ -425,10 +418,8 @@ function SessionCard({
 }: SessionCardProps) {
   const startDate = new Date(session.scheduledStart);
   const endDate = new Date(session.scheduledEnd);
-  const typeLabel =
-    SESSION_TYPE_LABELS[session.sessionType] ?? session.sessionType;
-  const statusLabel =
-    SESSION_STATUS_LABELS[session.status] ?? session.status;
+  const typeLabel = SESSION_TYPE_LABELS[session.sessionType] ?? session.sessionType;
+  const statusLabel = SESSION_STATUS_LABELS[session.status] ?? session.status;
   const visibilityLabel =
     SESSION_VISIBILITY_LABELS[session.visibility] ?? session.visibility;
 
@@ -442,10 +433,11 @@ function SessionCard({
             <Badge variant="outline">{statusLabel}</Badge>
           </div>
           <p className="text-sm text-muted-foreground">
-            {format(startDate, "EEE, MMM d • h:mm a")} —{" "}
-            {format(endDate, "h:mm a")} ({formatDistanceToNow(startDate, {
+            {format(startDate, "EEE, MMM d • h:mm a")} — {format(endDate, "h:mm a")} (
+            {formatDistanceToNow(startDate, {
               addSuffix: true,
-            })})
+            })}
+            )
           </p>
           {session.location && (
             <div className="flex items-center text-sm text-muted-foreground">
@@ -465,9 +457,7 @@ function SessionCard({
             <Users className="h-4 w-4" />
             <span>
               {session.participantCount}
-              {session.capacity
-                ? ` / ${session.capacity} spots`
-                : " participants"}
+              {session.capacity ? ` / ${session.capacity} spots` : " participants"}
             </span>
           </div>
           <Button
@@ -492,10 +482,7 @@ function SessionCard({
             <DetailRow
               icon={<Calendar className="h-4 w-4" />}
               label="Scheduled window"
-              value={`${format(startDate, "PPpp")} → ${format(
-                endDate,
-                "PPpp",
-              )}`}
+              value={`${format(startDate, "PPpp")} → ${format(endDate, "PPpp")}`}
             />
             <DetailRow
               icon={<Eye className="h-4 w-4" />}
@@ -507,8 +494,8 @@ function SessionCard({
               label="Organizer"
               value={
                 session.organizer
-                  ? session.organizer.displayName ??
-                    `${session.organizer.firstName} ${session.organizer.lastName}`
+                  ? (session.organizer.displayName ??
+                    `${session.organizer.firstName} ${session.organizer.lastName}`)
                   : "Unknown organizer"
               }
             />
@@ -524,10 +511,7 @@ function SessionCard({
           </div>
 
           {canEdit ? (
-            <SessionQuickEdit
-              session={session}
-              onSessionUpdated={onSessionUpdated}
-            />
+            <SessionQuickEdit session={session} onSessionUpdated={onSessionUpdated} />
           ) : (
             <p className="mt-4 text-xs text-muted-foreground">
               Only the session organizer can edit these details.
@@ -550,15 +534,11 @@ interface SessionQuickEditProps {
   onSessionUpdated: (session: SessionListItem) => void;
 }
 
-function SessionQuickEdit({
-  session,
-  onSessionUpdated,
-}: SessionQuickEditProps) {
-  const [statusValue, setStatusValue] = useState<SessionStatus>(
-    session.status,
+function SessionQuickEdit({ session, onSessionUpdated }: SessionQuickEditProps) {
+  const [statusValue, setStatusValue] = useState<SessionStatus>(session.status);
+  const [visibilityValue, setVisibilityValue] = useState<SessionVisibility>(
+    session.visibility,
   );
-  const [visibilityValue, setVisibilityValue] =
-    useState<SessionVisibility>(session.visibility);
   const [capacityValue, setCapacityValue] = useState(
     session.capacity != null ? String(session.capacity) : "",
   );
@@ -611,9 +591,7 @@ function SessionQuickEdit({
       onSessionUpdated(updated);
     } catch (e) {
       setError(
-        e instanceof Error
-          ? e.message
-          : "Unable to save session updates right now.",
+        e instanceof Error ? e.message : "Unable to save session updates right now.",
       );
     } finally {
       setSaving(false);
@@ -646,9 +624,7 @@ function SessionQuickEdit({
           <Label>Visibility</Label>
           <Select
             value={visibilityValue}
-            onValueChange={(value) =>
-              setVisibilityValue(value as SessionVisibility)
-            }
+            onValueChange={(value) => setVisibilityValue(value as SessionVisibility)}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select visibility" />
@@ -708,9 +684,7 @@ function DetailRow({ icon, label, value }: DetailRowProps) {
     <div className="flex items-start gap-2">
       <div className="mt-1 text-muted-foreground">{icon}</div>
       <div>
-        <p className="text-xs uppercase tracking-wide text-muted-foreground">
-          {label}
-        </p>
+        <p className="text-xs uppercase tracking-wide text-muted-foreground">{label}</p>
         <p className="font-medium">{value}</p>
       </div>
     </div>
@@ -741,9 +715,7 @@ function CreateSessionDialog({
   onSessionCreated,
 }: CreateSessionDialogProps) {
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState<SessionFormState>(() =>
-    createInitialSessionForm(),
-  );
+  const [form, setForm] = useState<SessionFormState>(() => createInitialSessionForm());
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -809,9 +781,7 @@ function CreateSessionDialog({
       setOpen(false);
     } catch (e) {
       setError(
-        e instanceof Error
-          ? e.message
-          : "Unable to create the session right now.",
+        e instanceof Error ? e.message : "Unable to create the session right now.",
       );
     } finally {
       setSubmitting(false);
@@ -1017,4 +987,3 @@ const roundDate = (date: Date) => {
   rounded.setSeconds(0, 0);
   return rounded;
 };
-

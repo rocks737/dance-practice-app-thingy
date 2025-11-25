@@ -1,9 +1,5 @@
 import { createClient } from "@/lib/supabase/client";
-import {
-  fetchSessions,
-  createSession,
-  updateSession,
-} from "../api";
+import { fetchSessions, createSession, updateSession } from "../api";
 import type {
   SessionFilters,
   SessionStatus,
@@ -30,8 +26,7 @@ const createQueryBuilder = (response: QueryResponse) => {
     in: jest.fn().mockReturnThis(),
     gte: jest.fn().mockReturnThis(),
     lte: jest.fn().mockReturnThis(),
-    then: (resolve: any, reject?: any) =>
-      Promise.resolve(response).then(resolve, reject),
+    then: (resolve: any, reject?: any) => Promise.resolve(response).then(resolve, reject),
   };
 
   return builder;
@@ -136,29 +131,11 @@ describe("sessions/api", () => {
       await fetchSessions({ filters, limit: 5, offset: 10 });
 
       expect(builder.ilike).toHaveBeenCalledWith("title", "%westie%");
-      expect(builder.in).toHaveBeenNthCalledWith(
-        1,
-        "status",
-        filters.statuses,
-      );
-      expect(builder.in).toHaveBeenNthCalledWith(
-        2,
-        "session_type",
-        filters.sessionTypes,
-      );
-      expect(builder.in).toHaveBeenNthCalledWith(
-        3,
-        "visibility",
-        filters.visibilities,
-      );
-      expect(builder.gte).toHaveBeenCalledWith(
-        "scheduled_start",
-        filters.fromDate,
-      );
-      expect(builder.lte).toHaveBeenCalledWith(
-        "scheduled_start",
-        filters.toDate,
-      );
+      expect(builder.in).toHaveBeenNthCalledWith(1, "status", filters.statuses);
+      expect(builder.in).toHaveBeenNthCalledWith(2, "session_type", filters.sessionTypes);
+      expect(builder.in).toHaveBeenNthCalledWith(3, "visibility", filters.visibilities);
+      expect(builder.gte).toHaveBeenCalledWith("scheduled_start", filters.fromDate);
+      expect(builder.lte).toHaveBeenCalledWith("scheduled_start", filters.toDate);
       expect(builder.range).toHaveBeenCalledWith(10, 14);
     });
 
@@ -215,9 +192,7 @@ describe("sessions/api", () => {
         session_participants: [],
       };
 
-      const single = jest
-        .fn()
-        .mockResolvedValue({ data: rawSession, error: null });
+      const single = jest.fn().mockResolvedValue({ data: rawSession, error: null });
       const select = jest.fn().mockReturnValue({ single });
       const insert = jest.fn().mockReturnValue({ select });
 
@@ -272,9 +247,7 @@ describe("sessions/api", () => {
         session_participants: [{ user_id: "u-9" }],
       };
 
-      const single = jest
-        .fn()
-        .mockResolvedValue({ data: rawSession, error: null });
+      const single = jest.fn().mockResolvedValue({ data: rawSession, error: null });
       const select = jest.fn().mockReturnValue({ single });
       const eq = jest.fn().mockReturnValue({ select });
       const update = jest.fn().mockReturnValue({ eq });
@@ -322,4 +295,3 @@ describe("sessions/api", () => {
     });
   });
 });
-

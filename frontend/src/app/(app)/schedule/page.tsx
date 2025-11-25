@@ -2,6 +2,7 @@ import { Calendar } from "lucide-react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { SchedulePlanner } from "@/components/schedule/SchedulePlanner";
+import { fetchProfileIdByAuthUserId } from "@/lib/profiles/api";
 
 export default async function SchedulePage() {
   const supabase = await createClient();
@@ -11,6 +12,12 @@ export default async function SchedulePage() {
 
   if (!user) {
     redirect("/login");
+  }
+
+  const profileId = await fetchProfileIdByAuthUserId(supabase, user.id);
+  if (!profileId) {
+    // No profile yet: prompt user to complete onboarding
+    redirect("/profile?message=Please complete your profile first");
   }
 
   return (
@@ -29,8 +36,7 @@ export default async function SchedulePage() {
         </div>
       </div>
 
-      <SchedulePlanner authUserId={user.id} />
+      <SchedulePlanner profileId={profileId} />
     </div>
   );
 }
-

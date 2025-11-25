@@ -5,8 +5,11 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Eye, EyeOff, Key, Loader2, Save, X } from "lucide-react";
 import { toast } from "sonner";
-import { passwordChangeSchema, type PasswordChangeFormData } from "@/lib/profiles/validation";
-import { updatePassword } from "@/lib/profiles/api";
+import {
+  passwordChangeSchema,
+  type PasswordChangeFormData,
+} from "@/lib/profiles/validation";
+import { updatePassword } from "@/lib/profiles/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -40,7 +43,7 @@ export function PasswordChangeForm() {
   // Calculate password strength
   const getPasswordStrength = (password: string) => {
     if (!password) return { score: 0, label: "", color: "" };
-    
+
     let score = 0;
     if (password.length >= 8) score++;
     if (password.length >= 12) score++;
@@ -61,7 +64,7 @@ export function PasswordChangeForm() {
     setIsSaving(true);
     try {
       await updatePassword(data.newPassword);
-      
+
       toast.success("Password updated successfully");
       setIsEditing(false);
       reset();
@@ -114,14 +117,22 @@ export function PasswordChangeForm() {
                 />
                 <button
                   type="button"
-                  onClick={() => setShowPasswords(prev => ({ ...prev, current: !prev.current }))}
+                  onClick={() =>
+                    setShowPasswords((prev) => ({ ...prev, current: !prev.current }))
+                  }
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors duration-200 hover:scale-110 active:scale-95"
                 >
-                  {showPasswords.current ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  {showPasswords.current ? (
+                    <EyeOff className="w-4 h-4" />
+                  ) : (
+                    <Eye className="w-4 h-4" />
+                  )}
                 </button>
               </div>
               {errors.currentPassword && (
-                <p className="mt-1 text-sm text-red-500">{errors.currentPassword.message}</p>
+                <p className="mt-1 text-sm text-red-500">
+                  {errors.currentPassword.message}
+                </p>
               )}
             </div>
 
@@ -140,27 +151,40 @@ export function PasswordChangeForm() {
                 />
                 <button
                   type="button"
-                  onClick={() => setShowPasswords(prev => ({ ...prev, new: !prev.new }))}
+                  onClick={() =>
+                    setShowPasswords((prev) => ({ ...prev, new: !prev.new }))
+                  }
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors duration-200 hover:scale-110 active:scale-95"
                 >
-                  {showPasswords.new ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  {showPasswords.new ? (
+                    <EyeOff className="w-4 h-4" />
+                  ) : (
+                    <Eye className="w-4 h-4" />
+                  )}
                 </button>
               </div>
               {errors.newPassword && (
                 <p className="mt-1 text-sm text-red-500">{errors.newPassword.message}</p>
               )}
-              
+
               {/* Password Strength Indicator */}
               {newPassword && (
                 <div className="mt-2">
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs text-gray-600 dark:text-gray-400">Password Strength:</span>
-                    <span className={`text-xs font-medium ${
-                      strength.label === "Weak" ? "text-red-500" :
-                      strength.label === "Fair" ? "text-yellow-500" :
-                      strength.label === "Good" ? "text-blue-500" :
-                      "text-green-500"
-                    }`}>
+                    <span className="text-xs text-gray-600 dark:text-gray-400">
+                      Password Strength:
+                    </span>
+                    <span
+                      className={`text-xs font-medium ${
+                        strength.label === "Weak"
+                          ? "text-red-500"
+                          : strength.label === "Fair"
+                            ? "text-yellow-500"
+                            : strength.label === "Good"
+                              ? "text-blue-500"
+                              : "text-green-500"
+                      }`}
+                    >
                       {strength.label}
                     </span>
                   </div>
@@ -192,14 +216,22 @@ export function PasswordChangeForm() {
                 />
                 <button
                   type="button"
-                  onClick={() => setShowPasswords(prev => ({ ...prev, confirm: !prev.confirm }))}
+                  onClick={() =>
+                    setShowPasswords((prev) => ({ ...prev, confirm: !prev.confirm }))
+                  }
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors duration-200 hover:scale-110 active:scale-95"
                 >
-                  {showPasswords.confirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  {showPasswords.confirm ? (
+                    <EyeOff className="w-4 h-4" />
+                  ) : (
+                    <Eye className="w-4 h-4" />
+                  )}
                 </button>
               </div>
               {errors.confirmPassword && (
-                <p className="mt-1 text-sm text-red-500">{errors.confirmPassword.message}</p>
+                <p className="mt-1 text-sm text-red-500">
+                  {errors.confirmPassword.message}
+                </p>
               )}
             </div>
 
@@ -231,12 +263,10 @@ export function PasswordChangeForm() {
           </form>
         ) : (
           <div className="py-4">
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              ••••••••••••
-            </p>
+            <p className="text-sm text-gray-600 dark:text-gray-400">••••••••••••</p>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-              For security reasons, we don't display your current password.
-              Click "Change Password" to update it.
+              For security reasons, we don't display your current password. Click "Change
+              Password" to update it.
             </p>
           </div>
         )}
@@ -244,4 +274,3 @@ export function PasswordChangeForm() {
     </div>
   );
 }
-
