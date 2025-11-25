@@ -16,7 +16,7 @@ import {
   dancePreferencesSchema,
   type DancePreferencesFormData,
 } from "@/lib/profiles/validation";
-import { updateProfile } from "@/lib/profiles/api";
+import { updateProfile } from "@/lib/profiles/client";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {

@@ -118,6 +118,11 @@ export function ScheduleAvailabilityCalendar({
         return;
       }
 
+      if (start < new Date()) {
+        toast.error("You can't add availability in the past");
+        return;
+      }
+
       const newWindow = eventToWindow(start, end);
 
       // Check for duplicate
@@ -172,6 +177,11 @@ export function ScheduleAvailabilityCalendar({
         return;
       }
 
+      if (roundedStart < new Date()) {
+        toast.error("You can't move availability into the past");
+        return;
+      }
+
       const oldWindow: AvailabilityWindow = {
         dayOfWeek: event.dayOfWeek,
         startTime: event.startTime,
@@ -194,6 +204,11 @@ export function ScheduleAvailabilityCalendar({
 
       if (!isValidDuration(roundedStart, roundedEnd, 15)) {
         toast.error("Availability window must be at least 15 minutes");
+        return;
+      }
+
+      if (roundedStart < new Date()) {
+        toast.error("You can't move availability into the past");
         return;
       }
 

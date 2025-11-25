@@ -191,7 +191,7 @@ export function LocationEditorDialog({
 
             <div className="mt-4 flex items-center justify-between">
               {mode === "edit" ? (
-                <Button variant="ghost" onClick={handleDelete} disabled={pending}>
+                <Button variant="destructive" onClick={handleDelete} disabled={pending}>
                   Delete
                 </Button>
               ) : (

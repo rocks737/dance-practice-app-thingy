@@ -14,6 +14,8 @@ as $$
   limit 1;
 $$;
 
+grant execute on function public.current_profile_id() to authenticated;
+
 create or replace function public.current_user_is_admin()
 returns boolean
 language sql
@@ -28,6 +30,8 @@ as $$
       and ur.role = 'ADMIN'
   );
 $$;
+
+grant execute on function public.current_user_is_admin() to authenticated;
 
 -- user_profiles -------------------------------------------------------------
 alter table public.user_profiles enable row level security;
@@ -137,6 +141,8 @@ as $$
       and sp.user_id = public.current_profile_id()
   );
 $$;
+
+grant execute on function public.preference_owned_by_current(uuid) to authenticated;
 
 -- schedule_preference child tables -----------------------------------------
 alter table public.schedule_preference_windows enable row level security;
@@ -422,6 +428,8 @@ as $$
       and sn.author_id = public.current_profile_id()
   );
 $$;
+
+grant execute on function public.session_note_owned(uuid) to authenticated;
 
 do $$
 declare

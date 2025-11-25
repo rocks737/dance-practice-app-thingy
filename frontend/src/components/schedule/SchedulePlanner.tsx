@@ -132,7 +132,7 @@ export function SchedulePlanner({ profileId }: SchedulePlannerProps) {
           }
         }}
       >
-        <DialogContent className="max-w-3xl overflow-y-auto max-h-[85vh]">
+        <DialogContent className="h-[80vh] w-[90vw] max-w-[1100px]">
           <DialogHeader>
             <DialogTitle>
               {editorState?.mode === "edit" ? "Edit preference" : "Create preference"}

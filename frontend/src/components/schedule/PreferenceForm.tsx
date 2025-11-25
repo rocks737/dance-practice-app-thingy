@@ -75,7 +75,7 @@ export function PreferenceForm({
     watch,
     formState: { errors, isSubmitting, isDirty },
   } = useForm<SchedulePreferenceFormData>({
-    resolver: zodResolver(schedulePreferenceSchema),
+    resolver: zodResolver(schedulePreferenceSchema) as any,
     defaultValues,
   });
 
@@ -219,7 +219,7 @@ export function PreferenceForm({
   };
 
   return (
-    <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
+    <form className="space-y-6" onSubmit={handleSubmit(onSubmit as any)}>
       <div className="space-y-1">
         <div className="flex items-center gap-3">
           <div className="rounded-full bg-primary/10 p-2 text-primary">
@@ -287,7 +287,7 @@ export function PreferenceForm({
                           `availabilityWindows.${index}.dayOfWeek`,
                           value as (typeof DAY_OF_WEEK_VALUES)[number],
                           {
-                            shouldDirty: true,
+                          shouldDirty: true,
                           },
                         )
                       }
@@ -501,6 +501,7 @@ export function PreferenceForm({
     </form>
   );
 }
+
 
 interface PreferenceCheckboxGroupProps {
   title: string;

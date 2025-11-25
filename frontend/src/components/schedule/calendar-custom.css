@@ -86,3 +86,33 @@
 .rbc-time-view .rbc-time-content > .rbc-day-slot.past-date {
   background-color: hsl(var(--muted) / 0.15);
 }
+
+/* Highlight the current day in both header and grid */
+.rbc-time-view .rbc-header.rbc-today {
+  background-color: hsl(var(--primary) / 0.1);
+  color: hsl(var(--foreground));
+  font-weight: 600;
+  border-radius: 4px;
+}
+
+.rbc-time-view .rbc-header.rbc-today span {
+  color: inherit;
+}
+
+.rbc-day-slot.rbc-today {
+  background-color: hsl(var(--primary) / 0.04);
+  border-left: 2px solid hsl(var(--primary));
+  border-right: 2px solid hsl(var(--primary));
+  box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.08);
+}
+
+.rbc-day-slot.rbc-today .rbc-event {
+  border-color: hsl(var(--primary));
+}
+
+/* Center events within each column */
+.rbc-event {
+  width: calc(100% - 12px) !important;
+  margin-left: 6px !important;
+  margin-right: 6px !important;
+}
