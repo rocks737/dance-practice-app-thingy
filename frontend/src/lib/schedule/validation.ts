@@ -18,11 +18,26 @@ export const availabilityWindowSchema = z
     dayOfWeek: dayOfWeekEnum,
     startTime: z.string().regex(timePattern, "Start time must be in HH:MM format"),
     endTime: z.string().regex(timePattern, "End time must be in HH:MM format"),
+    recurring: z.boolean().default(true),
+    specificDate: z.string().optional(),
   })
   .refine((window) => window.startTime < window.endTime, {
     message: "Start time must be before end time",
     path: ["endTime"],
-  });
+  })
+  .refine(
+    (window) => {
+      // If not recurring, specificDate must be provided
+      if (window.recurring === false && !window.specificDate) {
+        return false;
+      }
+      return true;
+    },
+    {
+      message: "Specific date is required for one-time availability",
+      path: ["specificDate"],
+    },
+  );
 
 export const schedulePreferenceSchema = z.object({
   availabilityWindows: z

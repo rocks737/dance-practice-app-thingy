@@ -92,6 +92,15 @@ export interface AvailabilityWindow {
    * Stored as HH:mm in the user's local timezone
    */
   endTime: string;
+  /**
+   * If true, this window applies every week on the specified day.
+   * If false, it only applies to one specific date.
+   */
+  recurring?: boolean;
+  /**
+   * For one-time windows, the specific date (ISO format)
+   */
+  specificDate?: string;
 }
 
 export interface SchedulePreference {

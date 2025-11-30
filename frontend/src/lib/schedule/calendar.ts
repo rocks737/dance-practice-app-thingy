@@ -105,7 +105,7 @@ export function windowToEvent(
     ...window,
     start,
     end,
-    title: `${window.startTime} - ${window.endTime}`,
+    title: `${format(start, "h:mm a")} - ${format(end, "h:mm a")}`,
   };
 }
 
@@ -128,6 +128,8 @@ export function eventToWindow(
 
 /**
  * Converts an array of availability windows to calendar events.
+ * For recurring windows, only shows instances in the future or current week.
+ * For one-time windows, only shows them in the week of their specific date.
  * @param windows - Array of availability windows to convert
  * @param weekStart - The Sunday of the week to display (defaults to current week)
  */
@@ -135,7 +137,32 @@ export function windowsToEvents(
   windows: AvailabilityWindow[],
   weekStart: Date = getWeekStart(),
 ): AvailabilityEvent[] {
-  return windows.map((window) => windowToEvent(window, weekStart));
+  const now = new Date();
+  const currentWeekStart = getWeekStart(now);
+  
+  return windows
+    .filter((window) => {
+      // For one-time windows, only show if their specificDate falls within this week
+      if (window.recurring === false) {
+        if (!window.specificDate) {
+          // Invalid one-time window without specific date - skip it
+          return false;
+        }
+        
+        // Parse the specific date (YYYY-MM-DD format)
+        const specificDate = new Date(window.specificDate);
+        const specificDateStart = startOfDay(specificDate);
+        
+        // Check if the specific date falls within the current week being displayed
+        const weekEnd = addDays(weekStart, 6);
+        return specificDateStart >= weekStart && specificDateStart <= weekEnd;
+      }
+      
+      // For recurring windows, only show them if they're in the current week or future
+      // This prevents showing recurring blocks in past weeks
+      return weekStart >= currentWeekStart;
+    })
+    .map((window) => windowToEvent(window, weekStart));
 }
 
 /**

@@ -26,7 +26,7 @@ import sys
 import time
 import uuid
 from typing import Any, Dict, Optional, Tuple
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 try:
     import requests
@@ -429,6 +429,69 @@ def create_schedule_preferences(
     return pref_id
 
 
+def create_session(
+    url: str,
+    key: str,
+    bearer: str,
+    organizer_id: str,
+    title: str,
+    session_type: str,
+    status: str,
+    scheduled_start: datetime,
+    scheduled_end: datetime,
+    location_id: Optional[str] = None,
+    visibility: str = "PUBLIC",
+    capacity: Optional[int] = None,
+) -> str:
+    """
+    Create a session. Returns session_id.
+    """
+    now_iso = datetime.now(timezone.utc).isoformat()
+    session = {
+        "organizer_id": organizer_id,
+        "title": title,
+        "session_type": session_type,
+        "status": status,
+        "scheduled_start": scheduled_start.isoformat(),
+        "scheduled_end": scheduled_end.isoformat(),
+        "visibility": visibility,
+        "created_at": now_iso,
+        "updated_at": now_iso,
+        "version": 0,
+    }
+    if location_id:
+        session["location_id"] = location_id
+    if capacity:
+        session["capacity"] = capacity
+
+    s, b = rest_insert(url, key, bearer, "sessions", [session])
+    if s in (200, 201) and isinstance(b, list) and b:
+        return b[0]["id"]
+    raise RuntimeError(f"Failed to create session: {s} {b}")
+
+
+def add_session_participant(
+    url: str,
+    key: str,
+    bearer: str,
+    session_id: str,
+    user_id: str,
+) -> None:
+    """
+    Add a participant to a session.
+    """
+    s, b = rest_insert(
+        url,
+        key,
+        bearer,
+        "session_participants",
+        [{"session_id": session_id, "user_id": user_id}],
+    )
+    if s not in (200, 201):
+        # It's ok if they already exist
+        pass
+
+
 def verify_created(url: str, key: str, profile_emails: list[str]) -> Dict[str, Any]:
     """
     Verify via REST that profiles and preferences exist.
@@ -539,6 +602,139 @@ def main() -> int:
     prefs = verification["preferences"]
     for email, info in prefs.items():
         print(f"   - {email}: {len(info.get('windows', []))} windows")
+
+    # Create past sessions
+    print("\nCreating past sessions...")
+    profile_map = {r["email"]: r["profile_id"] for r in results}
+    alice_id = profile_map.get("alice@example.com")
+    bob_id = profile_map.get("bob@example.com")
+    test_id = profile_map.get("test@ex.com")
+
+    if alice_id and bob_id:
+        now = datetime.now(timezone.utc)
+        
+        # Helper to find the most recent occurrence of a weekday
+        def find_most_recent_weekday(target_weekday: int, max_days_ago: int) -> datetime:
+            """Find the most recent occurrence of weekday (0=Monday, 1=Tuesday, etc.) within max_days_ago"""
+            for days_ago in range(max_days_ago + 1):
+                candidate = now - timedelta(days=days_ago)
+                if candidate.weekday() == target_weekday:
+                    return candidate
+            # Fallback: just go back max_days_ago and adjust to target weekday
+            return now - timedelta(days=max_days_ago - ((now.weekday() - target_weekday) % 7))
+
+        # Session 3 weeks ago (Tuesday)
+        tuesday_3w = find_most_recent_weekday(1, 21)  # Tuesday = 1
+        session1_start = tuesday_3w.replace(hour=18, minute=0, second=0, microsecond=0)
+        session1_end = session1_start + timedelta(hours=3)
+        session1_id = create_session(
+            base_url,
+            service_key,
+            service_key,
+            alice_id,
+            "Past Practice Session - Technique Focus",
+            "PARTNER_PRACTICE",
+            "COMPLETED",
+            session1_start,
+            session1_end,
+            location_id,
+            "PUBLIC",
+            capacity=4,
+        )
+        add_session_participant(base_url, service_key, service_key, session1_id, alice_id)
+        add_session_participant(base_url, service_key, service_key, session1_id, bob_id)
+        print(f"  ✓ Created session 3 weeks ago: {session1_start.strftime('%Y-%m-%d %H:%M')}")
+
+        # Session 2 weeks ago (Thursday)
+        thursday_2w = find_most_recent_weekday(3, 14)  # Thursday = 3
+        session2_start = thursday_2w.replace(hour=18, minute=0, second=0, microsecond=0)
+        session2_end = session2_start + timedelta(hours=3)
+        session2_id = create_session(
+            base_url,
+            service_key,
+            service_key,
+            bob_id,
+            "Past Group Practice - Musicality",
+            "GROUP_PRACTICE",
+            "COMPLETED",
+            session2_start,
+            session2_end,
+            location_id,
+            "PUBLIC",
+            capacity=6,
+        )
+        add_session_participant(base_url, service_key, service_key, session2_id, bob_id)
+        add_session_participant(base_url, service_key, service_key, session2_id, alice_id)
+        print(f"  ✓ Created session 2 weeks ago: {session2_start.strftime('%Y-%m-%d %H:%M')}")
+
+        # Session 1 week ago (Saturday)
+        saturday_1w = find_most_recent_weekday(5, 7)  # Saturday = 5
+        session3_start = saturday_1w.replace(hour=10, minute=0, second=0, microsecond=0)
+        session3_end = session3_start + timedelta(hours=4)
+        session3_id = create_session(
+            base_url,
+            service_key,
+            service_key,
+            alice_id,
+            "Past Saturday Practice - Connection",
+            "PARTNER_PRACTICE",
+            "COMPLETED",
+            session3_start,
+            session3_end,
+            location_id,
+            "PUBLIC",
+            capacity=4,
+        )
+        add_session_participant(base_url, service_key, service_key, session3_id, alice_id)
+        add_session_participant(base_url, service_key, service_key, session3_id, bob_id)
+        print(f"  ✓ Created session 1 week ago: {session3_start.strftime('%Y-%m-%d %H:%M')}")
+
+        # Session 3 days ago (Tuesday)
+        tuesday_3d = find_most_recent_weekday(1, 3)
+        session4_start = tuesday_3d.replace(hour=18, minute=0, second=0, microsecond=0)
+        session4_end = session4_start + timedelta(hours=3)
+        session4_id = create_session(
+            base_url,
+            service_key,
+            service_key,
+            bob_id,
+            "Recent Practice - Styling",
+            "PARTNER_PRACTICE",
+            "COMPLETED",
+            session4_start,
+            session4_end,
+            location_id,
+            "PUBLIC",
+            capacity=4,
+        )
+        add_session_participant(base_url, service_key, service_key, session4_id, bob_id)
+        add_session_participant(base_url, service_key, service_key, session4_id, alice_id)
+        if test_id:
+            add_session_participant(base_url, service_key, service_key, session4_id, test_id)
+        print(f"  ✓ Created session 3 days ago: {session4_start.strftime('%Y-%m-%d %H:%M')}")
+
+        # Session yesterday (if it was Tuesday, Thursday, or Saturday)
+        yesterday = now - timedelta(days=1)
+        if yesterday.weekday() in [1, 3, 5]:  # Tuesday, Thursday, or Saturday
+            session5_start = yesterday.replace(hour=18 if yesterday.weekday() != 5 else 10, minute=0, second=0, microsecond=0)
+            session5_end = session5_start + timedelta(hours=3 if yesterday.weekday() != 5 else 4)
+            session5_id = create_session(
+                base_url,
+                service_key,
+                service_key,
+                alice_id,
+                "Yesterday's Practice Session",
+                "GROUP_PRACTICE",
+                "COMPLETED",
+                session5_start,
+                session5_end,
+                location_id,
+                "PUBLIC",
+                capacity=6,
+            )
+            add_session_participant(base_url, service_key, service_key, session5_id, alice_id)
+            add_session_participant(base_url, service_key, service_key, session5_id, bob_id)
+            print(f"  ✓ Created session yesterday: {session5_start.strftime('%Y-%m-%d %H:%M')}")
 
     print("\n✅ Done.")
     print("Overlapping availability times:")

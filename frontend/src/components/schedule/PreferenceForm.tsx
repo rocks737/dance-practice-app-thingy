@@ -73,6 +73,7 @@ export function PreferenceForm({
     handleSubmit,
     setValue,
     watch,
+    reset,
     formState: { errors, isSubmitting, isDirty },
   } = useForm<SchedulePreferenceFormData>({
     resolver: zodResolver(schedulePreferenceSchema) as any,
@@ -108,35 +109,154 @@ export function PreferenceForm({
     }
   };
 
-  // Calendar handlers
-  const handleCalendarCreate = (window: AvailabilityWindow) => {
-    append(window);
+  // Calendar handlers - auto-save for immediate feedback
+  const handleCalendarCreate = async (window: AvailabilityWindow) => {
+    // Ensure recurring is always set
+    const normalizedWindow = {
+      ...window,
+      recurring: window.recurring ?? true,
+    };
+    
+    // If editing existing preference, auto-save
+    if (mode === "edit" && preference) {
+      try {
+        // Get current windows BEFORE optimistic update
+        const currentWindows = watch("availabilityWindows");
+        
+        // Optimistically add to UI
+        append(normalizedWindow);
+        
+        const updatedData = {
+          ...watch(),
+          availabilityWindows: [...currentWindows, normalizedWindow],
+        };
+        
+        const result = await updateSchedulePreference({
+          userId: profileId,
+          preferenceId: preference.id,
+          data: updatedData as SchedulePreferenceFormData,
+        });
+        
+        // Sync with server response
+        const freshData = toFormData(result);
+        reset(freshData, { keepDirty: false });
+        
+        onSuccess(result);
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Unable to save");
+        console.error(error);
+        // Rollback the optimistic update
+        remove(fields.length);
+      }
+    } else {
+      // In create mode, just append (will be saved on form submit)
+      append(normalizedWindow);
+    }
   };
 
-  const handleCalendarUpdate = (
+  const handleCalendarUpdate = async (
     oldWindow: AvailabilityWindow,
     newWindow: AvailabilityWindow,
   ) => {
+    // Ensure recurring is always set
+    const normalizedNewWindow = {
+      ...newWindow,
+      recurring: newWindow.recurring ?? true,
+    };
+    
     const index = fields.findIndex(
       (f) =>
         f.dayOfWeek === oldWindow.dayOfWeek &&
         f.startTime === oldWindow.startTime &&
-        f.endTime === oldWindow.endTime,
+        f.endTime === oldWindow.endTime &&
+        (f.recurring ?? true) === (oldWindow.recurring ?? true) &&
+        f.specificDate === oldWindow.specificDate,
     );
-    if (index >= 0) {
-      setValue(`availabilityWindows.${index}`, newWindow, { shouldDirty: true });
+    
+    if (index < 0) return;
+    
+    const oldValue = fields[index];
+    
+    // Optimistically update the UI
+    setValue(`availabilityWindows.${index}`, normalizedNewWindow, { shouldDirty: false });
+    
+    // If editing existing preference, auto-save
+    if (mode === "edit" && preference) {
+      try {
+        const currentWindows = watch("availabilityWindows");
+        const updatedWindows = [...currentWindows];
+        updatedWindows[index] = normalizedNewWindow;
+        
+        const updatedData = {
+          ...watch(),
+          availabilityWindows: updatedWindows,
+        };
+        
+        const result = await updateSchedulePreference({
+          userId: profileId,
+          preferenceId: preference.id,
+          data: updatedData as SchedulePreferenceFormData,
+        });
+        
+        // Sync the entire form with server response to ensure consistency
+        // This shouldn't cause a flash since the data should match our optimistic update
+        const freshData = toFormData(result);
+        reset(freshData, { keepDirty: false });
+        
+        onSuccess(result);
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Unable to save");
+        console.error(error);
+        // Rollback the optimistic update
+        setValue(`availabilityWindows.${index}`, oldValue, { shouldDirty: false });
+      }
     }
   };
 
-  const handleCalendarDelete = (window: AvailabilityWindow) => {
+  const handleCalendarDelete = async (window: AvailabilityWindow) => {
     const index = fields.findIndex(
       (f) =>
         f.dayOfWeek === window.dayOfWeek &&
         f.startTime === window.startTime &&
-        f.endTime === window.endTime,
+        f.endTime === window.endTime &&
+        (f.recurring ?? true) === (window.recurring ?? true) &&
+        f.specificDate === window.specificDate,
     );
-    if (index >= 0) {
-      remove(index);
+    
+    if (index < 0) return;
+    
+    const deletedWindow = fields[index];
+    
+    // Optimistically remove from UI
+    remove(index);
+    
+    // If editing existing preference, auto-save
+    if (mode === "edit" && preference) {
+      try {
+        const currentWindows = watch("availabilityWindows");
+        const updatedWindows = currentWindows.filter((_, i) => i !== index);
+        
+        const updatedData = {
+          ...watch(),
+          availabilityWindows: updatedWindows,
+        };
+        
+        const result = await updateSchedulePreference({
+          userId: profileId,
+          preferenceId: preference.id,
+          data: updatedData as SchedulePreferenceFormData,
+        });
+        
+        // Sync with server response
+        const freshData = toFormData(result);
+        reset(freshData, { keepDirty: false });
+        
+        onSuccess(result);
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Unable to save");
+        // Rollback the optimistic update
+        append(deletedWindow);
+      }
     }
   };
 
@@ -166,6 +286,7 @@ export function PreferenceForm({
         DAY_OF_WEEK_VALUES[Math.min(fields.length, DAY_OF_WEEK_VALUES.length - 1)],
       startTime: "18:00",
       endTime: "20:00",
+      recurring: true,
     });
   };
 
@@ -561,6 +682,8 @@ function toFormData(preference?: SchedulePreference): SchedulePreferenceFormData
       dayOfWeek: window.dayOfWeek,
       startTime: window.startTime,
       endTime: window.endTime,
+      recurring: window.recurring ?? true,
+      specificDate: window.specificDate,
     })),
     preferredRoles: preference.preferredRoles,
     preferredLevels: preference.preferredLevels,

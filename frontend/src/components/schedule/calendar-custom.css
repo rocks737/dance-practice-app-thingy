@@ -110,9 +110,16 @@
   border-color: hsl(var(--primary));
 }
 
-/* Center events within each column */
+/* Adjust event positioning to center them with equal margins */
+.rbc-events-container {
+  margin: 0 2px;
+}
+
 .rbc-event {
-  width: calc(100% - 12px) !important;
-  margin-left: 6px !important;
-  margin-right: 6px !important;
+  margin: 0 !important;
+}
+
+/* Hide default time labels since events render custom headings */
+.rbc-event-label {
+  display: none;
 }

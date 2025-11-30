@@ -26,7 +26,9 @@ const SCHEDULE_PREFERENCE_SELECT = `
   schedule_preference_windows (
     day_of_week,
     start_time,
-    end_time
+    end_time,
+    recurring,
+    specific_date
   ),
   schedule_preference_roles (
     role
@@ -278,6 +280,8 @@ function mapWindows(rows: SchedulePreferenceWindowRow[] | null): AvailabilityWin
     dayOfWeek: window.day_of_week as AvailabilityWindow["dayOfWeek"],
     startTime: normalizeTime(window.start_time),
     endTime: normalizeTime(window.end_time),
+    recurring: window.recurring ?? true,
+    specificDate: window.specific_date ?? undefined,
   }));
 }
 
@@ -347,6 +351,8 @@ async function replaceChildRows(
           day_of_week: window.dayOfWeek,
           start_time: window.startTime,
           end_time: window.endTime,
+          recurring: window.recurring ?? true,
+          specific_date: window.specificDate ?? null,
         })),
       ),
     );

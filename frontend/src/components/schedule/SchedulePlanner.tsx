@@ -177,8 +177,8 @@ function PreferenceCard({ preference, onEdit, onDelete, deleting }: PreferenceCa
 
   return (
     <div className="rounded-lg border bg-card p-5 shadow-sm">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="space-y-2">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex-1 space-y-2">
           <p className="text-xs uppercase text-muted-foreground">Availability</p>
           <div className="flex flex-wrap gap-2">
             {dailySummaries.length === 0 ? (
@@ -192,7 +192,7 @@ function PreferenceCard({ preference, onEdit, onDelete, deleting }: PreferenceCa
             )}
           </div>
         </div>
-        <div className="flex flex-col items-end gap-2 text-right text-xs text-muted-foreground">
+        <div className="flex shrink-0 flex-col items-end gap-2 text-right text-xs text-muted-foreground">
           <PreferenceActions
             preference={preference}
             onEdit={onEdit}

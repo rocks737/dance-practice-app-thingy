@@ -22,11 +22,17 @@ import {
   isValidDuration,
   type AvailabilityEvent,
 } from "@/lib/schedule/calendar";
-import { Info, ChevronLeft, ChevronRight } from "lucide-react";
+import { Info, ChevronLeft, ChevronRight, Repeat, Calendar as CalendarIcon } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { addWeeks, addDays, startOfToday } from "date-fns";
 import { Button } from "@/components/ui/button";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 
 // Enable drag and drop
 const Calendar = withDragAndDrop(BigCalendar);
@@ -107,6 +113,15 @@ export function ScheduleAvailabilityCalendar({
     [today],
   );
 
+  // Check if an event's end time is in the past (for styling)
+  const isEventInPast = useCallback(
+    (eventEnd: Date) => {
+      const now = new Date();
+      return eventEnd < now;
+    },
+    [],
+  );
+
   // Handle slot selection (user clicks/drags on empty calendar space)
   const handleSelectSlot = useCallback(
     (slotInfo: SlotInfo) => {
@@ -124,13 +139,16 @@ export function ScheduleAvailabilityCalendar({
       }
 
       const newWindow = eventToWindow(start, end);
+      // Default to recurring
+      newWindow.recurring = true;
 
       // Check for duplicate
       const isDuplicate = windows.some(
         (w) =>
           w.dayOfWeek === newWindow.dayOfWeek &&
           w.startTime === newWindow.startTime &&
-          w.endTime === newWindow.endTime,
+          w.endTime === newWindow.endTime &&
+          w.recurring === newWindow.recurring,
       );
 
       if (isDuplicate) {
@@ -139,7 +157,7 @@ export function ScheduleAvailabilityCalendar({
       }
 
       onCreateWindow(newWindow);
-      toast.success("Availability window added");
+      toast.success("Recurring availability added");
     },
     [windows, onCreateWindow],
   );
@@ -147,23 +165,83 @@ export function ScheduleAvailabilityCalendar({
   // Handle event selection (user clicks on existing event)
   const handleSelectEvent = useCallback(
     (event: object) => {
-      const availEvent = event as AvailabilityEvent;
-      const confirmed = window.confirm(
-        `Remove availability on ${DAY_OF_WEEK_LABELS[availEvent.dayOfWeek]} ${availEvent.startTime} - ${availEvent.endTime}?`,
-      );
+      // Context menu now handles all interactions
+    },
+    [],
+  );
 
-      if (confirmed) {
-        const windowToDelete: AvailabilityWindow = {
-          dayOfWeek: availEvent.dayOfWeek,
-          startTime: availEvent.startTime,
-          endTime: availEvent.endTime,
+  // Toggle between recurring and one-time
+  const handleToggleRecurring = useCallback(
+    async (event: AvailabilityEvent) => {
+      const oldWindow: AvailabilityWindow = {
+        dayOfWeek: event.dayOfWeek,
+        startTime: event.startTime,
+        endTime: event.endTime,
+        recurring: event.recurring,
+        specificDate: event.specificDate,
+      };
+
+      const isCurrentlyRecurring = oldWindow.recurring !== false;
+
+      if (isCurrentlyRecurring) {
+        // Converting recurring → one-time:
+        // 1. Delete the recurring pattern (removes all instances)
+        // 2. Create a NEW one-time window for this specific date only
+        const oneTimeWindow: AvailabilityWindow = {
+          dayOfWeek: event.dayOfWeek,
+          startTime: event.startTime,
+          endTime: event.endTime,
+          recurring: false,
+          specificDate: format(event.start, "yyyy-MM-dd"),
         };
-        onDeleteWindow(windowToDelete);
-        toast.success("Availability window removed");
+
+        // Delete recurring pattern first
+        onDeleteWindow(oldWindow);
+        // Then create the one-time window
+        // Add a small delay to ensure delete completes first
+        setTimeout(() => {
+          onCreateWindow(oneTimeWindow);
+        }, 100);
+        
+        toast.success("Converted to one-time availability for this date only");
+      } else {
+        // Converting one-time → recurring:
+        // 1. Delete the one-time window
+        // 2. Create a NEW recurring window
+        const recurringWindow: AvailabilityWindow = {
+          dayOfWeek: event.dayOfWeek,
+          startTime: event.startTime,
+          endTime: event.endTime,
+          recurring: true,
+          specificDate: undefined,
+        };
+
+        // Delete one-time window first
+        onDeleteWindow(oldWindow);
+        // Then create the recurring pattern
+        setTimeout(() => {
+          onCreateWindow(recurringWindow);
+        }, 100);
+        
+        toast.success("Converted to recurring (appears every week)");
       }
     },
-    [onDeleteWindow],
+    [onDeleteWindow, onCreateWindow],
   );
+
+  // Delete window
+  const handleDeleteEvent = useCallback((event: AvailabilityEvent) => {
+    const windowToDelete: AvailabilityWindow = {
+      dayOfWeek: event.dayOfWeek,
+      startTime: event.startTime,
+      endTime: event.endTime,
+      recurring: event.recurring,
+      specificDate: event.specificDate,
+    };
+
+    onDeleteWindow(windowToDelete);
+    toast.success("Availability window removed");
+  }, [onDeleteWindow]);
 
   // Handle event drag/drop
   const handleEventDrop = useCallback(
@@ -177,22 +255,36 @@ export function ScheduleAvailabilityCalendar({
         return;
       }
 
-      if (roundedStart < new Date()) {
-        toast.error("You can't move availability into the past");
-        return;
-      }
-
       const oldWindow: AvailabilityWindow = {
         dayOfWeek: event.dayOfWeek,
         startTime: event.startTime,
         endTime: event.endTime,
+        recurring: event.recurring,
+        specificDate: event.specificDate,
       };
+      
       const newWindow = eventToWindow(roundedStart, roundedEnd);
+      
+      // Check if this is a recurring event being moved from a past time
+      const isRecurring = oldWindow.recurring !== false;
+      const eventEndTime = new Date(event.end);
+      const isEventInPastTime = isEventInPast(eventEndTime);
+      
+      if (isRecurring && isEventInPastTime) {
+        // Convert this specific past instance to a one-time event
+        // Keep the old recurring pattern as-is for future weeks
+        toast.error("Cannot modify past recurring events. Past instances are preserved.");
+        return;
+      }
+      
+      // For current/future events, preserve the recurring status
+      newWindow.recurring = oldWindow.recurring;
+      newWindow.specificDate = oldWindow.specificDate;
 
       onUpdateWindow(oldWindow, newWindow);
-      toast.success("Availability window updated");
+      // Don't show toast - the UI update itself provides immediate feedback
     },
-    [onUpdateWindow],
+    [onUpdateWindow, isEventInPast],
   );
 
   // Handle event resize
@@ -207,22 +299,35 @@ export function ScheduleAvailabilityCalendar({
         return;
       }
 
-      if (roundedStart < new Date()) {
-        toast.error("You can't move availability into the past");
-        return;
-      }
-
       const oldWindow: AvailabilityWindow = {
         dayOfWeek: event.dayOfWeek,
         startTime: event.startTime,
         endTime: event.endTime,
+        recurring: event.recurring,
+        specificDate: event.specificDate,
       };
+      
       const newWindow = eventToWindow(roundedStart, roundedEnd);
+      
+      // Check if this is a recurring event being resized in the past
+      const isRecurring = oldWindow.recurring !== false;
+      const eventEndTime = new Date(event.end);
+      const isEventInPastTime = isEventInPast(eventEndTime);
+      
+      if (isRecurring && isEventInPastTime) {
+        // Prevent modifying past recurring events
+        toast.error("Cannot modify past recurring events. Past instances are preserved.");
+        return;
+      }
+      
+      // For current/future events, preserve the recurring status
+      newWindow.recurring = oldWindow.recurring;
+      newWindow.specificDate = oldWindow.specificDate;
 
       onUpdateWindow(oldWindow, newWindow);
-      toast.success("Availability window updated");
+      // Don't show toast - the UI update itself provides immediate feedback
     },
-    [onUpdateWindow],
+    [onUpdateWindow, isEventInPast],
   );
 
   return (
@@ -232,32 +337,42 @@ export function ScheduleAvailabilityCalendar({
         <div className="space-y-1 text-muted-foreground">
           <p>
             <strong className="text-foreground">Click and drag</strong> on empty slots to
-            add availability windows.
+            add recurring availability.
           </p>
           <p>
-            <strong className="text-foreground">Click existing blocks</strong> to remove
-            them.
+            <strong className="text-foreground">Right-click blocks</strong> to make them one-time
+            only or delete them.
           </p>
           <p>
             <strong className="text-foreground">Drag blocks</strong> to change day/time,
             or resize to adjust duration.
           </p>
+          <div className="flex items-center gap-4 mt-2">
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 rounded" style={{ backgroundColor: "hsl(var(--primary))" }} />
+              <span className="text-xs">Recurring (every week)</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 rounded" style={{ backgroundColor: "hsl(180 70% 45%)" }} />
+              <span className="text-xs">One-time only</span>
+            </div>
+          </div>
         </div>
       </div>
 
       {/* Navigation Controls */}
       <div className="flex items-center justify-between rounded-lg border bg-background p-3">
-        <Button onClick={goToPreviousWeek} variant="outline" size="sm">
+        <Button type="button" onClick={goToPreviousWeek} variant="outline" size="sm">
           <ChevronLeft className="h-4 w-4 mr-1" />
           Previous Week
         </Button>
         <div className="flex flex-col items-center gap-1">
-          <Button onClick={goToToday} variant="ghost" size="sm">
+          <Button type="button" onClick={goToToday} variant="outline" size="sm">
             Today
           </Button>
           <p className="text-sm font-medium text-foreground">{weekRangeText}</p>
         </div>
-        <Button onClick={goToNextWeek} variant="outline" size="sm">
+        <Button type="button" onClick={goToNextWeek} variant="outline" size="sm">
           Next Week
           <ChevronRight className="h-4 w-4 ml-1" />
         </Button>
@@ -317,14 +432,18 @@ export function ScheduleAvailabilityCalendar({
           }}
           eventPropGetter={(event: object) => {
             const availEvent = event as AvailabilityEvent;
+            const isRecurring = availEvent.recurring !== false;
+            // Use teal/cyan for one-time events (more visible than chart-2)
+            const baseColor = isRecurring ? "hsl(var(--primary))" : "hsl(180 70% 45%)"; // teal
+            
             const baseStyle = {
-              backgroundColor: "hsl(var(--primary))",
-              borderColor: "hsl(var(--primary))",
+              backgroundColor: baseColor,
+              borderColor: baseColor,
               color: "hsl(var(--primary-foreground))",
             };
 
-            // Dim events in past dates slightly
-            if (isPastDate(availEvent.start)) {
+            // Dim events that have already ended (use event.end time, not just date)
+            if (isEventInPast(availEvent.end)) {
               return {
                 style: {
                   ...baseStyle,
@@ -337,6 +456,40 @@ export function ScheduleAvailabilityCalendar({
             return {
               style: baseStyle,
             };
+          }}
+          components={{
+            event: ({ event }: { event: object }) => {
+              const availEvent = event as AvailabilityEvent;
+              const isRecurring = availEvent.recurring !== false;
+              
+              return (
+                <ContextMenu>
+                  <ContextMenuTrigger asChild>
+                    <div className="flex h-full w-full flex-col gap-0.5 px-1 py-0.5 text-left">
+                      <div className="flex items-center gap-1 text-[10px] uppercase tracking-wide opacity-80">
+                        {isRecurring ? (
+                          <Repeat className="h-3 w-3 flex-shrink-0" />
+                        ) : (
+                          <CalendarIcon className="h-3 w-3 flex-shrink-0" />
+                        )}
+                        <span>{isRecurring ? "Recurring" : "One-time"}</span>
+                      </div>
+                      <span className="text-xs leading-tight whitespace-normal break-words">
+                        {availEvent.title}
+                      </span>
+                    </div>
+                  </ContextMenuTrigger>
+                  <ContextMenuContent>
+                    <ContextMenuItem onClick={() => handleToggleRecurring(availEvent)}>
+                      {isRecurring ? "Make One-Time Only" : "Make Recurring"}
+                    </ContextMenuItem>
+                    <ContextMenuItem onClick={() => handleDeleteEvent(availEvent)} className="text-destructive">
+                      Delete
+                    </ContextMenuItem>
+                  </ContextMenuContent>
+                </ContextMenu>
+              );
+            },
           }}
         />
       </div>

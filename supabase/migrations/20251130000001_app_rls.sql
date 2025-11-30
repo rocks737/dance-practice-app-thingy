@@ -1,6 +1,14 @@
+-- ------------------------------------------------------------------
+-- Dance Practice App - Row Level Security (RLS)
+-- Consolidated migration including all RLS policies and helper functions
+-- ------------------------------------------------------------------
+
 set search_path = public;
 
--- Helper functions ----------------------------------------------------------
+-- ------------------------------------------------------------------
+-- Helper Functions
+-- ------------------------------------------------------------------
+
 create or replace function public.current_profile_id()
 returns uuid
 language sql
@@ -33,7 +41,84 @@ $$;
 
 grant execute on function public.current_user_is_admin() to authenticated;
 
--- user_profiles -------------------------------------------------------------
+-- Helper function to check if current user is a participant in a session
+-- Uses security definer to bypass RLS and avoid infinite recursion
+create or replace function public.is_session_participant(session_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.session_participants sp
+    where sp.session_id = is_session_participant.session_id
+      and sp.user_id = public.current_profile_id()
+  );
+$$;
+
+grant execute on function public.is_session_participant(uuid) to authenticated;
+
+-- Helper function to check if current user is the organizer of a session
+-- Uses security definer to bypass RLS and avoid infinite recursion
+create or replace function public.is_session_organizer(session_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.sessions s
+    where s.id = is_session_organizer.session_id
+      and s.organizer_id = public.current_profile_id()
+  );
+$$;
+
+grant execute on function public.is_session_organizer(uuid) to authenticated;
+
+-- Helper function to check if current user owns a preference
+create or replace function public.preference_owned_by_current(pref_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.schedule_preferences sp
+    where sp.id = pref_id
+      and sp.user_id = public.current_profile_id()
+  );
+$$;
+
+grant execute on function public.preference_owned_by_current(uuid) to authenticated;
+
+-- Helper function to check if current user owns a session note
+create or replace function public.session_note_owned(note_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.session_notes sn
+    where sn.id = note_id
+      and sn.author_id = public.current_profile_id()
+  );
+$$;
+
+grant execute on function public.session_note_owned(uuid) to authenticated;
+
+-- ------------------------------------------------------------------
+-- RLS Policies: user_profiles
+-- ------------------------------------------------------------------
+
 alter table public.user_profiles enable row level security;
 
 drop policy if exists "user_profiles public read" on public.user_profiles;
@@ -80,7 +165,10 @@ to authenticated
 using (public.current_user_is_admin())
 with check (public.current_user_is_admin());
 
--- user_roles ---------------------------------------------------------------
+-- ------------------------------------------------------------------
+-- RLS Policies: user_roles
+-- ------------------------------------------------------------------
+
 alter table public.user_roles enable row level security;
 
 drop policy if exists "user_roles owner read" on public.user_roles;
@@ -100,7 +188,49 @@ to authenticated
 using (public.current_user_is_admin())
 with check (public.current_user_is_admin());
 
--- schedule_preferences ------------------------------------------------------
+-- ------------------------------------------------------------------
+-- RLS Policies: locations
+-- ------------------------------------------------------------------
+
+alter table public.locations enable row level security;
+
+-- Allow authenticated users to read locations
+drop policy if exists "locations readable by authenticated" on public.locations;
+create policy "locations readable by authenticated"
+on public.locations
+for select
+to authenticated
+using (true);
+
+-- Inserts only by admins
+drop policy if exists "locations insertable by admins" on public.locations;
+create policy "locations insertable by admins"
+on public.locations
+for insert
+to authenticated
+with check (public.current_user_is_admin());
+
+-- Updates only by admins
+drop policy if exists "locations updatable by admins" on public.locations;
+create policy "locations updatable by admins"
+on public.locations
+for update
+to authenticated
+using (public.current_user_is_admin())
+with check (public.current_user_is_admin());
+
+-- Deletes only by admins
+drop policy if exists "locations deletable by admins" on public.locations;
+create policy "locations deletable by admins"
+on public.locations
+for delete
+to authenticated
+using (public.current_user_is_admin());
+
+-- ------------------------------------------------------------------
+-- RLS Policies: schedule_preferences
+-- ------------------------------------------------------------------
+
 alter table public.schedule_preferences enable row level security;
 
 drop policy if exists "schedule_preferences owner read" on public.schedule_preferences;
@@ -126,25 +256,10 @@ to authenticated
 using (public.current_user_is_admin())
 with check (public.current_user_is_admin());
 
--- child helper predicate
-create or replace function public.preference_owned_by_current(pref_id uuid)
-returns boolean
-language sql
-stable
-security definer
-set search_path = public
-as $$
-  select exists (
-    select 1
-    from public.schedule_preferences sp
-    where sp.id = pref_id
-      and sp.user_id = public.current_profile_id()
-  );
-$$;
+-- ------------------------------------------------------------------
+-- RLS Policies: schedule_preference child tables
+-- ------------------------------------------------------------------
 
-grant execute on function public.preference_owned_by_current(uuid) to authenticated;
-
--- schedule_preference child tables -----------------------------------------
 alter table public.schedule_preference_windows enable row level security;
 alter table public.schedule_preference_roles enable row level security;
 alter table public.schedule_preference_levels enable row level security;
@@ -186,7 +301,10 @@ begin
   end loop;
 end $$;
 
--- sessions -----------------------------------------------------------------
+-- ------------------------------------------------------------------
+-- RLS Policies: sessions
+-- ------------------------------------------------------------------
+
 alter table public.sessions enable row level security;
 
 drop policy if exists "sessions public read" on public.sessions;
@@ -203,12 +321,7 @@ for select
 to authenticated
 using (
   organizer_id = public.current_profile_id()
-  or exists (
-    select 1
-    from public.session_participants sp
-    where sp.session_id = sessions.id
-      and sp.user_id = public.current_profile_id()
-  )
+  or public.is_session_participant(sessions.id)
 );
 
 drop policy if exists "sessions organizer insert" on public.sessions;
@@ -243,7 +356,10 @@ to authenticated
 using (public.current_user_is_admin())
 with check (public.current_user_is_admin());
 
--- session_participants -----------------------------------------------------
+-- ------------------------------------------------------------------
+-- RLS Policies: session_participants
+-- ------------------------------------------------------------------
+
 alter table public.session_participants enable row level security;
 
 drop policy if exists "session_participants read" on public.session_participants;
@@ -253,12 +369,7 @@ for select
 to authenticated
 using (
   user_id = public.current_profile_id()
-  or exists (
-    select 1
-    from public.sessions s
-    where s.id = session_participants.session_id
-      and s.organizer_id = public.current_profile_id()
-  )
+  or public.is_session_organizer(session_participants.session_id)
   or public.current_user_is_admin()
 );
 
@@ -268,12 +379,7 @@ on public.session_participants
 for insert
 to authenticated
 with check (
-  exists (
-    select 1
-    from public.sessions s
-    where s.id = session_participants.session_id
-      and s.organizer_id = public.current_profile_id()
-  )
+  public.is_session_organizer(session_participants.session_id)
 );
 
 drop policy if exists "session_participants organizer update" on public.session_participants;
@@ -282,20 +388,10 @@ on public.session_participants
 for update
 to authenticated
 using (
-  exists (
-    select 1
-    from public.sessions s
-    where s.id = session_participants.session_id
-      and s.organizer_id = public.current_profile_id()
-  )
+  public.is_session_organizer(session_participants.session_id)
 )
 with check (
-  exists (
-    select 1
-    from public.sessions s
-    where s.id = session_participants.session_id
-      and s.organizer_id = public.current_profile_id()
-  )
+  public.is_session_organizer(session_participants.session_id)
 );
 
 drop policy if exists "session_participants organizer delete" on public.session_participants;
@@ -304,12 +400,7 @@ on public.session_participants
 for delete
 to authenticated
 using (
-  exists (
-    select 1
-    from public.sessions s
-    where s.id = session_participants.session_id
-      and s.organizer_id = public.current_profile_id()
-  )
+  public.is_session_organizer(session_participants.session_id)
 );
 
 drop policy if exists "session_participants self remove" on public.session_participants;
@@ -327,7 +418,10 @@ to authenticated
 using (public.current_user_is_admin())
 with check (public.current_user_is_admin());
 
--- session_focus_areas ------------------------------------------------------
+-- ------------------------------------------------------------------
+-- RLS Policies: session_focus_areas
+-- ------------------------------------------------------------------
+
 alter table public.session_focus_areas enable row level security;
 
 drop policy if exists "session_focus_areas organizer write" on public.session_focus_areas;
@@ -336,18 +430,10 @@ on public.session_focus_areas
 for all
 to authenticated
 using (
-  exists (
-    select 1 from public.sessions s
-    where s.id = session_focus_areas.session_id
-      and s.organizer_id = public.current_profile_id()
-  )
+  public.is_session_organizer(session_focus_areas.session_id)
 )
 with check (
-  exists (
-    select 1 from public.sessions s
-    where s.id = session_focus_areas.session_id
-      and s.organizer_id = public.current_profile_id()
-  )
+  public.is_session_organizer(session_focus_areas.session_id)
 );
 
 drop policy if exists "session_focus_areas admin all" on public.session_focus_areas;
@@ -358,7 +444,10 @@ to authenticated
 using (public.current_user_is_admin())
 with check (public.current_user_is_admin());
 
--- session_notes & attachments ----------------------------------------------
+-- ------------------------------------------------------------------
+-- RLS Policies: session_notes
+-- ------------------------------------------------------------------
+
 alter table public.session_notes enable row level security;
 alter table public.session_note_media enable row level security;
 alter table public.session_note_tags enable row level security;
@@ -373,12 +462,7 @@ using (
   or author_id = public.current_profile_id()
   or (
     visibility = 'PARTICIPANTS_ONLY'
-    and exists (
-      select 1
-      from public.session_participants sp
-      where sp.session_id = session_notes.session_id
-        and sp.user_id = public.current_profile_id()
-    )
+    and public.is_session_participant(session_notes.session_id)
   )
   or public.current_user_is_admin()
 );
@@ -413,24 +497,6 @@ to authenticated
 using (public.current_user_is_admin())
 with check (public.current_user_is_admin());
 
--- Helper for notes attachments
-create or replace function public.session_note_owned(note_id uuid)
-returns boolean
-language sql
-stable
-security definer
-set search_path = public
-as $$
-  select exists (
-    select 1
-    from public.session_notes sn
-    where sn.id = note_id
-      and sn.author_id = public.current_profile_id()
-  );
-$$;
-
-grant execute on function public.session_note_owned(uuid) to authenticated;
-
 do $$
 declare
   tbl text;
@@ -459,7 +525,10 @@ begin
   end loop;
 end $$;
 
--- abuse_reports ------------------------------------------------------------
+-- ------------------------------------------------------------------
+-- RLS Policies: abuse_reports
+-- ------------------------------------------------------------------
+
 alter table public.abuse_reports enable row level security;
 
 drop policy if exists "abuse_reports reporter read" on public.abuse_reports;
@@ -486,7 +555,10 @@ to authenticated
 using (public.current_user_is_admin())
 with check (public.current_user_is_admin());
 
--- user_blocks --------------------------------------------------------------
+-- ------------------------------------------------------------------
+-- RLS Policies: user_blocks
+-- ------------------------------------------------------------------
+
 alter table public.user_blocks enable row level security;
 
 drop policy if exists "user_blocks owner access" on public.user_blocks;
@@ -505,7 +577,10 @@ to authenticated
 using (public.current_user_is_admin())
 with check (public.current_user_is_admin());
 
--- user_notification_channels ----------------------------------------------
+-- ------------------------------------------------------------------
+-- RLS Policies: user_notification_channels
+-- ------------------------------------------------------------------
+
 alter table public.user_notification_channels enable row level security;
 
 drop policy if exists "notification_channels owner" on public.user_notification_channels;
@@ -523,5 +598,4 @@ for all
 to authenticated
 using (public.current_user_is_admin())
 with check (public.current_user_is_admin());
-
 
