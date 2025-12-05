@@ -87,27 +87,54 @@ export function windowToEvent(
   window: AvailabilityWindow,
   weekStart: Date = getWeekStart(),
 ): AvailabilityEvent {
+  // Validate input
+  if (!window || !window.dayOfWeek || !window.startTime || !window.endTime) {
+    throw new Error("Invalid window: missing required properties");
+  }
+  
   const dayIndex = DAY_INDEX_MAP[window.dayOfWeek];
+  
+  if (dayIndex === undefined) {
+    throw new Error(`Invalid dayOfWeek: ${window.dayOfWeek}`);
+  }
 
   // Calculate the date for this day in the given week (Sunday = 0, Monday = 1, etc.)
   const dayDate = addDays(weekStart, dayIndex);
 
-  // Parse HH:mm times
-  const [startHour, startMinute] = window.startTime.split(":").map(Number);
-  const [endHour, endMinute] = window.endTime.split(":").map(Number);
+  // Parse HH:mm times with validation
+  const startParts = window.startTime.split(":");
+  const endParts = window.endTime.split(":");
+  
+  if (startParts.length !== 2 || endParts.length !== 2) {
+    throw new Error(`Invalid time format: ${window.startTime} or ${window.endTime}`);
+  }
+  
+  const [startHour, startMinute] = startParts.map(Number);
+  const [endHour, endMinute] = endParts.map(Number);
+  
+  if (isNaN(startHour) || isNaN(startMinute) || isNaN(endHour) || isNaN(endMinute)) {
+    throw new Error(`Invalid time values: ${window.startTime} or ${window.endTime}`);
+  }
 
   // Create Date objects
   const start = setMinutes(setHours(dayDate, startHour), startMinute);
   const end = setMinutes(setHours(dayDate, endHour), endMinute);
 
+  const title = `${format(start, "h:mm a")} - ${format(end, "h:mm a")}`;
+  const id = window.recurring !== false
+    ? `recurring-${window.dayOfWeek}-${window.startTime}-${window.endTime}`
+    : `onetime-${window.specificDate}-${window.startTime}-${window.endTime}`;
+
   return {
-    id: window.recurring !== false
-      ? `recurring-${window.dayOfWeek}-${window.startTime}-${window.endTime}`
-      : `onetime-${window.specificDate}-${window.startTime}-${window.endTime}`,
-    ...window,
+    id,
+    dayOfWeek: window.dayOfWeek,
+    startTime: window.startTime,
+    endTime: window.endTime,
+    recurring: window.recurring,
+    specificDate: window.specificDate,
     start,
     end,
-    title: `${format(start, "h:mm a")} - ${format(end, "h:mm a")}`,
+    title,
   };
 }
 
@@ -139,11 +166,24 @@ export function windowsToEvents(
   windows: AvailabilityWindow[],
   weekStart: Date = getWeekStart(),
 ): AvailabilityEvent[] {
+  console.log("[windowsToEvents] Input windows:", windows?.length || 0);
+  console.log("[windowsToEvents] Week start:", weekStart);
+  
+  if (!windows || !Array.isArray(windows)) {
+    console.warn("[windowsToEvents] Invalid windows array:", windows);
+    return [];
+  }
+  
   const now = new Date();
   const currentWeekStart = getWeekStart(now);
   
-  return windows
-    .filter((window) => {
+  const filtered = windows.filter((window) => {
+      // Validate required window properties
+      if (!window || !window.dayOfWeek || !window.startTime || !window.endTime) {
+        console.warn("Invalid window - missing required properties:", window);
+        return false;
+      }
+      
       // For one-time windows, only show if their specificDate falls within this week
       if (window.recurring === false) {
         if (!window.specificDate) {
@@ -167,8 +207,32 @@ export function windowsToEvents(
       // For recurring windows, only show them if they're in the current week or future
       // This prevents showing recurring blocks in past weeks
       return weekStart >= currentWeekStart;
-    })
-    .map((window) => windowToEvent(window, weekStart));
+    });
+  
+  console.log("[windowsToEvents] After filter:", filtered.length);
+  
+  const mapped = filtered.map((window) => {
+      try {
+        const event = windowToEvent(window, weekStart);
+        console.log("[windowsToEvents] Generated event:", event?.id, event?.title);
+        return event;
+      } catch (error) {
+        console.error("Error converting window to event:", window, error);
+        return null;
+      }
+    });
+  
+  const result = mapped.filter((event): event is AvailabilityEvent => {
+    const isValid = event !== null && event !== undefined;
+    if (!isValid) {
+      console.warn("[windowsToEvents] Filtered out null/undefined event");
+    }
+    return isValid;
+  });
+  
+  console.log("[windowsToEvents] Final events:", result.length, result);
+  
+  return result;
 }
 
 /**

@@ -20,10 +20,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <AppSidebar user={user} />
       </ErrorBoundary>
       <main
-        className="flex-1 overflow-y-scroll w-full"
+        className="flex-1 overflow-y-auto w-full pt-16 lg:pt-0"
         style={{ scrollbarGutter: "stable both-edges" }}
       >
-        <div className="w-full p-8 flex justify-center">
+        <div className="w-full p-4 sm:p-6 lg:p-8 flex justify-center">
           <div className="w-full max-w-5xl min-w-0">
             <ErrorBoundary>{children}</ErrorBoundary>
           </div>

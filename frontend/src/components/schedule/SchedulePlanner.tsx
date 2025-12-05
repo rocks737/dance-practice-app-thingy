@@ -63,24 +63,27 @@ export function SchedulePlanner({ profileId }: SchedulePlannerProps) {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-2 justify-end">
-        <Button variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing}>
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex items-center gap-2 justify-end flex-wrap">
+        <Button variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing} className="flex-shrink-0">
           <RefreshCcw className="mr-2 h-4 w-4" />
-          Refresh
+          <span className="hidden sm:inline">Refresh</span>
         </Button>
         {preferences.length === 0 ? (
-          <Button size="sm" onClick={() => setEditorState({ mode: "create" })}>
+          <Button size="sm" onClick={() => setEditorState({ mode: "create" })} className="flex-shrink-0">
             <Plus className="mr-2 h-4 w-4" />
-            New preference
+            <span className="hidden sm:inline">New preference</span>
+            <span className="sm:hidden">New</span>
           </Button>
         ) : (
           <Button
             size="sm"
             variant="outline"
             onClick={() => setEditorState({ mode: "edit", preference: preferences[0] })}
+            className="flex-shrink-0"
           >
-            Edit preference
+            <span className="hidden sm:inline">Edit preference</span>
+            <span className="sm:hidden">Edit</span>
           </Button>
         )}
       </div>
@@ -142,9 +145,9 @@ export function SchedulePlanner({ profileId }: SchedulePlannerProps) {
           }
         }}
       >
-        <DialogContent className="h-[80vh] w-[90vw] max-w-[1100px]">
+        <DialogContent className="h-[90vh] sm:h-[80vh] w-[95vw] sm:w-[90vw] max-w-[1100px] p-4 sm:p-6">
           <DialogHeader>
-            <DialogTitle>
+            <DialogTitle className="text-lg sm:text-xl">
               {editorState?.mode === "edit" ? "Edit preference" : "Create preference"}
             </DialogTitle>
           </DialogHeader>
@@ -186,11 +189,11 @@ function PreferenceCard({ preference, onEdit, onDelete, deleting }: PreferenceCa
   }, [preference.preferredLocations]);
 
   return (
-    <div className="rounded-lg border bg-card p-5 shadow-sm">
-      <div className="flex items-start justify-between gap-4">
+    <div className="rounded-lg border bg-card p-3 sm:p-5 shadow-sm">
+      <div className="flex items-start justify-between gap-2 sm:gap-4">
         <div className="flex-1 space-y-2">
           <p className="text-xs uppercase text-muted-foreground">Availability</p>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-1 sm:gap-2">
             {dailySummaries.length === 0 ? (
               <Badge variant="outline">No hours specified</Badge>
             ) : (
@@ -215,7 +218,7 @@ function PreferenceCard({ preference, onEdit, onDelete, deleting }: PreferenceCa
 
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
-          <p className="text-xs uppercase text-muted-foreground">Preferred roles</p>
+          <p className="text-xs uppercase text-muted-foreground">I want to dance as</p>
           <div className="flex flex-wrap gap-2">
             {preference.preferredRoles.length === 0 ? (
               <Badge variant="secondary">Any role</Badge>

@@ -1,20 +1,37 @@
 "use client";
 
+import { useState } from "react";
 import { User } from "@supabase/supabase-js";
 import { useUserProfile } from "@/lib/hooks/useUserProfile";
-import { Loader2, UserCircle } from "lucide-react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Loader2, UserCircle, User as UserIcon, Music, Settings as SettingsIcon, Shield, ChevronDown } from "lucide-react";
 import { PersonalInfoForm } from "@/components/profile/PersonalInfoForm";
 import { DancePreferencesForm } from "@/components/profile/DancePreferencesForm";
 import { PasswordChangeForm } from "@/components/profile/PasswordChangeForm";
 import { ProfileSettings } from "@/components/profile/ProfileSettings";
+import { cn } from "@/lib/utils";
 
 interface ProfileEditorProps {
   user: User;
 }
 
+type TabValue = "personal" | "dance" | "settings" | "security";
+
+interface TabItem {
+  name: string;
+  value: TabValue;
+  icon: React.ComponentType<{ className?: string }>;
+}
+
+const tabs: TabItem[] = [
+  { name: "Personal", value: "personal", icon: UserIcon },
+  { name: "Dance", value: "dance", icon: Music },
+  { name: "Settings", value: "settings", icon: SettingsIcon },
+  { name: "Security", value: "security", icon: Shield },
+];
+
 export function ProfileEditor({ user }: ProfileEditorProps) {
   const { profile, loading, error, refetch } = useUserProfile(user.id);
+  const [activeTab, setActiveTab] = useState<TabValue>("personal");
 
   if (loading) {
     return (
@@ -50,43 +67,82 @@ export function ProfileEditor({ user }: ProfileEditorProps) {
   return (
     <div className="w-full max-w-4xl">
       {/* Header */}
-      <div className="flex items-center space-x-3 mb-6">
-        <UserCircle className="w-8 h-8 text-gray-700 dark:text-gray-300" />
+      <div className="flex items-center space-x-2 sm:space-x-3 mb-4 sm:mb-6">
+        <UserCircle className="w-6 h-6 sm:w-8 sm:h-8 text-gray-700 dark:text-gray-300 flex-shrink-0" />
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Profile</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            Manage your personal information and preferences
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100">Profile</h1>
+          <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+            Manage your information and preferences
           </p>
         </div>
       </div>
 
-      {/* Tabs for different sections */}
-      <Tabs defaultValue="personal" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="personal">Personal</TabsTrigger>
-          <TabsTrigger value="dance">Dance</TabsTrigger>
-          <TabsTrigger value="settings">Settings</TabsTrigger>
-          <TabsTrigger value="security">Security</TabsTrigger>
-        </TabsList>
-
-        <div className="min-h-[640px]">
-          <TabsContent value="personal" className="h-full">
-            <PersonalInfoForm profile={profile} onUpdate={refetch} />
-          </TabsContent>
-
-          <TabsContent value="dance" className="h-full">
-            <DancePreferencesForm profile={profile} onUpdate={refetch} />
-          </TabsContent>
-
-          <TabsContent value="settings" className="h-full">
-            <ProfileSettings profile={profile} onUpdate={refetch} />
-          </TabsContent>
-
-          <TabsContent value="security" className="h-full">
-            <PasswordChangeForm />
-          </TabsContent>
+      {/* Navigation */}
+      <div className="mb-6">
+        {/* Mobile dropdown */}
+        <div className="grid grid-cols-1 sm:hidden">
+          <select
+            value={activeTab}
+            onChange={(e) => setActiveTab(e.target.value as TabValue)}
+            aria-label="Select a tab"
+            className="col-start-1 row-start-1 w-full appearance-none rounded-md bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 py-2 pr-8 pl-3 text-base text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+          >
+            {tabs.map((tab) => (
+              <option key={tab.value} value={tab.value}>
+                {tab.name}
+              </option>
+            ))}
+          </select>
+          <ChevronDown
+            aria-hidden="true"
+            className="pointer-events-none col-start-1 row-start-1 mr-2 size-5 self-center justify-self-end fill-gray-500 dark:fill-gray-400"
+          />
         </div>
-      </Tabs>
+
+        {/* Desktop tabs */}
+        <div className="hidden sm:block">
+          <div className="border-b border-gray-200 dark:border-gray-700">
+            <nav aria-label="Tabs" className="-mb-px flex space-x-8">
+              {tabs.map((tab) => {
+                const Icon = tab.icon;
+                const isActive = activeTab === tab.value;
+                return (
+                  <button
+                    key={tab.value}
+                    onClick={() => setActiveTab(tab.value)}
+                    aria-current={isActive ? "page" : undefined}
+                    className={cn(
+                      "group inline-flex items-center border-b-2 px-1 py-4 text-sm font-medium transition-colors",
+                      isActive
+                        ? "border-primary text-primary"
+                        : "border-transparent text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600 hover:text-gray-700 dark:hover:text-gray-300"
+                    )}
+                  >
+                    <Icon
+                      aria-hidden="true"
+                      className={cn(
+                        "mr-2 -ml-0.5 size-5",
+                        isActive
+                          ? "text-primary"
+                          : "text-gray-400 dark:text-gray-500 group-hover:text-gray-500 dark:group-hover:text-gray-400"
+                      )}
+                    />
+                    <span>{tab.name}</span>
+                  </button>
+                );
+              })}
+            </nav>
+          </div>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="min-h-[400px] sm:min-h-[640px]">
+        {activeTab === "personal" && <PersonalInfoForm profile={profile} onUpdate={refetch} />}
+        {activeTab === "dance" && <DancePreferencesForm profile={profile} onUpdate={refetch} />}
+        {activeTab === "settings" && <ProfileSettings profile={profile} onUpdate={refetch} />}
+        {activeTab === "security" && <PasswordChangeForm />}
+      </div>
     </div>
   );
 }

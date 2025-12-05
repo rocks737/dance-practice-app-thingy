@@ -56,18 +56,18 @@ export default async function LocationsPage({ searchParams }: LocationsPageProps
   const totalPages = Math.max(1, Math.ceil(count / pageSize));
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row items-start justify-between gap-3 sm:gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Locations</h1>
-          <p className="text-sm text-muted-foreground">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Locations</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground">
             Explore practice locations. Search by name or city.
           </p>
         </div>
         {isAdmin && (
           <LocationEditorDialog
             trigger={
-              <button className="inline-flex items-center rounded-md border px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground">
+              <button className="inline-flex items-center rounded-md border px-3 py-2 text-xs sm:text-sm font-medium hover:bg-accent hover:text-accent-foreground flex-shrink-0">
                 New location
               </button>
             }
@@ -77,7 +77,7 @@ export default async function LocationsPage({ searchParams }: LocationsPageProps
       </div>
 
       <form
-        className="grid gap-3 rounded-lg border bg-background p-3 md:grid-cols-5"
+        className="grid gap-3 rounded-lg border bg-background p-3 sm:grid-cols-2 md:grid-cols-5"
         action="/locations"
         method="get"
       >

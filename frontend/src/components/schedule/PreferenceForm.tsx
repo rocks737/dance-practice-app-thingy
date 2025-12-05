@@ -482,8 +482,8 @@ export function PreferenceForm({
       <section className="space-y-4 rounded-lg border bg-muted/20 p-4">
         <div className="grid gap-4 md:grid-cols-2">
           <PreferenceCheckboxGroup
-            title="Preferred roles"
-            description="Which role(s) are you open to practicing?"
+            title="I want to dance as"
+            description="Select the role(s) you'll take during practice sessions."
             options={PREFERRED_ROLE_VALUES.map((value) => ({
               value,
               label: PREFERRED_ROLE_LABELS[value],
