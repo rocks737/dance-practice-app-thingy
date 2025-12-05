@@ -94,8 +94,9 @@ export interface UpdateSessionInput {
 
 export async function fetchSessions(
   options: FetchSessionsOptions = {},
+  supabaseOverride?: SupabaseClient<Database>,
 ): Promise<FetchSessionsResult> {
-  const supabase = createClient();
+  const supabase = supabaseOverride ?? createClient();
   const { filters = defaultSessionFilters, limit = 20, offset = 0 } = options;
 
   let query = supabase
@@ -184,10 +185,12 @@ function mapSessionRecord(record: RawSessionRecord): SessionListItem {
   };
 }
 
-export async function createSession(input: CreateSessionInput): Promise<SessionListItem> {
-  const supabase = createClient();
+export async function createSession(
+  input: CreateSessionInput,
+  supabaseOverride?: SupabaseClient<Database>,
+): Promise<SessionListItem> {
+  const supabase = supabaseOverride ?? createClient();
   const payload: TablesInsert<"sessions"> = {
-    id: crypto.randomUUID(),
     title: input.title,
     session_type: input.sessionType,
     status: input.status,
@@ -212,8 +215,11 @@ export async function createSession(input: CreateSessionInput): Promise<SessionL
   return mapSessionRecord(data as RawSessionRecord);
 }
 
-export async function updateSession(input: UpdateSessionInput): Promise<SessionListItem> {
-  const supabase = createClient();
+export async function updateSession(
+  input: UpdateSessionInput,
+  supabaseOverride?: SupabaseClient<Database>,
+): Promise<SessionListItem> {
+  const supabase = supabaseOverride ?? createClient();
   const patch: TablesUpdate<"sessions"> = {
     status: input.patch.status,
     visibility: input.patch.visibility,

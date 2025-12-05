@@ -45,15 +45,15 @@ interface ScheduleAvailabilityCalendarProps {
   /**
    * Callback when a new window is created via calendar selection
    */
-  onCreateWindow: (window: AvailabilityWindow) => void;
+  onCreateWindow: (window: AvailabilityWindow) => Promise<void> | void;
   /**
    * Callback when an existing window is updated via drag/resize
    */
-  onUpdateWindow: (oldWindow: AvailabilityWindow, newWindow: AvailabilityWindow) => void;
+  onUpdateWindow: (oldWindow: AvailabilityWindow, newWindow: AvailabilityWindow) => Promise<void> | void;
   /**
    * Callback when a window is deleted
    */
-  onDeleteWindow: (window: AvailabilityWindow) => void;
+  onDeleteWindow: (window: AvailabilityWindow) => Promise<void> | void;
 }
 
 export function ScheduleAvailabilityCalendar({
@@ -148,7 +148,8 @@ export function ScheduleAvailabilityCalendar({
           w.dayOfWeek === newWindow.dayOfWeek &&
           w.startTime === newWindow.startTime &&
           w.endTime === newWindow.endTime &&
-          w.recurring === newWindow.recurring,
+          (w.recurring ?? true) === (newWindow.recurring ?? true) &&
+          w.specificDate === newWindow.specificDate,
       );
 
       if (isDuplicate) {
@@ -195,15 +196,16 @@ export function ScheduleAvailabilityCalendar({
           specificDate: format(event.start, "yyyy-MM-dd"),
         };
 
-        // Delete recurring pattern first
-        onDeleteWindow(oldWindow);
-        // Then create the one-time window
-        // Add a small delay to ensure delete completes first
-        setTimeout(() => {
-          onCreateWindow(oneTimeWindow);
-        }, 100);
-        
-        toast.success("Converted to one-time availability for this date only");
+        try {
+          // Delete recurring pattern first and wait for it to complete
+          await onDeleteWindow(oldWindow);
+          // Then create the one-time window
+          await onCreateWindow(oneTimeWindow);
+          toast.success("Converted to one-time availability for this date only");
+        } catch (error) {
+          toast.error("Failed to convert to one-time");
+          console.error(error);
+        }
       } else {
         // Converting one-time → recurring:
         // 1. Delete the one-time window
@@ -216,14 +218,16 @@ export function ScheduleAvailabilityCalendar({
           specificDate: undefined,
         };
 
-        // Delete one-time window first
-        onDeleteWindow(oldWindow);
-        // Then create the recurring pattern
-        setTimeout(() => {
-          onCreateWindow(recurringWindow);
-        }, 100);
-        
-        toast.success("Converted to recurring (appears every week)");
+        try {
+          // Delete one-time window first and wait for it to complete
+          await onDeleteWindow(oldWindow);
+          // Then create the recurring pattern
+          await onCreateWindow(recurringWindow);
+          toast.success("Converted to recurring (appears every week)");
+        } catch (error) {
+          toast.error("Failed to convert to recurring");
+          console.error(error);
+        }
       }
     },
     [onDeleteWindow, onCreateWindow],

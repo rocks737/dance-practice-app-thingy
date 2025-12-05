@@ -6,12 +6,7 @@
 import { describe, it, expect, beforeAll, afterAll } from "@jest/globals";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
-
-// For integration tests, use local Supabase instance
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "http://127.0.0.1:54321";
-const supabaseAnonKey =
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0";
+import { supabaseUrl, supabaseAnonKey } from "./integration-utils";
 
 describe("Schedule Preference Availability Windows - Integration", () => {
   let supabase: ReturnType<typeof createClient<Database>>;

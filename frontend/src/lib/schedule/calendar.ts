@@ -101,7 +101,9 @@ export function windowToEvent(
   const end = setMinutes(setHours(dayDate, endHour), endMinute);
 
   return {
-    id: `${window.dayOfWeek}-${window.startTime}-${window.endTime}`,
+    id: window.recurring !== false
+      ? `recurring-${window.dayOfWeek}-${window.startTime}-${window.endTime}`
+      : `onetime-${window.specificDate}-${window.startTime}-${window.endTime}`,
     ...window,
     start,
     end,
@@ -145,7 +147,11 @@ export function windowsToEvents(
       // For one-time windows, only show if their specificDate falls within this week
       if (window.recurring === false) {
         if (!window.specificDate) {
-          // Invalid one-time window without specific date - skip it
+          // Invalid one-time window without specific date - log warning
+          console.warn(
+            `Invalid one-time window missing specificDate:`,
+            window
+          );
           return false;
         }
         
