@@ -67,6 +67,27 @@ vercel --prod
 
 Or connect via GitHub: push your repo and import it in the Vercel dashboard. Add the environment variables in Project Settings → Environment Variables.
 
+### Designer Preview
+
+A dedicated page for designers to preview and customize all UI components without authentication:
+
+**Access:** `http://localhost:3000/designer-preview`
+
+**Features:**
+- 🎨 Live theme editor with real-time color customization
+- 🌓 Dark/light mode testing
+- 📦 Complete component library showcase
+- 💾 Export theme as CSS (copy or download)
+- 🎯 Preset themes (Ocean, Sunset, Forest, Royal)
+
+Perfect for:
+- Design collaboration
+- Theme customization
+- Component previewing
+- Accessibility testing
+
+See `frontend/src/app/designer-preview/README.md` for detailed documentation.
+
 ## Supabase CLI & schema export
 
 - Install/update the Supabase CLI with npm (local project scope keeps versions aligned):
