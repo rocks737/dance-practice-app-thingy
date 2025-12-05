@@ -13,7 +13,7 @@ import {
   type TestUser,
 } from "./integration-utils";
 import { createClient } from "@supabase/supabase-js";
-import type { Database } from "@/lib/database.types";
+import type { Database } from "@/lib/supabase/types";
 
 describe("Authentication Flow - Integration", () => {
   describe("User Signup", () => {

@@ -1,5 +1,7 @@
 package com.dancepractice.app.domain.location;
 
+// NOTE: Reference-only entity preserved to describe the Supabase schema; no Spring Boot backend exists.
+
 import com.dancepractice.app.common.persistence.AbstractAuditableEntity;
 import com.dancepractice.app.domain.common.LocationType;
 import jakarta.persistence.Column;

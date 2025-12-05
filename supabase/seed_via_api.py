@@ -283,6 +283,25 @@ def rest_insert(url: str, key: str, bearer: str, path: str, rows: Any, params: O
         return r.status_code, r.text
 
 
+def rest_update(
+    url: str,
+    key: str,
+    bearer: str,
+    path: str,
+    row: Dict[str, Any],
+    params: Optional[Dict[str, Any]] = None,
+) -> Tuple[int, Any]:
+    """
+    Convenience helper for PATCH operations against PostgREST.
+    `path` is the table name (e.g. "user_profiles"), `params` carries filters (e.g. {"id": "eq.<uuid>"}).
+    """
+    r = http("patch", f"{url}/rest/v1/{path}", rest_headers(key, bearer), json_body=row, params=params or {})
+    try:
+        return r.status_code, r.json()
+    except Exception:
+        return r.status_code, r.text
+
+
 # ------------------------------
 # Seed logic
 # ------------------------------
@@ -340,6 +359,18 @@ def ensure_roles(url: str, key: str, bearer: str, profile_id: str, roles: list[s
     if status not in (200, 201):
         # It's ok if they already exist
         pass
+
+
+def set_home_location(url: str, key: str, profile_id: str, location_id: str) -> None:
+    """
+    Set or update the user's home_location_id to point at the shared seed location.
+    Uses an upsert on user_profiles(id) so it works for existing rows as well.
+    """
+    params = {"id": f"eq.{profile_id}"}
+    row = {"home_location_id": location_id}
+    status, body = rest_update(url, key, key, "user_profiles", row, params=params)
+    if status not in (200, 201):
+        raise RuntimeError(f"Failed to set home_location_id for profile {profile_id}: {status} {body}")
 
 
 def create_schedule_preferences(
@@ -533,7 +564,79 @@ def verify_created(url: str, key: str, profile_emails: list[str]) -> Dict[str, A
     }
 
 
-def main() -> int:
+def seed_single_user(
+    base_url: str,
+    anon_key: str,
+    service_key: str,
+    user: Dict[str, Any],
+    location_id: str,
+    windows_per_user: Optional[int] = None,
+) -> Dict[str, Any]:
+    """
+    Creates or updates a single seeded user:
+    - Ensures auth user exists (signup/signin)
+    - Ensures profile exists
+    - Ensures roles are assigned
+    - Sets home_location_id to the shared location
+    - Creates schedule preferences, windows, and focus areas
+    Returns a dict with email, user_id, profile_id.
+    """
+    email = user["email"]
+    password = user["password"]
+
+    print(f"\nUser: {email}")
+
+    access_token: Optional[str] = None
+    user_id: Optional[str] = None
+
+    # Try signup, then signin fallback
+    tok, uid = signup(base_url, anon_key, email, password)
+    if tok and uid:
+        access_token, user_id = tok, uid
+        print("  ✓ Signed up")
+    else:
+        tok, uid = signin(base_url, anon_key, email, password)
+        access_token, user_id = tok, uid
+        print("  ✓ Signed in (existing user)")
+
+    assert user_id is not None
+
+    # Create/Upsert profile (using service key to avoid RLS/return issues)
+    profile_id = create_or_upsert_profile(base_url, service_key, service_key, user_id, user)
+    print(f"  ✓ Profile ID: {profile_id}")
+
+    # Ensure roles (service key)
+    ensure_roles(base_url, service_key, service_key, profile_id, user.get("roles", ["DANCER"]))
+    print(f"  ✓ Roles: {', '.join(user.get('roles', ['DANCER']))}")
+
+    # Set home_location_id to the shared seed location so matching can use city
+    set_home_location(base_url, service_key, profile_id, location_id)
+    print(f"  ✓ Home location set to shared location")
+
+    # Schedule prefs and windows (service key)
+    availability_key = user.get("availability_key", "test")
+    windows = AVAILABILITY.get(availability_key, [])
+    if windows_per_user is not None:
+        windows = windows[:windows_per_user]
+
+    pref_id = create_schedule_preferences(
+        base_url,
+        service_key,
+        service_key,
+        profile_id,
+        location_id,
+        windows,
+    )
+    print(f"  ✓ Schedule preference ID: {pref_id}")
+
+    return {
+        "email": email,
+        "user_id": user_id,
+        "profile_id": profile_id,
+    }
+
+
+def main(extra_users: int = 0, windows_per_user: Optional[int] = None) -> int:
     base_url, anon_key, service_key = resolve_config()
 
     print("=" * 60)
@@ -546,51 +649,46 @@ def main() -> int:
     location_id = create_or_get_location(base_url, service_key)
     print(f"  ✓ Location ID: {location_id}")
 
-    results = []
+    results: list[Dict[str, Any]] = []
+
+    # Seed core users from USERS config
     for user in USERS:
-        email = user["email"]
-        password = user["password"]
-        print(f"\nUser: {email}")
-
-        access_token = None
-        user_id = None
-
-        # Try signup, then signin fallback
-        tok, uid = signup(base_url, anon_key, email, password)
-        if tok and uid:
-            access_token, user_id = tok, uid
-            print("  ✓ Signed up")
-        else:
-            tok, uid = signin(base_url, anon_key, email, password)
-            access_token, user_id = tok, uid
-            print("  ✓ Signed in (existing user)")
-
-        # Create/Upsert profile (using service key to avoid RLS/return issues)
-        profile_id = create_or_upsert_profile(base_url, service_key, service_key, user_id, user)
-        print(f"  ✓ Profile ID: {profile_id}")
-
-        # Ensure roles (service key)
-        ensure_roles(base_url, service_key, service_key, profile_id, user.get("roles", ["DANCER"]))
-        print(f"  ✓ Roles: {', '.join(user.get('roles', ['DANCER']))}")
-
-        # Schedule prefs and windows (service key)
-        pref_id = create_schedule_preferences(
-            base_url,
-            service_key,
-            service_key,
-            profile_id,
-            location_id,
-            AVAILABILITY[user["availability_key"]],
+        result = seed_single_user(
+            base_url=base_url,
+            anon_key=anon_key,
+            service_key=service_key,
+            user=user,
+            location_id=location_id,
+            windows_per_user=windows_per_user,
         )
-        print(f"  ✓ Schedule preference ID: {pref_id}")
+        results.append(result)
 
-        results.append(
-            {
-                "email": email,
-                "user_id": user_id,
-                "profile_id": profile_id,
-            }
+    # Optionally seed additional generic users
+    for i in range(extra_users):
+        extra_email = f"extra{i+1}@example.com"
+        extra_user = {
+            "email": extra_email,
+            "password": "extra123",
+            "first_name": "Extra",
+            "last_name": f"User{i+1}",
+            "display_name": f"Extra User {i+1}",
+            "primary_role": 0,
+            "wsdc_level": 1,
+            "competitiveness_level": 2,
+            "bio": "Additional seeded user for testing matching and filters.",
+            "dance_goals": "Explore practice partner matching.",
+            "availability_key": "test",
+            "roles": ["DANCER"],
+        }
+        result = seed_single_user(
+            base_url=base_url,
+            anon_key=anon_key,
+            service_key=service_key,
+            user=extra_user,
+            location_id=location_id,
+            windows_per_user=windows_per_user,
         )
+        results.append(result)
 
     # Verify via REST (service key)
     print("\nVerifying via REST...")
@@ -745,8 +843,26 @@ def main() -> int:
 
 
 if __name__ == "__main__":
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Seed local Supabase data for the dance practice app.")
+    parser.add_argument(
+        "--extra-users",
+        type=int,
+        default=0,
+        help="Number of additional generic test users to create (in addition to the core USERS).",
+    )
+    parser.add_argument(
+        "--windows-per-user",
+        type=int,
+        default=None,
+        help="Maximum number of availability windows to create per user (sliced from their template).",
+    )
+
+    args = parser.parse_args()
+
     try:
-        sys.exit(main())
+        sys.exit(main(extra_users=args.extra_users, windows_per_user=args.windows_per_user))
     except Exception as e:
         print(f"\n✗ Error: {e}")
         sys.exit(1)

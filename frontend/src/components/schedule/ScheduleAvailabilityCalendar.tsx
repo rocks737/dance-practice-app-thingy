@@ -22,7 +22,7 @@ import {
   isValidDuration,
   type AvailabilityEvent,
 } from "@/lib/schedule/calendar";
-import { Info, ChevronLeft, ChevronRight, Repeat, Calendar as CalendarIcon, CalendarDays, Loader2 } from "lucide-react";
+import { Info, ChevronLeft, ChevronRight, Repeat, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { addWeeks, addDays, startOfToday } from "date-fns";
@@ -438,8 +438,7 @@ export function ScheduleAvailabilityCalendar({
             add recurring availability.
           </p>
           <p>
-            <strong className="text-foreground">Right-click blocks</strong> to make them one-time
-            only or delete them.
+            <strong className="text-foreground">Right-click blocks</strong> to delete them.
           </p>
           <p className="hidden sm:block">
             <strong className="text-foreground">Drag blocks</strong> to change day/time,
@@ -449,10 +448,6 @@ export function ScheduleAvailabilityCalendar({
             <div className="flex items-center gap-2">
               <div className="w-4 h-4 rounded flex-shrink-0" style={{ backgroundColor: "hsl(var(--primary))" }} />
               <span className="text-xs">Recurring (every week)</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded flex-shrink-0" style={{ backgroundColor: "hsl(180 70% 45%)" }} />
-              <span className="text-xs">One-time only</span>
             </div>
           </div>
         </div>
@@ -569,9 +564,7 @@ export function ScheduleAvailabilityCalendar({
               };
             }
             
-            const isRecurring = availEvent.recurring !== false;
-            // Use teal/cyan for one-time events (more visible than chart-2)
-            const baseColor = isRecurring ? "hsl(var(--primary))" : "hsl(180 70% 45%)"; // teal
+            const baseColor = "hsl(var(--primary))";
             
             const baseStyle = {
               backgroundColor: baseColor,
@@ -606,20 +599,14 @@ export function ScheduleAvailabilityCalendar({
                 console.warn("Event missing title:", availEvent);
                 return null;
               }
-              
-              const isRecurring = availEvent.recurring !== false;
-              
+
               return (
                 <ContextMenu>
                   <ContextMenuTrigger asChild>
                     <div className="flex h-full w-full flex-col gap-0.5 px-1 py-0.5 text-left">
                       <div className="flex items-center gap-1 text-[10px] uppercase tracking-wide opacity-80">
-                        {isRecurring ? (
-                          <Repeat className="h-3 w-3 flex-shrink-0" />
-                        ) : (
-                          <CalendarIcon className="h-3 w-3 flex-shrink-0" />
-                        )}
-                        <span>{isRecurring ? "Recurring" : "One-time"}</span>
+                        <Repeat className="h-3 w-3 flex-shrink-0" />
+                        <span>Recurring</span>
                       </div>
                       <span className="text-xs leading-tight whitespace-normal break-words">
                         {availEvent.title}
@@ -627,10 +614,10 @@ export function ScheduleAvailabilityCalendar({
                     </div>
                   </ContextMenuTrigger>
                   <ContextMenuContent>
-                    <ContextMenuItem onClick={() => handleToggleRecurring(availEvent)}>
-                      {isRecurring ? "Make One-Time Only" : "Make Recurring"}
-                    </ContextMenuItem>
-                    <ContextMenuItem onClick={() => handleDeleteEvent(availEvent)} className="text-destructive">
+                    <ContextMenuItem
+                      onClick={() => handleDeleteEvent(availEvent)}
+                      className="text-destructive"
+                    >
                       Delete
                     </ContextMenuItem>
                   </ContextMenuContent>

@@ -69,11 +69,23 @@ export function SchedulePlanner({ profileId }: SchedulePlannerProps) {
           <RefreshCcw className="mr-2 h-4 w-4" />
           <span className="hidden sm:inline">Refresh</span>
         </Button>
-        <Button size="sm" onClick={() => setEditorState({ mode: "create" })} className="flex-shrink-0">
-          <Plus className="mr-2 h-4 w-4" />
-          <span className="hidden xs:inline">New</span>
-          <span className="xs:hidden">+</span>
-        </Button>
+        {preferences.length === 0 ? (
+          <Button size="sm" onClick={() => setEditorState({ mode: "create" })} className="flex-shrink-0">
+            <Plus className="mr-2 h-4 w-4" />
+            <span className="hidden sm:inline">New preference</span>
+            <span className="sm:hidden">New</span>
+          </Button>
+        ) : (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setEditorState({ mode: "edit", preference: preferences[0] })}
+            className="flex-shrink-0"
+          >
+            <span className="hidden sm:inline">Edit preference</span>
+            <span className="sm:hidden">Edit</span>
+          </Button>
+        )}
       </div>
 
       {error && (
@@ -97,14 +109,14 @@ export function SchedulePlanner({ profileId }: SchedulePlannerProps) {
               <CalendarCheck className="h-6 w-6" />
             </div>
             <div className="space-y-2">
-              <h3 className="text-lg font-semibold">No preferences yet</h3>
+              <h3 className="text-lg font-semibold">No schedule preference yet</h3>
               <p className="text-sm text-muted-foreground">
                 Add your availability, preferred roles, and practice focus to start
-                getting matched with compatible partners.
+                getting matched with compatible partners. You can create one schedule preference.
               </p>
-              <Button size="sm" disabled>
+              <Button size="sm" onClick={() => setEditorState({ mode: "create" })}>
                 <Plus className="mr-2 h-4 w-4" />
-                Plan my schedule
+                Create preference
               </Button>
             </div>
           </div>

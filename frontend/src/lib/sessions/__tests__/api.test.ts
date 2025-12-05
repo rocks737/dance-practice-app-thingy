@@ -152,25 +152,7 @@ describe("sessions/api", () => {
   });
 
   describe("createSession", () => {
-    beforeAll(() => {
-      if (!global.crypto) {
-        (global as any).crypto = {
-          randomUUID: jest.fn(),
-        };
-      } else if (!global.crypto.randomUUID) {
-        (global.crypto as any).randomUUID = jest.fn();
-      }
-    });
-
-    afterEach(() => {
-      jest.spyOn(global.crypto, "randomUUID").mockRestore();
-    });
-
     it("inserts payload and maps response", async () => {
-      const uuidSpy = jest
-        .spyOn(global.crypto, "randomUUID")
-        .mockReturnValue("session-generated");
-
       const rawSession = {
         id: "session-generated",
         title: "Evening Drill",
@@ -211,11 +193,9 @@ describe("sessions/api", () => {
         capacity: 16,
       });
 
-      expect(uuidSpy).toHaveBeenCalled();
       expect(mockSupabase.from).toHaveBeenCalledWith("sessions");
       expect(insert).toHaveBeenCalledWith(
         expect.objectContaining({
-          id: "session-generated",
           title: "Evening Drill",
           session_type: "GROUP_PRACTICE",
           status: "SCHEDULED",

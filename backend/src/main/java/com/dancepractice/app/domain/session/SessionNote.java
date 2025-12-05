@@ -1,5 +1,7 @@
 package com.dancepractice.app.domain.session;
 
+// NOTE: Reference-only entity mirroring Supabase tables; there is no Spring Boot backend.
+
 import com.dancepractice.app.common.persistence.AbstractAuditableEntity;
 import com.dancepractice.app.domain.common.Visibility;
 import com.dancepractice.app.domain.user.User;

@@ -1,5 +1,8 @@
 package com.dancepractice.app.common.persistence;
 
+// NOTE: Reference-only base entity for Supabase schema documentation.
+// This repository does not ship a Spring Boot/Gradle backend; do not treat this as runnable code.
+
 import jakarta.persistence.Column;
 import jakarta.persistence.EntityListeners;
 import jakarta.persistence.GeneratedValue;

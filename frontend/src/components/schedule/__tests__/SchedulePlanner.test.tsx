@@ -79,7 +79,7 @@ describe("SchedulePlanner", () => {
 
     render(<SchedulePlanner profileId="profile-1" />);
 
-    expect(screen.getByText(/No preferences yet/i)).toBeInTheDocument();
+    expect(screen.getByText(/No schedule preference yet/i)).toBeInTheDocument();
   });
 
   it("opens the preference dialog when clicking new preference", async () => {
