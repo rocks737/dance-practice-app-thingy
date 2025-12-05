@@ -53,11 +53,17 @@ stable
 security definer
 set search_path = public
 as $$
--- Current caller's profile + skill information
+-- Current caller's profile + skill information + home location
 with cur_user as (
-  select id as profile_id, wsdc_level
-  from user_profiles
-  where id = public.current_profile_id()
+  select
+    up.id as profile_id,
+    up.wsdc_level,
+    loc.city as home_city,
+    loc.state as home_state,
+    loc.country as home_country
+  from user_profiles up
+  left join locations loc on loc.id = up.home_location_id
+  where up.id = public.current_profile_id()
 ),
 -- Most recent schedule preference for the current user
 current_pref as (
@@ -80,21 +86,29 @@ current_focus as (
   from schedule_preference_focus f
   join current_pref cp on f.preference_id = cp.preference_id
 ),
--- All visible candidate users (not blocked), with their preferences
+-- All visible candidate users (not blocked), with their preferences and home location
 candidates as (
   select
     sp.id as preference_id,
     sp.user_id as profile_id,
-    up.wsdc_level
+    up.wsdc_level,
+    loc.city as home_city,
+    loc.state as home_state,
+    loc.country as home_country
   from schedule_preferences sp
   join user_profiles up on up.id = sp.user_id
   join cur_user cu on cu.profile_id <> up.id
+  left join locations loc on loc.id = up.home_location_id
   left join user_blocks b
     on (b.user_id = cu.profile_id and b.blocked_user_id = up.id)
     or (b.blocked_user_id = cu.profile_id and b.user_id = up.id)
   where
     b.user_id is null
     and up.profile_visible = true
+    -- Location filter: only match candidates whose home city matches current user's home city
+    and cu.home_city is not null
+    and loc.city is not null
+    and loc.city = cu.home_city
 ),
 -- Count of overlapping recurring windows between current user and each candidate
 availability_overlap as (
