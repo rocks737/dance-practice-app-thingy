@@ -7,9 +7,8 @@ Welcome to the Dance Practice App! This guide will help you get started with con
 - [Prerequisites](#prerequisites)
 - [Getting Started](#getting-started)
 - [Development Setup](#development-setup)
-  - [Backend Setup](#backend-setup)
+  - [Supabase Setup (Backend)](#supabase-setup-backend)
   - [Frontend Setup](#frontend-setup)
-  - [Supabase Setup](#supabase-setup)
 - [Running the Application](#running-the-application)
 - [Testing](#testing)
 - [Project Structure](#project-structure)
@@ -199,70 +198,6 @@ frontend/
 ├── package.json
 ├── next.config.js
 └── tailwind.config.ts
-```
-
-### Supabase Setup
-
-The project uses Supabase for authentication, database, and real-time features.
-
-1. **Install Supabase CLI** (if not already installed)
-   ```bash
-   npm install supabase --save-dev
-   ```
-
-2. **Start Supabase locally**
-   ```bash
-   npx supabase start
-   ```
-
-   This will:
-   - Start PostgreSQL (port `54322`)
-   - Start Supabase API (port `54321`)
-   - Start Supabase Studio (port `54323`)
-   - Apply all migrations from `supabase/migrations/`
-
-3. **Get your local Supabase credentials**
-   ```bash
-   npx supabase status
-   ```
-
-   Copy the output values to your `frontend/.env.local` file.
-
-4. **Reset the database** (if needed)
-   ```bash
-   npx supabase db reset
-   ```
-
-   This will:
-   - Drop all data
-   - Reapply all migrations
-   - Run seed scripts (if configured)
-
-5. **Seed test data** (optional)
-   ```bash
-   python3 supabase/seed_via_api.py
-   ```
-
-   This creates test users and sample data:
-   - `alice@example.com` / `alice123`
-   - `bob@example.com` / `bob123`
-   - `test@ex.com` / `test123` (with ADMIN role)
-
-#### Supabase Project Structure
-
-```
-supabase/
-├── migrations/                 # Database migrations
-│   ├── 20240414161707_basejump-setup.sql
-│   ├── 20240414161947_basejump-accounts.sql
-│   ├── 20251119033000_app-schema.sql
-│   └── 20251125041000_core_rls.sql
-├── functions/                  # Edge functions
-│   ├── billing-functions/
-│   └── billing-webhooks/
-├── config.toml                 # Supabase configuration
-├── seed_via_api.py            # Python seed script
-└── tests/                      # Database tests
 ```
 
 ## Running the Application
