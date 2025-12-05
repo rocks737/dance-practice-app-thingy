@@ -87,6 +87,185 @@ USERS = [
     },
 ]
 
+SCORING_USERS = [
+    # Base profile whose perspective we use conceptually in scoring tests
+    # (the actual RPC caller is test@ex.com; this profile is a candidate).
+    {
+        "email": "scoring_base@example.com",
+        "password": "score123",
+        "first_name": "Scoring",
+        "last_name": "Base",
+        "display_name": "Scoring Base",
+        "primary_role": 0,
+        "wsdc_level": 0,
+        "competitiveness_level": 3,
+        "bio": "Base-like profile for scoring integration tests.",
+        "dance_goals": "Serve as a reference point for scoring behavior.",
+        "availability_key": "scoring_base",
+        "roles": ["DANCER"],
+        "fixture_type": "SCORING_BASE",
+    },
+    # Overlap-only variants (same focus + wsdc as base; windows vary)
+    {
+        "email": "scoring_high_overlap@example.com",
+        "password": "score123",
+        "first_name": "Scoring",
+        "last_name": "HighOverlap",
+        "display_name": "Scoring High Overlap",
+        "primary_role": 0,
+        "wsdc_level": 0,
+        "competitiveness_level": 3,
+        "bio": "Maximal overlapping availability with scoring base.",
+        "dance_goals": "Test high-overlap scoring.",
+        "availability_key": "scoring_high_overlap",
+        "roles": ["DANCER"],
+        "fixture_type": "SCORING_OVERLAP_HIGH",
+    },
+    {
+        "email": "scoring_mid_overlap@example.com",
+        "password": "score123",
+        "first_name": "Scoring",
+        "last_name": "MidOverlap",
+        "display_name": "Scoring Mid Overlap",
+        "primary_role": 0,
+        "wsdc_level": 0,
+        "competitiveness_level": 3,
+        "bio": "Partial overlapping availability with scoring base.",
+        "dance_goals": "Test mid-overlap scoring.",
+        "availability_key": "scoring_mid_overlap",
+        "roles": ["DANCER"],
+        "fixture_type": "SCORING_OVERLAP_MID",
+    },
+    {
+        "email": "scoring_low_overlap@example.com",
+        "password": "score123",
+        "first_name": "Scoring",
+        "last_name": "LowOverlap",
+        "display_name": "Scoring Low Overlap",
+        "primary_role": 0,
+        "wsdc_level": 0,
+        "competitiveness_level": 3,
+        "bio": "Minimal overlapping availability with scoring base.",
+        "dance_goals": "Test low-overlap scoring.",
+        "availability_key": "scoring_low_overlap",
+        "roles": ["DANCER"],
+        "fixture_type": "SCORING_OVERLAP_LOW",
+    },
+    {
+        "email": "scoring_no_overlap@example.com",
+        "password": "score123",
+        "first_name": "Scoring",
+        "last_name": "NoOverlap",
+        "display_name": "Scoring No Overlap",
+        "primary_role": 0,
+        "wsdc_level": 0,
+        "competitiveness_level": 3,
+        "bio": "No overlapping availability with scoring base.",
+        "dance_goals": "Verify no-overlap candidates are excluded.",
+        "availability_key": "scoring_no_overlap",
+        "roles": ["DANCER"],
+        "fixture_type": "SCORING_OVERLAP_NONE",
+    },
+    # Focus-only variants (same windows + wsdc as base; focus areas vary)
+    {
+        "email": "scoring_focus0@example.com",
+        "password": "score123",
+        "first_name": "Scoring",
+        "last_name": "Focus0",
+        "display_name": "Scoring Focus 0",
+        "primary_role": 0,
+        "wsdc_level": 0,
+        "competitiveness_level": 3,
+        "bio": "Zero shared focus areas with scoring base.",
+        "dance_goals": "Test focus-area scoring at minimum.",
+        "availability_key": "scoring_base",
+        "roles": ["DANCER"],
+        "fixture_type": "SCORING_FOCUS_0",
+        "focus_preset": "focus0",
+    },
+    {
+        "email": "scoring_focus1@example.com",
+        "password": "score123",
+        "first_name": "Scoring",
+        "last_name": "Focus1",
+        "display_name": "Scoring Focus 1",
+        "primary_role": 0,
+        "wsdc_level": 0,
+        "competitiveness_level": 3,
+        "bio": "One shared focus area with scoring base.",
+        "dance_goals": "Test focus-area scoring at medium level.",
+        "availability_key": "scoring_base",
+        "roles": ["DANCER"],
+        "fixture_type": "SCORING_FOCUS_1",
+        "focus_preset": "focus1",
+    },
+    {
+        "email": "scoring_focus3@example.com",
+        "password": "score123",
+        "first_name": "Scoring",
+        "last_name": "Focus3",
+        "display_name": "Scoring Focus 3",
+        "primary_role": 0,
+        "wsdc_level": 0,
+        "competitiveness_level": 3,
+        "bio": "All default focus areas shared with scoring base.",
+        "dance_goals": "Test focus-area scoring at maximum.",
+        "availability_key": "scoring_base",
+        "roles": ["DANCER"],
+        "fixture_type": "SCORING_FOCUS_3",
+        "focus_preset": "focus3",
+    },
+    # WSDC-only variants (same windows + focus as base; wsdc level varies)
+    {
+        "email": "scoring_wsdc_same@example.com",
+        "password": "score123",
+        "first_name": "Scoring",
+        "last_name": "WsdcSame",
+        "display_name": "Scoring WSDC Same",
+        "primary_role": 0,
+        # Match the base caller (test@ex.com) which has wsdc_level = 1
+        "wsdc_level": 1,
+        "competitiveness_level": 3,
+        "bio": "Same WSDC level as scoring base.",
+        "dance_goals": "Test best-case WSDC proximity.",
+        "availability_key": "scoring_base",
+        "roles": ["DANCER"],
+        "fixture_type": "SCORING_WSDC_SAME",
+    },
+    {
+        "email": "scoring_wsdc_diff2@example.com",
+        "password": "score123",
+        "first_name": "Scoring",
+        "last_name": "WsdcDiff2",
+        "display_name": "Scoring WSDC Diff 2",
+        "primary_role": 0,
+        # Two levels above base (diff = 2)
+        "wsdc_level": 3,
+        "competitiveness_level": 3,
+        "bio": "Two-level WSDC difference from scoring base.",
+        "dance_goals": "Test mid WSDC distance scoring.",
+        "availability_key": "scoring_base",
+        "roles": ["DANCER"],
+        "fixture_type": "SCORING_WSDC_DIFF2",
+    },
+    {
+        "email": "scoring_wsdc_diff5@example.com",
+        "password": "score123",
+        "first_name": "Scoring",
+        "last_name": "WsdcDiff5",
+        "display_name": "Scoring WSDC Diff 5",
+        "primary_role": 0,
+        # Five-ish levels above base (diff = 4 or more, hitting cap)
+        "wsdc_level": 5,
+        "competitiveness_level": 3,
+        "bio": "Five-level WSDC difference from scoring base (beyond cap).",
+        "dance_goals": "Test capped WSDC distance scoring.",
+        "availability_key": "scoring_base",
+        "roles": ["DANCER"],
+        "fixture_type": "SCORING_WSDC_DIFF5",
+    },
+]
+
 LOCATION = {
     "name": "Dance Studio Downtown",
     "description": "Popular practice space in downtown area",
@@ -119,10 +298,40 @@ AVAILABILITY = {
         {"day": "THURSDAY", "start": "18:00:00", "end": "21:00:00"},
         {"day": "SATURDAY", "start": "10:00:00", "end": "14:00:00"},
     ],
+    # Scoring fixtures: base and overlap variants (all recurring weekly windows)
+    "scoring_base": [
+        {"day": "TUESDAY", "start": "18:00:00", "end": "21:00:00"},
+        {"day": "THURSDAY", "start": "18:00:00", "end": "21:00:00"},
+    ],
+    # Exact same windows as base → maximum overlap
+    "scoring_high_overlap": [
+        {"day": "TUESDAY", "start": "18:00:00", "end": "21:00:00"},
+        {"day": "THURSDAY", "start": "18:00:00", "end": "21:00:00"},
+    ],
+    # Partial overlap (later start)
+    "scoring_mid_overlap": [
+        {"day": "TUESDAY", "start": "19:00:00", "end": "21:00:00"},
+        {"day": "THURSDAY", "start": "19:00:00", "end": "21:00:00"},
+    ],
+    # Small overlap (only last hour on Tuesday)
+    "scoring_low_overlap": [
+        {"day": "TUESDAY", "start": "20:00:00", "end": "21:00:00"},
+    ],
+    # No overlap (adjacent earlier slot)
+    "scoring_no_overlap": [
+        {"day": "TUESDAY", "start": "15:00:00", "end": "17:00:00"},
+    ],
 }
 
 FOCUS_AREAS = ["TECHNIQUE", "MUSICALITY", "CONNECTION"]
 SKILL_LEVELS = ["NOVICE", "INTERMEDIATE", "ADVANCED"]
+
+# Simple presets for scoring fixtures to vary shared focus areas.
+FOCUS_PRESETS = {
+    "focus0": [],
+    "focus1": ["TECHNIQUE"],
+    "focus3": FOCUS_AREAS,
+}
 
 
 # ------------------------------
@@ -319,10 +528,30 @@ def create_or_get_location(url: str, admin_key: str) -> str:
 
 
 def create_or_upsert_profile(url: str, key: str, bearer: str, auth_user_id: str, user: Dict[str, Any]) -> str:
-    # First, see if one already exists
-    status, body = rest_get(url, key, bearer, "user_profiles", {"select": "id", "auth_user_id": f"eq.{auth_user_id}"})
+    # First, see if one already exists for this auth_user_id
+    status, body = rest_get(
+        url,
+        key,
+        bearer,
+        "user_profiles",
+        {"select": "id", "auth_user_id": f"eq.{auth_user_id}"},
+    )
     if status == 200 and isinstance(body, list) and body:
-        return body[0]["id"]
+        profile_id = body[0]["id"]
+        # Keep seeded attributes (email, names, wsdc level, etc.) in sync by
+        # performing an update when a profile already exists.
+        row = {
+            "email": user["email"],
+            "first_name": user.get("first_name", ""),
+            "last_name": user.get("last_name", ""),
+            "display_name": user.get("display_name"),
+            "primary_role": user.get("primary_role", 0),
+            "wsdc_level": user.get("wsdc_level", 2),
+            "competitiveness_level": user.get("competitiveness_level", 3),
+        }
+        params = {"id": f"eq.{profile_id}"}
+        _, _ = rest_update(url, key, bearer, "user_profiles", row, params=params)
+        return profile_id
 
     # Insert a new profile (DB auto-generates id)
     now_iso = datetime.now(timezone.utc).isoformat()
@@ -346,7 +575,13 @@ def create_or_upsert_profile(url: str, key: str, bearer: str, auth_user_id: str,
     if status in (200, 201) and isinstance(body, list) and body:
         return body[0]["id"]
     # Fallback: fetch existing (in case of race or conflict on email)
-    status, body = rest_get(url, headers_key, bearer, "user_profiles", {"select": "id", "auth_user_id": f"eq.{auth_user_id}"})
+    status, body = rest_get(
+        url,
+        headers_key,
+        bearer,
+        "user_profiles",
+        {"select": "id", "auth_user_id": f"eq.{auth_user_id}"},
+    )
     if status == 200 and isinstance(body, list) and body:
         return body[0]["id"]
     raise RuntimeError(f"Failed to upsert user profile: {status} {body}")
@@ -380,6 +615,8 @@ def create_schedule_preferences(
     profile_id: str,
     location_id: str,
     windows: list[Dict[str, str]],
+    focus_areas: Optional[list[str]] = None,
+    skill_levels: Optional[list[str]] = None,
 ) -> str:
     # Check if already exists
     status, body = rest_get(url, key, bearer, "schedule_preferences", {"select": "id", "user_id": f"eq.{profile_id}"})
@@ -425,23 +662,25 @@ def create_schedule_preferences(
         raise RuntimeError(f"Failed to add windows: {s} {b}")
 
     # Focus areas
+    fa = focus_areas if focus_areas is not None else FOCUS_AREAS
     s, b = rest_insert(
         url,
         key,
         bearer,
         "schedule_preference_focus",
-        [{"preference_id": pref_id, "focus_area": f} for f in FOCUS_AREAS],
+        [{"preference_id": pref_id, "focus_area": f} for f in fa],
     )
     if s not in (200, 201):
         raise RuntimeError(f"Failed to add focus areas: {s} {b}")
 
     # Skill levels
+    lvls = skill_levels if skill_levels is not None else SKILL_LEVELS
     s, b = rest_insert(
         url,
         key,
         bearer,
         "schedule_preference_levels",
-        [{"preference_id": pref_id, "level": lv} for lv in SKILL_LEVELS],
+        [{"preference_id": pref_id, "level": lv} for lv in lvls],
     )
     if s not in (200, 201):
         raise RuntimeError(f"Failed to add levels: {s} {b}")
@@ -619,6 +858,11 @@ def seed_single_user(
     if windows_per_user is not None:
         windows = windows[:windows_per_user]
 
+    focus_preset = user.get("focus_preset")
+    focus_override = None
+    if focus_preset is not None:
+        focus_override = FOCUS_PRESETS.get(focus_preset, FOCUS_AREAS)
+
     pref_id = create_schedule_preferences(
         base_url,
         service_key,
@@ -626,6 +870,8 @@ def seed_single_user(
         profile_id,
         location_id,
         windows,
+        focus_areas=focus_override,
+        skill_levels=None,
     )
     print(f"  ✓ Schedule preference ID: {pref_id}")
 
@@ -633,10 +879,104 @@ def seed_single_user(
         "email": email,
         "user_id": user_id,
         "profile_id": profile_id,
+        "windows": windows,
+        "wsdc_level": user.get("wsdc_level"),
+        "fixture_type": user.get("fixture_type"),
+        "focus_areas": focus_override if focus_override is not None else FOCUS_AREAS,
     }
 
 
-def main(extra_users: int = 0, windows_per_user: Optional[int] = None) -> int:
+def create_scoring_profile(
+    url: str,
+    key: str,
+    bearer: str,
+    user: Dict[str, Any],
+    location_id: str,
+    windows_per_user: Optional[int] = None,
+) -> Dict[str, Any]:
+    """
+    Create or reuse a profile purely for scoring fixtures.
+    These profiles are candidates only (no auth user required).
+    """
+    email = user["email"]
+
+    # Try to find an existing profile by email first
+    status, body = rest_get(url, key, bearer, "user_profiles", {"select": "id,email,wsdc_level", "email": f"eq.{email}"})
+    profile_id: Optional[str] = None
+    if status == 200 and isinstance(body, list) and body:
+        profile_id = body[0]["id"]
+
+    if profile_id is None:
+        # Insert a new profile with a synthetic auth_user_id
+        synthetic_auth_id = str(uuid.uuid4())
+        now_iso = datetime.now(timezone.utc).isoformat()
+        payload = {
+            "auth_user_id": synthetic_auth_id,
+            "email": email,
+            "first_name": user.get("first_name", ""),
+            "last_name": user.get("last_name", ""),
+            "display_name": user.get("display_name"),
+            "primary_role": user.get("primary_role", 0),
+            "wsdc_level": user.get("wsdc_level", 2),
+            "competitiveness_level": user.get("competitiveness_level", 3),
+            "profile_visible": True,
+            "account_status": 0,
+            "created_at": now_iso,
+            "updated_at": now_iso,
+            "version": 0,
+        }
+        status, body = rest_insert(url, key, bearer, "user_profiles", [payload])
+        if status not in (200, 201):
+            raise RuntimeError(f"Failed to create scoring profile for {email}: {status} {body}")
+
+        # Fetch the created profile by email
+        status, body = rest_get(url, key, bearer, "user_profiles", {"select": "id,email,wsdc_level", "email": f"eq.{email}"})
+        if status == 200 and isinstance(body, list) and body:
+            profile_id = body[0]["id"]
+        else:
+            raise RuntimeError(f"Failed to fetch scoring profile for {email} after insert: {status} {body}")
+
+    assert profile_id is not None
+
+    # Ensure roles and location
+    ensure_roles(url, key, bearer, profile_id, user.get("roles", ["DANCER"]))
+    set_home_location(url, key, profile_id, location_id)
+
+    # Windows
+    availability_key = user.get("availability_key", "scoring_base")
+    windows = AVAILABILITY.get(availability_key, [])
+    if windows_per_user is not None:
+        windows = windows[:windows_per_user]
+
+    focus_preset = user.get("focus_preset")
+    focus_override = None
+    if focus_preset is not None:
+        focus_override = FOCUS_PRESETS.get(focus_preset, FOCUS_AREAS)
+
+    pref_id = create_schedule_preferences(
+        url,
+        key,
+        bearer,
+        profile_id,
+        location_id,
+        windows,
+        focus_areas=focus_override,
+        skill_levels=None,
+    )
+    print(f"  ✓ Scoring fixture {email} preference ID: {pref_id}")
+
+    return {
+        "email": email,
+        "user_id": None,
+        "profile_id": profile_id,
+        "windows": windows,
+        "wsdc_level": user.get("wsdc_level"),
+        "fixture_type": user.get("fixture_type"),
+        "focus_areas": focus_override if focus_override is not None else FOCUS_AREAS,
+    }
+
+
+def main(extra_users: int = 0, windows_per_user: Optional[int] = None, emit_json: bool = False) -> int:
     base_url, anon_key, service_key = resolve_config()
 
     print("=" * 60)
@@ -651,8 +991,21 @@ def main(extra_users: int = 0, windows_per_user: Optional[int] = None) -> int:
 
     results: list[Dict[str, Any]] = []
 
-    # Seed core users from USERS config
+    # Seed core users from USERS config (auth-backed, used as real callers)
     for user in USERS:
+        result = seed_single_user(
+            base_url=base_url,
+            anon_key=anon_key,
+            service_key=service_key,
+            user=user,
+            location_id=location_id,
+            windows_per_user=windows_per_user,
+        )
+        results.append(result)
+
+    # Seed scoring fixture users (auth-backed, used as structured candidates)
+    print("\nCreating scoring fixture profiles...")
+    for user in SCORING_USERS:
         result = seed_single_user(
             base_url=base_url,
             anon_key=anon_key,
@@ -839,6 +1192,12 @@ def main(extra_users: int = 0, windows_per_user: Optional[int] = None) -> int:
     print(" - Tuesday 18:00-21:00")
     print(" - Thursday 18:00-21:00")
     print(" - Saturday 10:00-14:00")
+
+    if emit_json:
+        # Emit a compact JSON representation of all seeded users so
+        # higher-level runners (e.g. run_scale_tests.py) can pass this
+        # into other test harnesses (like Jest) for verification.
+        print(json.dumps(results), flush=True)
     return 0
 
 
@@ -858,11 +1217,22 @@ if __name__ == "__main__":
         default=None,
         help="Maximum number of availability windows to create per user (sliced from their template).",
     )
+    parser.add_argument(
+        "--emit-json",
+        action="store_true",
+        help="If set, emit a JSON array of seeded users (email, user_id, profile_id) on stdout.",
+    )
 
     args = parser.parse_args()
 
     try:
-        sys.exit(main(extra_users=args.extra_users, windows_per_user=args.windows_per_user))
+        sys.exit(
+            main(
+                extra_users=args.extra_users,
+                windows_per_user=args.windows_per_user,
+                emit_json=args.emit_json,
+            )
+        )
     except Exception as e:
         print(f"\n✗ Error: {e}")
         sys.exit(1)
