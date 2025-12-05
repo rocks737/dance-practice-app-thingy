@@ -2,367 +2,166 @@
 
 ---
 
-## 📋 Design Brief: Partnerly.dance
+## 📋 Design Brief: Partnerly.dance (5-min read)
 
-### Project Overview
+### What It Is
+**partnerly.dance** - A platform that matches dancers with compatible practice partners based on skill, availability, and goals.
 
-**Partnerly.dance** is a dance practice partner matching platform that connects dancers to find compatible practice partners based on skill level, availability, location, and dance preferences.
+### Mission
+Make finding dance practice partners effortless → help dancers improve faster and enjoy practice more.
 
-**Domain:** `partnerly.dance`
+### Who Uses It
+- Social dancers (West Coast Swing, Salsa, Ballroom, etc.)
+- Ages 25-55, all skill levels (beginner to professional)
+- Competitive dancers, instructors, and newcomers
 
-### Mission Statement
+### Brand Personality (in 5 words)
+**Friendly • Professional • Energetic • Connected • Trustworthy**
 
-To make finding the perfect dance practice partner effortless by matching dancers based on compatibility, availability, and shared goals—helping dancers improve faster and enjoy practice more.
+### Design Direction
+- ✅ Welcoming yet professional
+- ✅ Balance energy with clarity
+- ✅ Accessible and easy to use
+- ✅ Reflect movement and partnership
+- ✅ Build trust through clean design
 
-### Target Audience
+### Core Values to Reflect
+1. **Compatibility** - Smart matching
+2. **Community** - Connection-focused
+3. **Growth** - Support improvement
+4. **Flexibility** - Accommodate schedules
+5. **Respect** - Safe environment
 
-- **Primary:** Social dancers (West Coast Swing, Salsa, Ballroom, etc.)
-- **Demographics:** Ages 25-55, active in the dance community
-- **Skill Levels:** All levels from beginner to professional
-- **User Personas:**
-  - Competitive dancers seeking high-level practice partners
-  - Social dancers wanting to improve specific skills
-  - Instructors looking for demo partners
-  - Newcomers finding their first practice buddy
-
-### Brand Personality
-
-- **Friendly & Approachable** - Welcoming to all skill levels
-- **Professional** - Trusted for serious practice matching
-- **Energetic** - Reflects the passion of dance
-- **Connected** - Emphasis on community and partnership
-- **Trustworthy** - Safe space for finding partners
-
-### Key Values
-
-1. **Compatibility** - Smart matching based on goals and availability
-2. **Community** - Building connections in the dance world
-3. **Growth** - Supporting dancers in their improvement journey
-4. **Flexibility** - Accommodating various schedules and preferences
-5. **Respect** - Safe, professional practice environment
-
-### Design Goals
-
-- Create a welcoming, professional platform
-- Balance playfulness with functionality
-- Ensure accessibility and ease of use
-- Reflect the energy and movement of dance
-- Build trust through clear, clean design
+**That's it! Now jump to the designer preview and start creating.** 👇
 
 ---
 
 ## 🎨 Design Proposal Template
 
-Use this template to pitch your design vision for Partnerly.dance.
-
-### Design Proposal for Partnerly.dance
-
-**Designer Name:** [Your Name]  
-**Date:** [Date]  
-**Proposal Version:** [v1.0]
+**Copy this template to pitch your design for partnerly.dance**
 
 ---
 
-### 1. Brand Vision
+### Design Proposal
 
-**Overall Design Direction:**
-[Describe your vision for the brand in 2-3 paragraphs. What feeling should users get when they use the platform? How does your design reflect the mission?]
+**Designer:** [Your Name] | **Date:** [Date] | **Contact:** [Email]
 
-**Key Design Principles:**
+---
+
+### 1. Design Vision (2-3 sentences)
+[What feeling should users get? How does your design reflect partnerly.dance's mission?]
+
+**Key Principles:**
 - [Principle 1]
 - [Principle 2]
 - [Principle 3]
 
-**Mood/Inspiration:**
-[Describe the mood you're creating - e.g., "Modern and energetic with a focus on connection"]
+**Mood:** [e.g., "Modern and energetic with a focus on connection"]
 
 ---
 
-### 2. Logo Concept
+### 2. Logo
 
-**Logo Design Philosophy:**
-[Explain the thinking behind your logo design]
+**Concept:** [Brief explanation of your logo thinking]
 
-**Logo Variations:**
-- Primary logo (for light backgrounds)
-- Inverted logo (for dark backgrounds)
-- Icon/Symbol only (for small spaces)
-- Wordmark (text-only version)
+**Deliverables:**
+- [ ] Primary logo (light backgrounds)
+- [ ] Inverted logo (dark backgrounds)
+- [ ] Icon/symbol only
+- [ ] Wordmark
 
-**Mockups/Sketches:**
-[Include images, links to Figma, or descriptions of your logo concepts]
+**Font:** [Logo font name and why]
 
-**Typography:**
-- Logo Font: [Font name and reason for choice]
-- Fallback: [Alternative font if primary unavailable]
-
-**Symbol/Icon Meaning:**
-[If applicable, explain any symbolism in the logo]
+**Link/Attachment:** [Figma/image link]
 
 ---
 
-### 3. Visual Identity
+### 3. Typography
 
-**Design Style:**
-[Choose and describe: Minimalist / Modern / Playful / Professional / etc.]
+**Primary Font:** [Name] - For headers, buttons, navigation  
+**Secondary Font:** [Name] - For body text
 
-**Visual Elements:**
-- **Shapes:** [Rounded corners, sharp edges, organic shapes, etc.]
-- **Imagery Style:** [Photography style, illustrations, icons]
-- **Patterns:** [Any recurring patterns or textures]
-- **Motion:** [How movement/animation should feel]
-
-**Typography System:**
-
-Primary Font:
-- **Font Family:** [e.g., Inter, Roboto, etc.]
-- **Usage:** Headers, buttons, navigation
-- **Reasoning:** [Why this font fits the brand]
-
-Secondary Font:
-- **Font Family:** [e.g., Merriweather, Georgia, etc.]
-- **Usage:** Body text, descriptions
-- **Reasoning:** [Why this font complements]
-
-**Font Hierarchy:**
-- H1: [Size, weight, usage]
-- H2: [Size, weight, usage]
-- H3: [Size, weight, usage]
-- Body: [Size, weight, line height]
-- Small: [Size, weight, usage]
-
-**Spacing & Layout:**
-- Grid system: [e.g., 8px base unit]
-- Container width: [e.g., 1400px max]
-- Padding/margins: [Spacing system]
+**Why these fonts?** [Brief reasoning]
 
 ---
 
 ### 4. Color Palette
 
-**Primary Colors:**
+**🎨 Test live on:** `http://localhost:3000/designer-preview`
 
-Test your colors live on: `http://localhost:3000/designer-preview`
+**Theme Name:** [Your theme name, e.g., "Ocean Breeze"]
 
-**Light Mode:**
-```
-Primary: [HSL value]
-  Usage: Main buttons, links, key actions
-  
-Primary Foreground: [HSL value]
-  Usage: Text on primary color
-  
-Secondary: [HSL value]
-  Usage: Alternative actions, less prominent buttons
-  
-Secondary Foreground: [HSL value]
-  Usage: Text on secondary color
-```
+**Primary Color:** `[HSL value]` - Main buttons, links  
+**Secondary Color:** `[HSL value]` - Alternative actions  
+**Accent Color:** `[HSL value]` - Highlights
 
-**Dark Mode:**
-```
-Primary: [HSL value]
-  Usage: [Same as light mode]
-  
-Primary Foreground: [HSL value]
-  Usage: [Same as light mode]
-  
-Secondary: [HSL value]
-  Usage: [Same as light mode]
-  
-Secondary Foreground: [HSL value]
-  Usage: [Same as light mode]
-```
+**Why these colors?** [1-2 sentences on color choices]
 
-**Supporting Colors:**
-
-**Light Mode:**
-```
-Background: [HSL value] - Main page background
-Foreground: [HSL value] - Primary text color
-
-Card: [HSL value] - Card backgrounds
-Card Foreground: [HSL value] - Text on cards
-
-Muted: [HSL value] - Subtle backgrounds
-Muted Foreground: [HSL value] - Secondary text
-
-Accent: [HSL value] - Highlights, hover states
-Accent Foreground: [HSL value] - Text on accent
-
-Border: [HSL value] - Dividers, outlines
-Input: [HSL value] - Form field borders
-Ring: [HSL value] - Focus indicator
-```
-
-**Dark Mode:**
-```
-[Same structure as light mode with dark-optimized values]
-```
-
-**Functional Colors:**
-```
-Destructive: [HSL value] - Errors, delete actions
-Destructive Foreground: [HSL value] - Text on destructive
-
-Success: [Optional, if needed]
-Warning: [Optional, if needed]
-Info: [Optional, if needed]
-```
-
-**Color Reasoning:**
-[Explain why you chose these colors. How do they reflect the brand? What emotions do they evoke?]
-
-**Accessibility Notes:**
-- All color combinations meet WCAG AA standards (4.5:1 contrast ratio)
-- Tested in both light and dark modes
-- Color is not the only indicator of state/meaning
-
----
-
-### 5. Component Style Guidance
-
-**Buttons:**
-- Shape: [Rounded corners, pill-shaped, etc.]
-- Size variants: [How sizes should feel]
-- States: [Hover, active, disabled styling philosophy]
-
-**Form Inputs:**
-- Style: [Outlined, filled, underlined]
-- States: [Focus, error, disabled]
-- Labels: [Floating, above, inline]
-
-**Cards:**
-- Elevation: [Flat, subtle shadow, prominent shadow]
-- Spacing: [Internal padding]
-- Borders: [Yes/no, subtle/prominent]
-
-**Navigation:**
-- Style: [Top bar, side bar, bottom bar]
-- Active states: [How to indicate current page]
-
-**Other Components:**
-[Any specific guidance for tables, modals, alerts, etc.]
-
----
-
-### 6. Preset Theme (for Designer Preview)
-
-Export your theme from `http://localhost:3000/designer-preview`:
-
-**Theme Name:** [Your custom theme name]
-
-**Preset Details:**
+**Export from designer-preview:**
 ```css
-/* Copy your exported CSS here */
-:root {
-  --background: [value];
-  --foreground: [value];
-  /* ... all color variables */
-}
-
-.dark {
-  --background: [value];
-  --foreground: [value];
-  /* ... all color variables */
-}
+/* Paste your exported CSS here or attach as file */
 ```
 
-**Theme Mood:**
-[Describe the feeling: Energetic, Calm, Professional, Playful, etc.]
+**Accessibility:** ✅ WCAG AA compliant | Tested light/dark modes
 
 ---
 
-### 7. Mockups/Examples
+### 5. Visual Style
 
-**Include:**
-- Landing page concept
-- Dashboard/main app interface
-- Mobile responsive views
-- Key user flows (signup, finding a partner, etc.)
+**Design Style:** [Minimalist / Modern / Playful / Professional / etc.]
 
-**Tools:**
-- Figma links
-- Adobe XD links
-- Sketch files
-- Screenshots from designer preview page
+**Key Elements:**
+- Shapes: [Rounded / Sharp / Organic]
+- Motion: [How animations should feel]
+- Imagery: [Photo style / Illustrations / Icons]
 
 ---
 
-### 8. Implementation Notes
+### 6. Mockups
 
-**For Developers:**
-[Any specific technical requirements or considerations]
+**Attached/Linked:**
+- [ ] Landing page
+- [ ] Main dashboard
+- [ ] Mobile views
+- [ ] Key user flows
 
-**Responsive Behavior:**
-[How design should adapt to mobile, tablet, desktop]
-
-**Animation/Transitions:**
-[Any motion design guidance]
-- Button hover: [timing, effect]
-- Page transitions: [style]
-- Loading states: [approach]
+**Figma/XD Link:** [Link here]
 
 ---
 
-### 9. Rationale
+### 7. Why This Works
 
-**Why This Design Works for Partnerly.dance:**
+[2-3 sentences: Why your design supports the brand mission and appeals to dancers]
 
-[Explain in detail why your design choices support the brand mission and will appeal to the target audience. Connect your visual decisions to user needs and brand values.]
-
-**Competitive Differentiation:**
-[How does this design stand out from other matching/social platforms?]
-
-**User Benefits:**
-[How does this design make the user experience better?]
+**Stands out because:** [How it's different from competitors]
 
 ---
 
-### 10. Next Steps
+### 8. Deliverables & Timeline
 
-**Phase 1 - Foundation:**
-- [ ] Finalize color palette
-- [ ] Create logo files (SVG, PNG)
-- [ ] Export theme CSS
-- [ ] Document typography
+**Phase 1 - Foundation** (Week 1-2)
+- [ ] Logo files (SVG, PNG)
+- [ ] Color palette export
+- [ ] Typography guide
 
-**Phase 2 - Components:**
-- [ ] Design system documentation
-- [ ] Component library in Figma
-- [ ] Icon set
-- [ ] Illustration style guide
+**Phase 2 - System** (Week 3-4)
+- [ ] Component library
+- [ ] Design system doc
+- [ ] Page mockups
 
-**Phase 3 - Application:**
-- [ ] Key page mockups
-- [ ] User flow diagrams
-- [ ] Interaction prototypes
-- [ ] Developer handoff
-
-**Timeline:**
-[Estimated timeline for deliverables]
-
-**Questions/Clarifications Needed:**
-[Any questions for stakeholders before proceeding]
+**Questions?** [Any clarifications needed]
 
 ---
 
-### Submission
-
-**Attachments:**
-- [ ] Logo files (multiple formats)
-- [ ] Color palette (from designer-preview export)
-- [ ] Mockup images/links
-- [ ] Typography specimens
-- [ ] Design system document (Figma/XD link)
-
-**Contact:**
-- Email: [your@email.com]
-- Portfolio: [portfolio link]
+### Submission Checklist
+- [ ] Logo files attached
+- [ ] Theme CSS exported from designer-preview
+- [ ] Mockup links included
+- [ ] Contact info provided
 
 ---
 
-**Thank you for your design proposal! 🎨**
+**Ready to submit! 🎨**
 
 ---
 
