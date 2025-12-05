@@ -88,6 +88,26 @@ Perfect for:
 
 See `frontend/src/app/designer-preview/README.md` for detailed documentation.
 
+### Mobile Optimization
+
+The entire frontend is optimized for mobile web (portrait mode) and ready to be wrapped in a mobile app:
+
+**Features:**
+- 📱 Responsive design for all screen sizes (375px+)
+- 🍔 Mobile hamburger menu with slide-out drawer
+- 👆 Touch-friendly buttons and interactions
+- 📏 Proper viewport and meta tags configured
+- 🌓 Dark mode fully supported on mobile
+- ⚡ Fast, smooth mobile experience
+
+**Ready for:**
+- Mobile web browsers (iOS Safari, Chrome, etc.)
+- React Native / Expo wrapping
+- Capacitor / Ionic wrapping
+- Progressive Web App (PWA)
+
+See `docs/MOBILE_OPTIMIZATION.md` for complete details.
+
 ## Supabase CLI & schema export
 
 - Install/update the Supabase CLI with npm (local project scope keeps versions aligned):

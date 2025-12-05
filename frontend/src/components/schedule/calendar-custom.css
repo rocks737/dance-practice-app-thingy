@@ -123,3 +123,53 @@
 .rbc-event-label {
   display: none;
 }
+
+/* Mobile optimizations for day view */
+@media (max-width: 640px) {
+  /* Reduce padding and margins on mobile */
+  .rbc-time-view .rbc-label {
+    padding-right: 4px;
+    font-size: 0.75rem;
+  }
+
+  .rbc-time-view .rbc-header {
+    padding: 8px 4px;
+    font-size: 0.875rem;
+  }
+
+  /* Make time slots more compact */
+  .rbc-time-view .rbc-time-content {
+    min-height: 400px;
+  }
+
+  /* Reduce event padding on mobile */
+  .rbc-event {
+    padding: 2px 4px;
+  }
+
+  /* Ensure events are readable on mobile */
+  .rbc-event-content {
+    font-size: 0.75rem;
+  }
+
+  /* Make the time gutter narrower on mobile */
+  .rbc-time-view .rbc-time-gutter {
+    width: 50px;
+  }
+
+  /* Improve touch targets for mobile */
+  .rbc-day-slot {
+    min-width: 0;
+  }
+}
+
+/* Ensure day view column takes full width */
+.rbc-time-view.rbc-day-view .rbc-day-slot {
+  min-width: 100%;
+}
+
+/* Improve event visibility in day view */
+.rbc-day-view .rbc-event {
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}

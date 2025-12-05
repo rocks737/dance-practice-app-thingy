@@ -43,19 +43,19 @@ export default async function Index() {
 
       {/* Hero Section */}
       <div className="flex-1 w-full">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-20">
           <div className="text-center">
-            <h1 className="text-5xl font-extrabold text-gray-900 dark:text-gray-100 mb-6">
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-gray-900 dark:text-gray-100 mb-4 sm:mb-6">
               Find Your Perfect
               <span className="text-blue-600 dark:text-blue-400"> Practice Partner</span>
             </h1>
-            <p className="text-xl text-gray-600 dark:text-gray-400 mb-8 max-w-3xl mx-auto">
+            <p className="text-base sm:text-lg lg:text-xl text-gray-600 dark:text-gray-400 mb-6 sm:mb-8 max-w-3xl mx-auto px-4">
               Connect with dancers who match your skill level, availability, and location.
               Make practice sessions more productive and enjoyable.
             </p>
             <div className="flex justify-center space-x-4">
               <Link href="/login">
-                <Button size="lg" className="px-8">
+                <Button size="lg" className="px-6 sm:px-8">
                   Get Started
                 </Button>
               </Link>
@@ -63,7 +63,7 @@ export default async function Index() {
           </div>
 
           {/* Features */}
-          <div className="mt-24 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="mt-12 sm:mt-16 lg:mt-24 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
             <div className="text-center">
               <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center mx-auto mb-4">
                 <Users className="w-6 h-6 text-blue-600 dark:text-blue-400" />

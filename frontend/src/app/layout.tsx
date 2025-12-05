@@ -15,6 +15,16 @@ export const metadata = {
   metadataBase: new URL(defaultUrl),
   title: "Dance Practice App",
   description: "Find your perfect practice partner",
+  viewport: {
+    width: "device-width",
+    initialScale: 1,
+    maximumScale: 5,
+    userScalable: true,
+  },
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "white" },
+    { media: "(prefers-color-scheme: dark)", color: "#0a0a0a" },
+  ],
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

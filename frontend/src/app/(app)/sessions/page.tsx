@@ -14,16 +14,16 @@ export default async function SessionsPage() {
   }
 
   return (
-    <div className="space-y-6 min-w-full">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="rounded-full bg-primary/10 p-3 text-primary">
-            <CalendarRange className="h-6 w-6" />
+    <div className="space-y-4 sm:space-y-6 min-w-full">
+      <div className="flex flex-wrap items-center justify-between gap-3 sm:gap-4">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <div className="rounded-full bg-primary/10 p-2 sm:p-3 text-primary flex-shrink-0">
+            <CalendarRange className="h-5 w-5 sm:h-6 sm:w-6" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Sessions</h1>
-            <p className="text-sm text-muted-foreground">
-              Search, filter, and manage your practice sessions.
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Sessions</h1>
+            <p className="text-xs sm:text-sm text-muted-foreground">
+              Search and manage practice sessions.
             </p>
           </div>
         </div>

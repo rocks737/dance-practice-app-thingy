@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useState, useEffect } from "react";
 import { Calendar as BigCalendar, View, SlotInfo } from "react-big-calendar";
 import withDragAndDrop from "react-big-calendar/lib/addons/dragAndDrop";
 import "react-big-calendar/lib/css/react-big-calendar.css";
@@ -22,7 +22,7 @@ import {
   isValidDuration,
   type AvailabilityEvent,
 } from "@/lib/schedule/calendar";
-import { Info, ChevronLeft, ChevronRight, Repeat, Calendar as CalendarIcon } from "lucide-react";
+import { Info, ChevronLeft, ChevronRight, Repeat, Calendar as CalendarIcon, CalendarDays, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { addWeeks, addDays, startOfToday } from "date-fns";
@@ -62,16 +62,79 @@ export function ScheduleAvailabilityCalendar({
   onUpdateWindow,
   onDeleteWindow,
 }: ScheduleAvailabilityCalendarProps) {
+  // Determine if mobile based on window width
+  const [isMobile, setIsMobile] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const [view, setView] = useState<View>("week");
   // Start with current date, calendar will show the week containing this date
   const [currentDate, setCurrentDate] = useState(() => new Date());
 
+  // Combine mobile detection and view update in a single effect
+  // to prevent race condition where view="week" but views=["day"]
+  useEffect(() => {
+    const checkMobile = () => {
+      const mobile = window.innerWidth < 640; // sm breakpoint
+      setIsMobile(mobile);
+      // Update view immediately when mobile state changes
+      // This ensures view is always consistent with the views array
+      setView(mobile ? "day" : "week");
+    };
+    
+    checkMobile();
+    setMounted(true);
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
   // Calculate the Sunday of the current week being displayed
   const currentWeekStart = useMemo(() => getWeekStart(currentDate), [currentDate]);
 
-  // Calculate events for the current week
+  // Calculate events - use currentWeekStart for both views to ensure proper event generation
+  // The calendar will filter events to show only the relevant day in day view
   const events = useMemo(
-    () => windowsToEvents(windows, currentWeekStart),
+    () => {
+      try {
+        // Ensure windows is an array
+        if (!Array.isArray(windows)) {
+          console.warn("Windows is not an array:", windows);
+          return [];
+        }
+        
+        console.log("[CALENDAR] Generating events for windows:", windows.length, "weekStart:", currentWeekStart);
+        
+        const allEvents = windowsToEvents(windows, currentWeekStart);
+        
+        console.log("[CALENDAR] Generated events:", allEvents.length);
+        
+        // Filter out any invalid events and log them
+        const validEvents = allEvents.filter((event) => {
+          if (!event) {
+            console.warn("Undefined event found");
+            return false;
+          }
+          if (!event.title) {
+            console.warn("Event missing title:", event);
+            return false;
+          }
+          if (!event.start || !event.end) {
+            console.warn("Event missing start/end:", event);
+            return false;
+          }
+          if (!event.id) {
+            console.warn("Event missing id:", event);
+            return false;
+          }
+          return true;
+        });
+        
+        console.log("[CALENDAR] Valid events:", validEvents.length, validEvents);
+        
+        return validEvents;
+      } catch (error) {
+        console.error("Error generating calendar events:", error);
+        return [];
+      }
+    },
     [windows, currentWeekStart],
   );
 
@@ -84,24 +147,30 @@ export function ScheduleAvailabilityCalendar({
   // Today's date for comparison (start of day)
   const today = useMemo(() => startOfToday(), []);
 
-  // Navigation handlers
-  const goToPreviousWeek = useCallback(() => {
-    setCurrentDate((prev) => addWeeks(prev, -1));
-  }, []);
+  // Navigation handlers - work for both day and week views
+  const goToPrevious = useCallback(() => {
+    setCurrentDate((prev) => isMobile ? addDays(prev, -1) : addWeeks(prev, -1));
+  }, [isMobile]);
 
-  const goToNextWeek = useCallback(() => {
-    setCurrentDate((prev) => addWeeks(prev, 1));
-  }, []);
+  const goToNext = useCallback(() => {
+    setCurrentDate((prev) => isMobile ? addDays(prev, 1) : addWeeks(prev, 1));
+  }, [isMobile]);
 
   const goToToday = useCallback(() => {
     setCurrentDate(new Date());
   }, []);
 
-  // Format week range for display
-  const weekRangeText = useMemo(() => {
-    const endDate = addDays(currentWeekStart, 6); // Saturday
-    return `${format(currentWeekStart, "MMM d")} - ${format(endDate, "MMM d, yyyy")}`;
-  }, [currentWeekStart]);
+  // Format date range for display
+  const dateRangeText = useMemo(() => {
+    if (isMobile) {
+      // Show single day: "Monday, Jan 15, 2024"
+      return format(currentDate, "EEEE, MMM d, yyyy");
+    } else {
+      // Show week range: "Jan 14 - Jan 20, 2024"
+      const endDate = addDays(currentWeekStart, 6);
+      return `${format(currentWeekStart, "MMM d")} - ${format(endDate, "MMM d, yyyy")}`;
+    }
+  }, [currentDate, currentWeekStart, isMobile]);
 
   // Check if a date is in the past (before today)
   const isPastDate = useCallback(
@@ -251,6 +320,14 @@ export function ScheduleAvailabilityCalendar({
   const handleEventDrop = useCallback(
     (data: any) => {
       const { event, start, end } = data;
+      
+      // Add defensive check
+      if (!event || !start || !end) {
+        console.error("Invalid event drop data:", data);
+        toast.error("Invalid event data");
+        return;
+      }
+      
       const roundedStart = roundToQuarterHour(new Date(start));
       const roundedEnd = roundToQuarterHour(new Date(end));
 
@@ -295,6 +372,14 @@ export function ScheduleAvailabilityCalendar({
   const handleEventResize = useCallback(
     (data: any) => {
       const { event, start, end } = data;
+      
+      // Add defensive check
+      if (!event || !start || !end) {
+        console.error("Invalid event resize data:", data);
+        toast.error("Invalid event data");
+        return;
+      }
+      
       const roundedStart = roundToQuarterHour(new Date(start));
       const roundedEnd = roundToQuarterHour(new Date(end));
 
@@ -334,9 +419,18 @@ export function ScheduleAvailabilityCalendar({
     [onUpdateWindow, isEventInPast],
   );
 
+  // Don't render calendar until component is mounted and we have valid events
+  if (!mounted || !events) {
+    return (
+      <div className="flex items-center justify-center p-12">
+        <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
-      <div className="flex items-start gap-2 rounded-lg border bg-muted/30 p-3 text-sm">
+      <div className="flex items-start gap-2 rounded-lg border bg-muted/30 p-3 text-xs sm:text-sm">
         <Info className="h-4 w-4 mt-0.5 flex-shrink-0 text-muted-foreground" />
         <div className="space-y-1 text-muted-foreground">
           <p>
@@ -347,17 +441,17 @@ export function ScheduleAvailabilityCalendar({
             <strong className="text-foreground">Right-click blocks</strong> to make them one-time
             only or delete them.
           </p>
-          <p>
+          <p className="hidden sm:block">
             <strong className="text-foreground">Drag blocks</strong> to change day/time,
             or resize to adjust duration.
           </p>
-          <div className="flex items-center gap-4 mt-2">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 mt-2">
             <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded" style={{ backgroundColor: "hsl(var(--primary))" }} />
+              <div className="w-4 h-4 rounded flex-shrink-0" style={{ backgroundColor: "hsl(var(--primary))" }} />
               <span className="text-xs">Recurring (every week)</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded" style={{ backgroundColor: "hsl(180 70% 45%)" }} />
+              <div className="w-4 h-4 rounded flex-shrink-0" style={{ backgroundColor: "hsl(180 70% 45%)" }} />
               <span className="text-xs">One-time only</span>
             </div>
           </div>
@@ -366,34 +460,39 @@ export function ScheduleAvailabilityCalendar({
 
       {/* Navigation Controls */}
       <div className="flex items-center justify-between rounded-lg border bg-background p-3">
-        <Button type="button" onClick={goToPreviousWeek} variant="outline" size="sm">
-          <ChevronLeft className="h-4 w-4 mr-1" />
-          Previous Week
+        <Button type="button" onClick={goToPrevious} variant="outline" size="sm" className="flex-shrink-0">
+          <ChevronLeft className="h-4 w-4 sm:mr-1" />
+          <span className="hidden sm:inline">{isMobile ? "Previous" : "Previous Week"}</span>
         </Button>
-        <div className="flex flex-col items-center gap-1">
-          <Button type="button" onClick={goToToday} variant="outline" size="sm">
+        <div className="flex flex-col items-center gap-1 px-2">
+          <Button type="button" onClick={goToToday} variant="outline" size="sm" className="text-xs sm:text-sm">
             Today
           </Button>
-          <p className="text-sm font-medium text-foreground">{weekRangeText}</p>
+          <p className="text-xs sm:text-sm font-medium text-foreground text-center">{dateRangeText}</p>
         </div>
-        <Button type="button" onClick={goToNextWeek} variant="outline" size="sm">
-          Next Week
-          <ChevronRight className="h-4 w-4 ml-1" />
+        <Button type="button" onClick={goToNext} variant="outline" size="sm" className="flex-shrink-0">
+          <span className="hidden sm:inline">{isMobile ? "Next" : "Next Week"}</span>
+          <ChevronRight className="h-4 w-4 sm:ml-1" />
         </Button>
       </div>
 
-      <div className="rounded-lg border bg-background p-4" style={{ height: "600px" }}>
+      <div className="rounded-lg border bg-background p-2 sm:p-4" style={{ height: isMobile ? "500px" : "600px" }}>
         <Calendar
+          key={`${view}-${currentDate.toISOString()}`}
           localizer={localizer}
-          events={events}
+          events={events || []}
           view={view}
           onView={setView}
-          views={["week"]}
-          defaultView="week"
-          date={currentWeekStart}
+          views={isMobile ? ["day"] : ["week", "day"]}
+          defaultView={isMobile ? "day" : "week"}
+          date={isMobile ? currentDate : currentWeekStart}
           onNavigate={(newDate: Date) => {
-            // Ensure we store the week start for consistency
-            setCurrentDate(getWeekStart(newDate));
+            if (isMobile) {
+              setCurrentDate(newDate);
+            } else {
+              // Ensure we store the week start for consistency in week view
+              setCurrentDate(getWeekStart(newDate));
+            }
           }}
           min={new Date(2024, 0, 1, 0, 0, 0)}
           max={new Date(2024, 0, 1, 23, 59, 59)}
@@ -408,12 +507,22 @@ export function ScheduleAvailabilityCalendar({
           toolbar={false}
           formats={{
             dayFormat: (date: Date) => {
-              // Show day name and date: "Sunday, Jan 14"
+              // For day view, show just the day name
+              if (isMobile) {
+                return format(date, "EEEE");
+              }
+              // For week view, show day name and date
               return format(date, "EEEE, MMM d");
             },
             dayHeaderFormat: (date: Date) => {
-              // Same format for header
+              if (isMobile) {
+                return format(date, "EEEE");
+              }
               return format(date, "EEEE, MMM d");
+            },
+            timeGutterFormat: (date: Date) => {
+              // Shorter time format on mobile
+              return format(date, isMobile ? "ha" : "h:mm a");
             },
           }}
           dayPropGetter={(date: Date) => {
@@ -435,7 +544,31 @@ export function ScheduleAvailabilityCalendar({
             return {};
           }}
           eventPropGetter={(event: object) => {
+            // Add defensive check
+            if (!event) {
+              return {
+                style: {
+                  backgroundColor: "hsl(var(--primary))",
+                  borderColor: "hsl(var(--primary))",
+                  color: "hsl(var(--primary-foreground))",
+                },
+              };
+            }
+            
             const availEvent = event as AvailabilityEvent;
+            
+            // Check if required properties exist
+            if (!availEvent.end) {
+              console.warn("Event missing end time:", availEvent);
+              return {
+                style: {
+                  backgroundColor: "hsl(var(--primary))",
+                  borderColor: "hsl(var(--primary))",
+                  color: "hsl(var(--primary-foreground))",
+                },
+              };
+            }
+            
             const isRecurring = availEvent.recurring !== false;
             // Use teal/cyan for one-time events (more visible than chart-2)
             const baseColor = isRecurring ? "hsl(var(--primary))" : "hsl(180 70% 45%)"; // teal
@@ -463,7 +596,17 @@ export function ScheduleAvailabilityCalendar({
           }}
           components={{
             event: ({ event }: { event: object }) => {
+              // Add defensive check
+              if (!event) return null;
+              
               const availEvent = event as AvailabilityEvent;
+              
+              // Add another defensive check for required properties
+              if (!availEvent.title) {
+                console.warn("Event missing title:", availEvent);
+                return null;
+              }
+              
               const isRecurring = availEvent.recurring !== false;
               
               return (

@@ -115,12 +115,12 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900 px-4 py-8">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900 px-4 sm:px-6 lg:px-8 py-8">
       {/* Back to Login Link - Only show on step 1 */}
       {step === 1 && (
         <Link
           href="/login"
-          className="absolute left-8 top-8 py-2 px-4 rounded-md no-underline text-foreground bg-btn-background hover:bg-btn-background-hover flex items-center group text-sm"
+          className="absolute left-4 sm:left-8 top-4 sm:top-8 py-2 px-3 sm:px-4 rounded-md no-underline text-foreground bg-btn-background hover:bg-btn-background-hover flex items-center group text-sm"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -136,17 +136,18 @@ export default function SignupPage() {
           >
             <polyline points="15 18 9 12 15 6" />
           </svg>
-          Back to Login
+          <span className="hidden sm:inline">Back to Login</span>
+          <span className="sm:hidden">Back</span>
         </Link>
       )}
 
       <div className="w-full max-w-2xl">
         {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+        <div className="text-center mb-6 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">
             Create Your Account
           </h1>
-          <p className="text-gray-600 dark:text-gray-400">
+          <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">
             Join our dance community and start practicing with partners
           </p>
         </div>
@@ -155,7 +156,7 @@ export default function SignupPage() {
         {step >= 2 && <SignupProgress currentStep={step} totalSteps={4} />}
 
         {/* Step Content */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 sm:p-6 lg:p-8">
           {step === 1 && (
             <AuthStep
               initialData={formData.auth}
