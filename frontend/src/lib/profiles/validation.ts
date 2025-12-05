@@ -87,3 +87,61 @@ export const profileSettingsSchema = z.object({
 });
 
 export type ProfileSettingsFormData = z.infer<typeof profileSettingsSchema>;
+
+/**
+ * Sign Up - Authentication Step validation
+ */
+export const signupAuthSchema = z.object({
+  email: z.string().email("Please enter a valid email address"),
+  password: z
+    .string()
+    .min(8, "Password must be at least 8 characters")
+    .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+    .regex(/[a-z]/, "Password must contain at least one lowercase letter")
+    .regex(/[0-9]/, "Password must contain at least one number"),
+});
+
+export type SignupAuthFormData = z.infer<typeof signupAuthSchema>;
+
+/**
+ * Sign Up - Personal Info Step validation
+ */
+export const signupPersonalInfoSchema = z.object({
+  firstName: z
+    .string()
+    .min(1, "First name is required")
+    .max(120, "First name must be 120 characters or less"),
+  lastName: z
+    .string()
+    .min(1, "Last name is required")
+    .max(120, "Last name must be 120 characters or less"),
+  displayName: z
+    .string()
+    .max(160, "Display name must be 160 characters or less")
+    .optional()
+    .transform((val) => val || undefined),
+  birthDate: z.string().optional(),
+});
+
+export type SignupPersonalInfoFormData = z.infer<typeof signupPersonalInfoSchema>;
+
+/**
+ * Sign Up - Dance Profile Step validation
+ */
+export const signupDanceProfileSchema = z.object({
+  primaryRole: z.number().int().min(0).max(1, "Please select a dance role"),
+  competitivenessLevel: z.number().int().min(1).max(5),
+  wsdcLevel: z.number().int().min(0).max(5).nullable().optional(),
+  bio: z
+    .string()
+    .max(1000, "Bio must be 1000 characters or less")
+    .optional()
+    .transform((val) => val || undefined),
+  danceGoals: z
+    .string()
+    .max(500, "Dance goals must be 500 characters or less")
+    .optional()
+    .transform((val) => val || undefined),
+});
+
+export type SignupDanceProfileFormData = z.infer<typeof signupDanceProfileSchema>;

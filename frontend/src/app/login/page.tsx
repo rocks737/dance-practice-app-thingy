@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { LoginButton } from "./login-buttons";
 
 // Helper to check if error is a Next.js redirect (which should not be caught)
@@ -114,89 +114,6 @@ export default function Login({
     }
   };
 
-  const signUp = async (formData: FormData) => {
-    "use server";
-
-    const origin = headers().get("origin");
-    const email = formData.get("email") as string;
-    const password = formData.get("password") as string;
-    const returnUrl = formData.get("returnUrl") as string | null;
-
-    if (!email || !password) {
-      const params = new URLSearchParams();
-      params.set("message", "Email and password are required");
-      if (returnUrl) {
-        params.set("returnUrl", returnUrl);
-      }
-      redirect(`/login?${params.toString()}`);
-    }
-
-    try {
-      const supabase = createClient();
-
-      console.log("[SIGNUP] Attempting sign up for:", email);
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: `${origin}/auth/callback${
-            returnUrl ? `?returnUrl=${encodeURIComponent(returnUrl)}` : ""
-          }`,
-        },
-      });
-
-      if (error) {
-        console.error("[SIGNUP ERROR] Supabase auth error:", {
-          message: error.message,
-          status: error.status,
-          code: (error as any).code,
-          fullError: error,
-        });
-
-        const params = new URLSearchParams();
-        params.set("message", error.message || "Could not create account");
-        if (returnUrl) {
-          params.set("returnUrl", returnUrl);
-        }
-        redirect(`/login?${params.toString()}`);
-      }
-
-      // Check if email confirmation is required
-      if (data.user && !data.session) {
-        console.log("[SIGNUP] User created, email confirmation required");
-        const params = new URLSearchParams();
-        params.set("message", "Please check your email to confirm your account");
-        if (returnUrl) {
-          params.set("returnUrl", returnUrl);
-        }
-        redirect(`/login?${params.toString()}`);
-      }
-
-      console.log("[SIGNUP SUCCESS] User signed up:", data.user?.email);
-      redirect("/profile");
-    } catch (err) {
-      // Don't catch redirect errors - let them propagate
-      if (isRedirectError(err)) {
-        throw err;
-      }
-
-      console.error("[SIGNUP ERROR] Unexpected error:", {
-        error: err,
-        message: err instanceof Error ? err.message : String(err),
-        stack: err instanceof Error ? err.stack : undefined,
-      });
-
-      const params = new URLSearchParams();
-      params.set(
-        "message",
-        err instanceof Error ? err.message : "An unexpected error occurred",
-      );
-      if (returnUrl) {
-        params.set("returnUrl", returnUrl);
-      }
-      redirect(`/login?${params.toString()}`);
-    }
-  };
 
   return (
     <div className="flex-1 flex flex-col w-full px-8 sm:max-w-md justify-center gap-2">
@@ -234,9 +151,14 @@ export default function Login({
         <LoginButton formAction={signIn} pendingText="Signing In...">
           Sign In
         </LoginButton>
-        <LoginButton formAction={signUp} variant="outline" pendingText="Signing Up...">
-          Sign Up
-        </LoginButton>
+        <Link
+          href={`/signup${safeReturnUrl ? `?returnUrl=${encodeURIComponent(safeReturnUrl)}` : ""}`}
+          className="w-full"
+        >
+          <Button type="button" variant="outline" className="w-full">
+            Sign Up
+          </Button>
+        </Link>
         {searchParams?.message && (
           <div className="mt-4 p-4 bg-destructive/10 border border-destructive/20 rounded-md">
             <p className="text-destructive text-center font-medium">
