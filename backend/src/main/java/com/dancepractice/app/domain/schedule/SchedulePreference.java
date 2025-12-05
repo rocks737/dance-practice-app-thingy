@@ -1,5 +1,7 @@
 package com.dancepractice.app.domain.schedule;
 
+// NOTE: Reference-only entity retained solely to describe the Supabase schema (no Spring Boot backend).
+
 import com.dancepractice.app.common.persistence.AbstractAuditableEntity;
 import com.dancepractice.app.domain.common.FocusArea;
 import com.dancepractice.app.domain.common.PrimaryRole;

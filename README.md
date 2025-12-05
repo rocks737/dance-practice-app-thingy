@@ -1,38 +1,16 @@
 # dance-practice-app-thingy
 
-Backend and frontend playground for the dance practice partner matcher.
+Frontend + Supabase playground for the dance practice partner matcher.
 
-## Backend quickstart
+## Where did the Java backend go?
 
-```bash
-cd backend
-./gradlew bootRun
-```
+There isn’t one anymore. The previous Spring Boot/Gradle stack has been removed so we don’t confuse people (or AI assistants) into thinking there’s an API to run. The `backend/` folder now only contains **reference-only JPA entities/enums** that document the Supabase schema.
 
-The API will be available on `http://localhost:8080` (see `/api/*` routes).  
-Swagger/OpenAPI isn’t wired up yet, but controllers live in `com.dancepractice.app.web.controller`.
+- ✅ Safe to open/read to understand relationships, column names, soft-delete patterns, etc.
+- ❌ Not runnable—no Gradle wrapper, Dockerfile, controllers, or services exist here.
+- 📝 Each Java file includes a comment reminding future readers that Supabase is the real backend.
 
-## Running with Docker Compose
-
-```bash
-docker compose up --build
-```
-
-Services:
-
-- `postgres` – stateful Postgres 16 database (persisted via the `pgdata` volume)
-- `backend` – Spring Boot app (profile `local`, auto-migrated schema via Hibernate)
-
-The compose file exposes backend on `8080` and Postgres on `5432`.
-
-## Tests
-
-```bash
-cd backend
-./gradlew test
-```
-
-Repository tests run against Testcontainers/Postgres, so Docker must be available.
+If you need executable code, copy the entities into your own project or inspect the Supabase migrations instead.
 
 ## Frontend
 
@@ -90,49 +68,28 @@ See `frontend/src/app/designer-preview/README.md` for detailed documentation.
 
 ## Supabase CLI & schema export
 
-- Install/update the Supabase CLI with npm (local project scope keeps versions aligned):
+- Install/update the CLI locally:
 
   ```bash
   npm install supabase --save-dev
   npx supabase --version
   ```
 
-- Export the current JPA schema via the dedicated Spring profile. This writes `backend/build/schema.sql` (override the path by setting `SCHEMA_EXPORT_TARGET`):
+- Boot the local stack and apply every migration in `supabase/migrations`:
 
   ```bash
-  cd backend
-  ./gradlew bootRun -Dspring-boot.run.profiles=schema-export --no-daemon
+  supabase start
+  supabase db reset
   ```
 
-  The app starts in non-web mode, generates the SQL script, logs the absolute output path, and exits automatically. Use the resulting file to seed Supabase migrations.
-
-- The backend `user_profiles` table stores dancer metadata and references Supabase Auth via `auth_user_id`. User profiles are **automatically created** when someone signs up through Supabase Auth (via database trigger). The trigger creates a default profile with DANCER role.
-
-- To add additional roles (ADMIN, INSTRUCTOR, ORGANIZER):
-
-  ```sql
-  -- Add ADMIN role to a user
-  INSERT INTO user_roles (user_id, role)
-  SELECT id, 'ADMIN'
-  FROM user_profiles
-  WHERE email = 'user@example.com'
-  ON CONFLICT (user_id, role) DO NOTHING;
-  ```
-
-- For existing users who signed up before the auto-profile trigger was added, use:
-
-  ```sql
-  SELECT public.create_profile_for_existing_user('user@example.com');
-  ```
-
-- Supabase bootstrap assets now live under `supabase/` (copied from the Basejump template). To recreate the Supabase state locally run:
+- Push new migrations to the hosted project (ref `ycouamhfhambbfcakkqo`) when you’re ready:
 
   ```bash
-  supabase start         # spins up local stack using supabase/config.toml
-  supabase db reset      # applies Basejump bootstrap + domain migrations (see supabase/migrations)
+  npx supabase login
+  supabase db push
   ```
 
-  To push your local migrations to the hosted project (ref `ycouamhfhambbfcakkqo`), run `supabase db push` after logging in via `npx supabase login`.
+That’s it—no JVM build, no schema-export profile, no Docker Compose backend. Supabase is the source of truth for data + auth.
 
 ## User Profile Auto-Creation
 

@@ -5,7 +5,7 @@
 
 import { describe, it, expect, beforeAll, afterAll } from "@jest/globals";
 import { createClient } from "@supabase/supabase-js";
-import type { Database } from "@/lib/database.types";
+import type { Database } from "@/lib/supabase/types";
 import { supabaseUrl, supabaseAnonKey } from "./integration-utils";
 
 describe("Schedule Preference Availability Windows - Integration", () => {

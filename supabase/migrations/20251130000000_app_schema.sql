@@ -223,6 +223,12 @@ alter table schedule_preference_windows
 alter table schedule_preferences
     add constraint fk_schedule_preferences_user foreign key (user_id) references user_profiles;
 
+-- Ensure each user can only have one active schedule preference at a time
+-- Deleted preferences (deleted_at IS NOT NULL) are excluded from this constraint
+create unique index idx_schedule_preferences_user_id_unique
+on schedule_preferences (user_id)
+where deleted_at is null;
+
 alter table session_focus_areas
     add constraint fk_session_focus_areas_session foreign key (session_id) references sessions;
 

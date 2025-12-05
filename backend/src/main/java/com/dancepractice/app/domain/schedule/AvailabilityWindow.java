@@ -1,5 +1,7 @@
 package com.dancepractice.app.domain.schedule;
 
+// NOTE: Reference-only embeddable used for Supabase schema context; no Java backend is active.
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
 import jakarta.persistence.EnumType;

@@ -4,7 +4,7 @@
  */
 
 import { createClient } from "@supabase/supabase-js";
-import type { Database } from "@/lib/database.types";
+import type { Database } from "@/lib/supabase/types";
 import { execSync } from "child_process";
 
 /**
@@ -250,7 +250,10 @@ export async function createTestSchedulePreference(
     specificDate?: string;
   }>
 ): Promise<string> {
-  const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey);
+  // Use admin client here because this is test setup. In the app, schedule
+  // preferences are created via the authenticated user client which must
+  // satisfy RLS (user_id = current_profile_id()).
+  const supabase = createAdminClient();
 
   const { data: preference, error: prefError } = await supabase
     .from("schedule_preferences")

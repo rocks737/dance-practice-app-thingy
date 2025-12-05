@@ -37,7 +37,7 @@ describe("ScheduleAvailabilityCalendar", () => {
     expect(screen.getByText(/Drag blocks/i)).toBeInTheDocument();
   });
 
-  it("should display recurring and one-time legends", () => {
+  it("should display recurring legend", () => {
     render(
       <ScheduleAvailabilityCalendar
         windows={[]}
@@ -48,7 +48,6 @@ describe("ScheduleAvailabilityCalendar", () => {
     );
 
     expect(screen.getByText("Recurring (every week)")).toBeInTheDocument();
-    expect(screen.getAllByText(/One-time only/i).length).toBeGreaterThan(0);
   });
 
   it("should display navigation controls", () => {
@@ -80,7 +79,7 @@ describe("ScheduleAvailabilityCalendar", () => {
     expect(screen.getByText(/\w+ \d+ - \w+ \d+, \d{4}/)).toBeInTheDocument();
   });
 
-  it("should show instructions for right-click", () => {
+  it("should show instructions for right-click delete", () => {
     render(
       <ScheduleAvailabilityCalendar
         windows={[]}
@@ -91,6 +90,6 @@ describe("ScheduleAvailabilityCalendar", () => {
     );
 
     expect(screen.getByText(/Right-click blocks/i)).toBeInTheDocument();
-    expect(screen.getByText(/to make them one-time only or delete them/i)).toBeInTheDocument();
+    expect(screen.getByText(/to delete them/i)).toBeInTheDocument();
   });
 });

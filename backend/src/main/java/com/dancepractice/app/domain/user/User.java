@@ -1,5 +1,7 @@
 package com.dancepractice.app.domain.user;
 
+// NOTE: Reference-only entity retained for Supabase schema documentation; no Spring Boot backend runs here.
+
 import com.dancepractice.app.common.persistence.AbstractAuditableEntity;
 import com.dancepractice.app.domain.common.AccountStatus;
 import com.dancepractice.app.domain.common.PrimaryRole;

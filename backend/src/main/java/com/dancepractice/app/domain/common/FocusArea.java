@@ -1,5 +1,7 @@
 package com.dancepractice.app.domain.common;
 
+// NOTE: Reference-only enum for Supabase schema documentation; no Java backend is running here.
+
 public enum FocusArea {
   CONNECTION("Connection"),
   TECHNIQUE("Technique"),
