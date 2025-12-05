@@ -38,11 +38,18 @@ const createChildTableMock = () => {
   };
 };
 
-const createSelectBuilder = (response: any) => ({
-  eq: jest.fn().mockReturnThis(),
-  order: jest.fn().mockResolvedValue(response),
-  maybeSingle: jest.fn().mockResolvedValue(response),
-});
+const createSelectBuilder = (response: any) => {
+  const builder: any = {
+    eq: jest.fn().mockReturnThis(),
+    is: jest.fn().mockReturnThis(),
+    order: jest.fn().mockReturnThis(),
+    limit: jest.fn().mockReturnThis(),
+    maybeSingle: jest.fn().mockResolvedValue(response),
+    // Make the builder thenable so `await query` returns `response`
+    then: (resolve: any, reject?: any) => Promise.resolve(response).then(resolve, reject),
+  };
+  return builder;
+};
 
 const createUpdateBuilder = (response: any) => ({
   eq: jest.fn().mockReturnThis(),
@@ -172,13 +179,21 @@ describe("schedule/api", () => {
       (global.crypto.randomUUID as jest.Mock).mockReturnValue("pref-1");
       schedulePreferencesTable.insert.mockResolvedValue({ error: null });
 
-      // fetchPreferenceById call
-      schedulePreferencesTable.select.mockReturnValue(
-        createSelectBuilder({
-          data: sampleRawPreference,
-          error: null,
-        }),
-      );
+      // First select: fetchUserSchedulePreference (no existing preference)
+      // Second select: fetchPreferenceById (returns created preference)
+      schedulePreferencesTable.select
+        .mockReturnValueOnce(
+          createSelectBuilder({
+            data: null,
+            error: null,
+          }),
+        )
+        .mockReturnValueOnce(
+          createSelectBuilder({
+            data: sampleRawPreference,
+            error: null,
+          }),
+        );
 
       const result = await createSchedulePreference({
         userId: "user-1",

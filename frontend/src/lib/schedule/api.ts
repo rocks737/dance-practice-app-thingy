@@ -99,6 +99,7 @@ export async function fetchSchedulePreferences(
     .from("schedule_preferences")
     .select(SCHEDULE_PREFERENCE_SELECT)
     .eq("user_id", userId)
+    .is("deleted_at", null)
     .order("created_at", { ascending: true });
 
   if (error) {
@@ -108,10 +109,43 @@ export async function fetchSchedulePreferences(
   return (data as RawSchedulePreferenceRow[] | null)?.map(mapPreference) ?? [];
 }
 
+/**
+ * Get the user's active schedule preference, if one exists.
+ * Returns null if no preference exists.
+ */
+export async function fetchUserSchedulePreference(
+  userId: string,
+): Promise<SchedulePreference | null> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("schedule_preferences")
+    .select(SCHEDULE_PREFERENCE_SELECT)
+    .eq("user_id", userId)
+    .is("deleted_at", null)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data ? mapPreference(data as RawSchedulePreferenceRow) : null;
+}
+
 export async function createSchedulePreference(
   input: CreateSchedulePreferenceInput,
 ): Promise<SchedulePreference> {
   const supabase = createClient();
+  
+  // Check if user already has an active preference
+  const existing = await fetchUserSchedulePreference(input.userId);
+  if (existing) {
+    throw new Error(
+      "You already have a schedule preference. Please update your existing preference instead of creating a new one."
+    );
+  }
+
   const normalized = normalizePayload(input.data);
   const preferenceId = crypto.randomUUID();
   const timestamp = new Date().toISOString();
@@ -129,6 +163,12 @@ export async function createSchedulePreference(
 
   const { error } = await supabase.from("schedule_preferences").insert(baseInsert);
   if (error) {
+    // Handle unique constraint violation with a user-friendly message
+    if (error.code === "23505" || error.message.includes("unique") || error.message.includes("duplicate")) {
+      throw new Error(
+        "You already have a schedule preference. Please update your existing preference instead of creating a new one."
+      );
+    }
     throw new Error(error.message);
   }
 

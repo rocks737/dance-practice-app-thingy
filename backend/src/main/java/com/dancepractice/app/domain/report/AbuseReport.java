@@ -1,5 +1,7 @@
 package com.dancepractice.app.domain.report;
 
+// NOTE: Reference-only entity documenting Supabase tables; there is no Spring Boot backend runtime.
+
 import com.dancepractice.app.common.persistence.AbstractAuditableEntity;
 import com.dancepractice.app.domain.common.AbuseCategory;
 import com.dancepractice.app.domain.common.AbuseReportStatus;
