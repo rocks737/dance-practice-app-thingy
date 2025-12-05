@@ -14,53 +14,31 @@ function forceLoginWithReturn(request: NextRequest) {
 }
 
 /**
- * Ensures user profile exists in database
- * Creates profile with defaults if it doesn't exist
+ * Check if user profile is complete
+ * Returns true if profile exists and has required fields filled
  */
-async function ensureUserProfileExists(supabase: any, userId: string, email: string) {
+async function checkProfileComplete(supabase: any, userId: string): Promise<boolean> {
   try {
-    // Check if profile exists
     const { data: profile } = await supabase
       .from("user_profiles")
-      .select("id")
+      .select("id, first_name, last_name")
       .eq("auth_user_id", userId)
-      .single();
+      .maybeSingle();
 
-    if (profile) {
-      return; // Profile exists, nothing to do
+    // Profile doesn't exist
+    if (!profile) {
+      return false;
     }
 
-    // Create profile with defaults
-    const { data: newProfile, error: profileError } = await supabase
-      .from("user_profiles")
-      .insert({
-        auth_user_id: userId,
-        email: email,
-        first_name: "",
-        last_name: "",
-        primary_role: 0, // LEADER
-        wsdc_level: 1, // NOVICE (since NEWCOMER is 0)
-        competitiveness_level: 3,
-        profile_visible: true,
-        account_status: 0, // ACTIVE
-      })
-      .select()
-      .single();
-
-    if (profileError) {
-      console.error("Error creating user profile:", profileError);
-      return;
+    // Profile exists but missing required fields
+    if (!profile.first_name || !profile.last_name) {
+      return false;
     }
 
-    // Add default DANCER role
-    await supabase.from("user_roles").insert({
-      user_id: newProfile.id,
-      role: "DANCER",
-    });
-
-    console.log("Created profile for new user:", email);
+    return true;
   } catch (error) {
-    console.error("Error ensuring user profile:", error);
+    console.error("Error checking profile:", error);
+    return false;
   }
 }
 
@@ -129,11 +107,6 @@ export const validateSession = async (request: NextRequest) => {
       data: { user },
     } = await supabase.auth.getUser();
 
-    // If user is authenticated, ensure their profile exists
-    if (user && user.email) {
-      await ensureUserProfileExists(supabase, user.id, user.email);
-    }
-
     const protectedRoutes = [
       "/invitation",
       "/profile",
@@ -144,12 +117,30 @@ export const validateSession = async (request: NextRequest) => {
       "/settings",
     ];
 
-    if (
-      !user &&
-      protectedRoutes.some((path) => request.nextUrl.pathname.startsWith(path))
-    ) {
-      // redirect to /login
+    const currentPath = request.nextUrl.pathname;
+    const isProtectedRoute = protectedRoutes.some((path) => currentPath.startsWith(path));
+    const isSignupRoute = currentPath.startsWith("/signup");
+    const isAuthCallback = currentPath.startsWith("/auth/callback");
+
+    // If not authenticated and trying to access protected route, redirect to login
+    if (!user && isProtectedRoute) {
       return forceLoginWithReturn(request);
+    }
+
+    // If authenticated, check if profile is complete (except for signup and auth callback routes)
+    if (user && !isSignupRoute && !isAuthCallback) {
+      const profileComplete = await checkProfileComplete(supabase, user.id);
+      
+      if (!profileComplete && isProtectedRoute) {
+        // Profile incomplete, redirect to signup to complete onboarding
+        console.log("[MIDDLEWARE] Redirecting user to complete onboarding:", user.email);
+        return NextResponse.redirect(
+          new URL(
+            `/signup?returnUrl=${encodeURIComponent(currentPath)}`,
+            request.url,
+          ),
+        );
+      }
     }
 
     return response;
