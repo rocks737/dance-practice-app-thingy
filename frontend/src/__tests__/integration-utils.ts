@@ -187,6 +187,33 @@ export async function createTestLocation(
 }
 
 /**
+ * Re-seeds the local Supabase database with a larger number of users and/or
+ * a limited number of availability windows per user, using the Python
+ * seed_via_api.py script. This is intended for scale integration tests.
+ *
+ * NOTE: This spawns a subprocess and assumes:
+ * - The Supabase CLI/dev stack is running locally.
+ * - Python 3 is available.
+ */
+export function reseedWithScale(extraUsers: number, windowsPerUser?: number) {
+  const baseCmd = [
+    "cd ..",
+    "cd supabase",
+    "python3 seed_via_api.py",
+    `--extra-users ${extraUsers}`,
+    windowsPerUser != null ? `--windows-per-user ${windowsPerUser}` : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  // Run from the frontend directory; command itself cds up into supabase.
+  execSync(baseCmd, {
+    cwd: process.cwd().replace(/\/frontend$/, "/frontend"),
+    stdio: "inherit",
+  });
+}
+
+/**
  * Creates a test session
  */
 export async function createTestSession(
