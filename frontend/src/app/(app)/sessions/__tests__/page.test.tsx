@@ -33,9 +33,7 @@ describe("SessionsPage", () => {
     render(Page);
 
     expect(screen.getByRole("heading", { name: /sessions/i })).toBeInTheDocument();
-    expect(
-      screen.getByText(/search, filter, and manage your practice sessions/i),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/search and manage practice sessions/i)).toBeInTheDocument();
     expect(screen.getByTestId("sessions-explorer")).toBeInTheDocument();
     expect(mockSessionsExplorer).toHaveBeenCalledWith(
       expect.objectContaining({ authUserId: "test-user-123" }),

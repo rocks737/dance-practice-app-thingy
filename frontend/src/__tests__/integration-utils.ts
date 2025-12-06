@@ -89,7 +89,12 @@ export interface TestLocation {
 export async function createTestUser(
   role: "DANCER" | "INSTRUCTOR" | "ORGANIZER" | "ADMIN" = "DANCER"
 ): Promise<TestUser> {
-  const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey);
+  const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  });
   const timestamp = Date.now();
   const email = `test-${role.toLowerCase()}-${timestamp}@example.com`;
 
@@ -104,6 +109,19 @@ export async function createTestUser(
   }
 
   const userId = authData.user.id;
+
+  // Ensure we have an active session (signUp may return null session depending on config)
+  const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+    email,
+    password: "testpassword123",
+  });
+  if (signInError || !signInData.session) {
+    throw new Error(`Failed to sign in test user ${email}: ${signInError?.message}`);
+  }
+
+  // Clean up any stale profiles for this auth user to keep current_profile_id deterministic
+  const admin = createAdminClient();
+  await admin.from("user_profiles").delete().eq("auth_user_id", userId);
 
   // Create user profile
   const { data: profileData, error: profileError } = await supabase

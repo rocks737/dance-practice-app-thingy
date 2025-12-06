@@ -33,7 +33,7 @@ describe("Navigation Integration", () => {
     render(<AppSidebar user={mockUser} />);
 
     // Header
-    expect(screen.getByText("Dance Practice")).toBeInTheDocument();
+    expect(screen.getAllByText("Dance Practice").length).toBeGreaterThanOrEqual(1);
 
     // User info - email comes from mockUser (test@example.com)
     expect(screen.getByText("JohnD")).toBeInTheDocument();

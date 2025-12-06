@@ -34,6 +34,7 @@ interface MatchRow {
   candidate_preference_id: string;
   score: number;
   overlapping_windows: number;
+  overlapping_minutes: number;
   shared_focus_areas: number;
   wsdc_level_diff: number;
 }
@@ -126,8 +127,14 @@ describe("Matches - Integration", () => {
         { dayOfWeek: "TUESDAY", startTime: "10:00:00", endTime: "12:00:00" },
       ]);
 
+      // Sanity: ensure RPC sees the correct caller profile
+      const { data: userInfo } = await userA.supabase.auth.getUser();
+      expect(userInfo.user?.id).toBe(userA.userId);
+      const { data: currentProfileId } = await (userA.supabase as any).rpc("current_profile_id");
+      expect(currentProfileId).toBe(userA.profileId);
+
       const { data, error } = await (userA.supabase as any).rpc("find_matches_for_current_user", {
-        p_limit: 10,
+        p_limit: 500, // ensure we include all candidates even if many share the same city
       });
 
       expect(error).toBeNull();
@@ -297,7 +304,8 @@ describe("Matches - Integration", () => {
       const admin = createAdminClient();
 
       // Put all three users in the same home city so they are eligible to match
-      const { locationId } = await createTestLocation("Level Test City", "Levelville", "LS");
+      const uniqueCity = `Levelville-${Date.now()}`;
+      const { locationId } = await createTestLocation("Level Test City", uniqueCity, "LS");
       await admin
         .from("user_profiles")
         .update({ home_location_id: locationId })
@@ -310,6 +318,40 @@ describe("Matches - Integration", () => {
         .from("user_profiles")
         .update({ home_location_id: locationId })
         .eq("id", userC.profileId);
+
+      // Set wsdc levels: A=2, B=2 (diff 0), C=5 (diff 3)
+      const wsdcA = await admin
+        .from("user_profiles")
+        .update({ wsdc_level: 2 })
+        .eq("id", userA.profileId);
+      expect(wsdcA.error).toBeNull();
+      const wsdcB = await admin
+        .from("user_profiles")
+        .update({ wsdc_level: 2 })
+        .eq("id", userB.profileId);
+      expect(wsdcB.error).toBeNull();
+      const wsdcC = await admin
+        .from("user_profiles")
+        .update({ wsdc_level: 5 })
+        .eq("id", userC.profileId);
+      expect(wsdcC.error).toBeNull();
+
+      // Assert home_location_id was applied (catches setup issues with location filtering)
+      const { data: profilesCheck, error: profilesErr } = await admin
+        .from("user_profiles")
+        .select("id,home_location_id,wsdc_level")
+        .in("id", [userA.profileId, userB.profileId, userC.profileId]);
+      expect(profilesErr).toBeNull();
+      expect(profilesCheck?.length).toBe(3);
+      profilesCheck?.forEach((p) => {
+        expect(p.home_location_id).toBe(locationId);
+      });
+      const profilesById = Object.fromEntries(
+        (profilesCheck ?? []).map((p) => [p.id, p.wsdc_level])
+      );
+      expect(profilesById[userA.profileId]).toBe(2);
+      expect(profilesById[userB.profileId]).toBe(2);
+      expect(profilesById[userC.profileId]).toBe(5);
 
       // Everyone overlaps on same window
       await createTestSchedulePreference(userA.profileId, [
@@ -322,22 +364,8 @@ describe("Matches - Integration", () => {
         { dayOfWeek: "THURSDAY", startTime: "18:30:00", endTime: "20:30:00" },
       ]);
 
-      // Set wsdc levels: A=2, B=2 (diff 0), C=5 (diff 3)
-      await admin
-        .from("user_profiles")
-        .update({ wsdc_level: 2 })
-        .eq("id", userA.profileId);
-      await admin
-        .from("user_profiles")
-        .update({ wsdc_level: 2 })
-        .eq("id", userB.profileId);
-      await admin
-        .from("user_profiles")
-        .update({ wsdc_level: 5 })
-        .eq("id", userC.profileId);
-
       const { data, error } = await (userA.supabase as any).rpc("find_matches_for_current_user", {
-        p_limit: 10,
+        p_limit: 50,
       });
 
       expect(error).toBeNull();
@@ -345,6 +373,17 @@ describe("Matches - Integration", () => {
 
       const matchB = rows.find((r) => r.candidate_profile_id === userB!.profileId);
       const matchC = rows.find((r) => r.candidate_profile_id === userC!.profileId);
+
+    // Diagnostic to help debug missing candidates in CI/scale runs.
+    // eslint-disable-next-line no-console
+    console.log("[wsdc-proximity] rows:", rows.map((r) => ({
+      id: r.candidate_profile_id,
+      wsdc: r.wsdc_level_diff,
+      score: r.score,
+      mins: r.overlapping_minutes,
+    })));
+      // eslint-disable-next-line no-console
+      console.log("[wsdc-proximity] hasB", rows.some((r) => r.candidate_profile_id === userB!.profileId), "B", userB!.profileId);
 
       expect(matchB).toBeDefined();
       if (matchC) {

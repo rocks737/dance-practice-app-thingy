@@ -70,6 +70,7 @@ describe("ProfileEditor", () => {
       profile: null,
       loading: true,
       error: null,
+      refetch: jest.fn(),
     });
 
     render(<ProfileEditor user={mockUser} />);
@@ -85,6 +86,7 @@ describe("ProfileEditor", () => {
       profile: null,
       loading: false,
       error: new Error(errorMessage),
+      refetch: jest.fn(),
     });
 
     render(<ProfileEditor user={mockUser} />);
@@ -98,6 +100,7 @@ describe("ProfileEditor", () => {
       profile: null,
       loading: false,
       error: null,
+      refetch: jest.fn(),
     });
 
     render(<ProfileEditor user={mockUser} />);
@@ -110,18 +113,19 @@ describe("ProfileEditor", () => {
       profile: mockProfile,
       loading: false,
       error: null,
+      refetch: jest.fn(),
     });
 
     render(<ProfileEditor user={mockUser} />);
 
     expect(screen.getByText("Profile")).toBeInTheDocument();
-    expect(screen.getByText(/manage your personal information/i)).toBeInTheDocument();
+    expect(screen.getByText(/manage your information and preferences/i)).toBeInTheDocument();
 
     // Check tabs
-    expect(screen.getByRole("tab", { name: /personal/i })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: /dance/i })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: /settings/i })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: /security/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /personal/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /dance/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /settings/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /security/i })).toBeInTheDocument();
   });
 
   it("should show PersonalInfoForm in personal tab by default", () => {
@@ -129,6 +133,7 @@ describe("ProfileEditor", () => {
       profile: mockProfile,
       loading: false,
       error: null,
+      refetch: jest.fn(),
     });
 
     render(<ProfileEditor user={mockUser} />);
@@ -142,6 +147,7 @@ describe("ProfileEditor", () => {
       profile: mockProfile,
       loading: false,
       error: null,
+      refetch: jest.fn(),
     });
 
     render(<ProfileEditor user={mockUser} />);
@@ -150,16 +156,17 @@ describe("ProfileEditor", () => {
     expect(screen.getByTestId("personal-info-form")).toBeInTheDocument();
 
     // Click Dance tab
-    await user.click(screen.getByRole("tab", { name: /dance/i }));
+    const danceButtons = screen.getAllByRole("button", { name: /dance/i });
+    await user.click(danceButtons[0]);
     expect(screen.getByTestId("dance-preferences-form")).toBeInTheDocument();
     expect(screen.queryByTestId("personal-info-form")).not.toBeInTheDocument();
 
     // Click Settings tab
-    await user.click(screen.getByRole("tab", { name: /settings/i }));
+    await user.click(screen.getByRole("button", { name: /settings/i }));
     expect(screen.getByTestId("profile-settings")).toBeInTheDocument();
 
     // Click Security tab
-    await user.click(screen.getByRole("tab", { name: /security/i }));
+    await user.click(screen.getByRole("button", { name: /security/i }));
     expect(screen.getByTestId("password-change-form")).toBeInTheDocument();
   });
 
@@ -169,17 +176,18 @@ describe("ProfileEditor", () => {
       profile: mockProfile,
       loading: false,
       error: null,
+      refetch: jest.fn(),
     });
 
     render(<ProfileEditor user={mockUser} />);
 
-    await user.click(screen.getByRole("tab", { name: /dance/i }));
+    await user.click(screen.getByRole("button", { name: /dance/i }));
     expect(screen.getByTestId("dance-preferences-form")).toBeInTheDocument();
 
-    await user.click(screen.getByRole("tab", { name: /settings/i }));
+    await user.click(screen.getByRole("button", { name: /settings/i }));
     expect(screen.getByTestId("profile-settings")).toBeInTheDocument();
 
-    await user.click(screen.getByRole("tab", { name: /security/i }));
+    await user.click(screen.getByRole("button", { name: /security/i }));
     expect(screen.getByTestId("password-change-form")).toBeInTheDocument();
   });
 
@@ -188,6 +196,7 @@ describe("ProfileEditor", () => {
       profile: mockProfile,
       loading: false,
       error: null,
+      refetch: jest.fn(),
     });
 
     render(<ProfileEditor user={mockUser} />);
@@ -200,12 +209,13 @@ describe("ProfileEditor", () => {
       profile: mockProfile,
       loading: false,
       error: null,
+      refetch: jest.fn(),
     });
 
     render(<ProfileEditor user={mockUser} />);
 
     // Check for heading and description
     expect(screen.getByRole("heading", { name: /profile/i })).toBeInTheDocument();
-    expect(screen.getByText(/manage your personal information/i)).toBeInTheDocument();
+    expect(screen.getByText(/manage your information and preferences/i)).toBeInTheDocument();
   });
 });

@@ -32,7 +32,7 @@ describe("AppSidebar", () => {
   it("renders the app title", () => {
     render(<AppSidebar user={mockUser} />);
 
-    expect(screen.getByText("Dance Practice")).toBeInTheDocument();
+    expect(screen.getAllByText("Dance Practice").length).toBeGreaterThanOrEqual(1);
   });
 
   it("displays user email", () => {

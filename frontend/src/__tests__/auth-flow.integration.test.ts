@@ -314,7 +314,7 @@ describe("Authentication Flow - Integration", () => {
         .insert({
           user_id: user1.profileId,
           notes: "User 1 preferences",
-        })
+        } as any)
         .select()
         .single();
 
@@ -367,7 +367,7 @@ describe("Authentication Flow - Integration", () => {
           scheduled_start: tomorrow.toISOString(),
           scheduled_end: tomorrowEnd.toISOString(),
           capacity: 2,
-        })
+        } as any)
         .select()
         .single();
 
