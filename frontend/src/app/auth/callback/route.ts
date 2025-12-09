@@ -12,7 +12,7 @@ export async function GET(request: Request) {
   const safeReturnPath =
     returnUrl && returnUrl !== "undefined" && returnUrl.trim() !== ""
       ? returnUrl
-      : "/profile";
+      : "/matches";
 
   if (code) {
     const supabase = createClient();

@@ -755,6 +755,22 @@ export type Database = {
         };
         Returns: undefined;
       };
+      current_profile_id: {
+        Args: Record<PropertyKey, never>;
+        Returns: string;
+      };
+      find_matches_for_current_user: {
+        Args: { p_limit?: number };
+        Returns: {
+          candidate_profile_id: string;
+          candidate_preference_id: string;
+          score: number;
+          overlapping_windows: number;
+          overlapping_minutes: number;
+          shared_focus_areas: number;
+          wsdc_level_diff: number;
+        }[];
+      };
     };
     Enums: {
       [_ in never]: never;
