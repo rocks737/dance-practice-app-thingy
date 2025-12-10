@@ -9,6 +9,7 @@ import {
   WSDC_SKILL_LEVEL_LABELS,
   WsdcSkillLevel,
 } from "@/lib/profiles/types";
+import { ProposeInviteDialog } from "./ProposeInviteDialog";
 
 interface MatchCardProps {
   match: EnrichedMatch;
@@ -124,6 +125,11 @@ export function MatchCard({ match }: MatchCardProps) {
             </dd>
           </div>
         )}
+
+        {/* CTA */}
+        <div className="mt-5">
+          <ProposeInviteDialog match={match} />
+        </div>
       </div>
 
       {/* Match Score Footer */}

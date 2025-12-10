@@ -177,4 +177,122 @@ export async function fetchEnrichedMatches(
     .filter((match): match is EnrichedMatch => match !== null);
 }
 
+export interface OverlapSuggestion {
+  dayOfWeek: string;
+  startTime: string;
+  endTime: string;
+  overlapMinutes: number;
+}
+
+export interface ProposeSessionResult {
+  sessionId: string;
+  inviteId: string;
+  inviteStatus: string;
+}
+
+export type InviteResponseAction = "ACCEPT" | "DECLINE" | "CANCEL";
+
+type SuggestionRow = {
+  day_of_week: string;
+  start_time: string;
+  end_time: string;
+  overlap_minutes: number | string | null;
+};
+
+type InviteRpcRow = {
+  session_id: string;
+  invite_id: string;
+  invite_status?: string | null;
+};
+
+/**
+ * Overlapping recurring windows between the current user and an invitee.
+ * Returns day + start/end times (as strings) ordered by overlap minutes.
+ */
+export async function fetchOverlapSuggestions(
+  inviteeProfileId: string,
+): Promise<OverlapSuggestion[]> {
+  const supabase = createClient();
+  const { data, error } = await supabase.rpc("suggest_overlapping_windows", {
+    p_invitee_id: inviteeProfileId,
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const rows = (data ?? []) as SuggestionRow[];
+
+  return rows.map((row) => ({
+    dayOfWeek: row.day_of_week,
+    startTime: row.start_time,
+    endTime: row.end_time,
+    overlapMinutes: Number(row.overlap_minutes ?? 0),
+  }));
+}
+
+/**
+ * Create a proposed practice session + invite a specific match.
+ */
+export async function proposePracticeSession(input: {
+  inviteeProfileId: string;
+  start: string;
+  end: string;
+  locationId?: string | null;
+  note?: string | null;
+}): Promise<ProposeSessionResult> {
+  const supabase = createClient();
+  const { data, error } = await supabase.rpc("propose_practice_session", {
+    p_invitee_id: input.inviteeProfileId,
+    p_start: input.start,
+    p_end: input.end,
+    p_location_id: input.locationId ?? null,
+    p_note: input.note ?? null,
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const row = (Array.isArray(data) ? data[0] : data) as InviteRpcRow | null;
+  if (!row?.session_id || !row?.invite_id) {
+    throw new Error("Unable to create invite");
+  }
+
+  return {
+    sessionId: row.session_id,
+    inviteId: row.invite_id,
+    inviteStatus: row.invite_status ?? "PENDING",
+  };
+}
+
+/**
+ * Accept / decline / cancel an invite via RPC.
+ */
+export async function respondToInvite(
+  inviteId: string,
+  action: InviteResponseAction,
+): Promise<ProposeSessionResult> {
+  const supabase = createClient();
+  const { data, error } = await supabase.rpc("respond_to_session_invite", {
+    p_invite_id: inviteId,
+    p_action: action,
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const row = (Array.isArray(data) ? data[0] : data) as InviteRpcRow | null;
+  if (!row?.session_id || !row?.invite_id) {
+    throw new Error("Unable to update invite");
+  }
+
+  return {
+    sessionId: row.session_id,
+    inviteId: row.invite_id,
+    inviteStatus: row.invite_status ?? action,
+  };
+}
+
 
