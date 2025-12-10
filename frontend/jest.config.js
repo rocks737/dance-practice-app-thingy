@@ -5,6 +5,9 @@ const createJestConfig = nextJest({
   dir: "./",
 });
 
+// Check if we should skip integration tests (CI environment or explicit flag)
+const skipIntegration = process.env.CI === "true" || process.env.SKIP_INTEGRATION === "true";
+
 // Add any custom config to be passed to Jest
 const config = {
   coverageProvider: "v8",
@@ -17,6 +20,11 @@ const config = {
     "**/__tests__/**/*.(test|spec).[jt]s?(x)",
     "**/?(*.)+(spec|test).[jt]s?(x)",
   ],
+  // Skip integration tests in CI or when SKIP_INTEGRATION=true
+  // Matches both: foo.integration.test.ts and foo-integration.test.ts
+  testPathIgnorePatterns: skipIntegration
+    ? ["/node_modules/", "[-.]integration\\.test\\.[jt]sx?$"]
+    : ["/node_modules/"],
   collectCoverageFrom: [
     "src/**/*.{js,jsx,ts,tsx}",
     "!src/**/*.d.ts",
