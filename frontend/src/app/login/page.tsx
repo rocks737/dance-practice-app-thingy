@@ -89,7 +89,7 @@ export default function Login({
       }
 
       console.log("[LOGIN SUCCESS] User signed in:", data.user.email);
-      redirect(returnUrl || "/profile");
+      redirect(returnUrl || "/matches");
     } catch (err) {
       // Don't catch redirect errors - let them propagate
       if (isRedirectError(err)) {

@@ -5,6 +5,8 @@
     "build": "next build",
     "start": "next start",
     "test": "jest",
+    "test:unit": "SKIP_INTEGRATION=true jest",
+    "test:integration": "jest --testPathPattern=\"[-.]integration\\.test\\.\"",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "lint": "next lint",

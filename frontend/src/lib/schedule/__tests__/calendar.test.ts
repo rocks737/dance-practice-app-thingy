@@ -92,14 +92,30 @@ describe("calendar utilities", () => {
 
   describe("windowsToEvents", () => {
     it("should convert multiple windows to events for current/future weeks", () => {
+      // Use dates far in the future to avoid date-sensitivity issues
+      // Calculate a future Wednesday date dynamically
+      const now = new Date();
+      const futureDate = new Date(now);
+      futureDate.setFullYear(futureDate.getFullYear() + 1); // 1 year from now
+      
+      // Find the next Sunday (week start)
+      const dayOfWeek = futureDate.getDay();
+      const daysUntilSunday = dayOfWeek === 0 ? 0 : 7 - dayOfWeek;
+      futureDate.setDate(futureDate.getDate() + daysUntilSunday);
+      futureDate.setHours(0, 0, 0, 0);
+      
+      const weekStart = futureDate;
+      
+      // Calculate the Wednesday of that week for the one-time event
+      const wednesday = new Date(weekStart);
+      wednesday.setDate(wednesday.getDate() + 3); // Sunday + 3 = Wednesday
+      const specificDate = wednesday.toISOString().split("T")[0]; // YYYY-MM-DD format
+      
       const windows: AvailabilityWindow[] = [
         { dayOfWeek: "MONDAY", startTime: "10:00", endTime: "12:00", recurring: true },
-        { dayOfWeek: "WEDNESDAY", startTime: "14:00", endTime: "16:00", recurring: false, specificDate: "2025-12-03" },
+        { dayOfWeek: "WEDNESDAY", startTime: "14:00", endTime: "16:00", recurring: false, specificDate },
       ];
 
-      // Use the week containing Dec 3, 2025 (Wednesday)
-      // Dec 3, 2025 falls in the week starting Nov 30, 2025 (Sunday)
-      const weekStart = new Date("2025-11-30T00:00:00");
       const events = windowsToEvents(windows, weekStart);
 
       // Should have both: 1 recurring + 1 one-time
@@ -115,8 +131,8 @@ describe("calendar utilities", () => {
         { dayOfWeek: "MONDAY", startTime: "10:00", endTime: "12:00", recurring: true },
       ];
 
-      // Use a week in the past
-      const pastWeekStart = new Date("2025-01-05T12:00:00");
+      // Use a week clearly in the past (2020)
+      const pastWeekStart = new Date("2020-01-05T12:00:00");
       const events = windowsToEvents(windows, pastWeekStart);
 
       // Recurring windows should not show in past weeks
