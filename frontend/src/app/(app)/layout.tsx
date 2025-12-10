@@ -1,7 +1,9 @@
+import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { AppSidebar } from "@/components/app/AppSidebar";
 import { ErrorBoundary } from "@/components/error-boundary";
+import { FlashMessage } from "@/components/FlashMessage";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
@@ -16,6 +18,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="flex h-screen w-full bg-gray-50 dark:bg-gray-950">
+      <Suspense fallback={null}>
+        <FlashMessage />
+      </Suspense>
       <ErrorBoundary>
         <AppSidebar user={user} />
       </ErrorBoundary>

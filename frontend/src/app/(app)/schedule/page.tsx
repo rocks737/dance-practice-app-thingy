@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { SchedulePlanner } from "@/components/schedule/SchedulePlanner";
 import { fetchProfileIdByAuthUserId } from "@/lib/profiles/api";
+import { buildRedirectUrl, MESSAGE_KEYS } from "@/lib/messages";
 
 export default async function SchedulePage() {
   const supabase = await createClient();
@@ -17,7 +18,7 @@ export default async function SchedulePage() {
   const profileId = await fetchProfileIdByAuthUserId(supabase, user.id);
   if (!profileId) {
     // No profile yet: prompt user to complete onboarding
-    redirect("/profile?message=Please complete your profile first");
+    redirect(buildRedirectUrl("/profile", MESSAGE_KEYS.PROFILE_REQUIRED));
   }
 
   return (

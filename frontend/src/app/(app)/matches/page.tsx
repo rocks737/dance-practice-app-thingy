@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { fetchProfileIdByAuthUserId } from "@/lib/profiles/api";
 import { MatchesBrowser } from "@/components/matches/MatchesBrowser";
+import { buildRedirectUrl, MESSAGE_KEYS } from "@/lib/messages";
 
 async function checkUserHasSchedule(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -37,13 +38,13 @@ export default async function MatchesPage() {
 
   const profileId = await fetchProfileIdByAuthUserId(supabase, user.id);
   if (!profileId) {
-    redirect("/profile?message=Please complete your profile first");
+    redirect(buildRedirectUrl("/profile", MESSAGE_KEYS.PROFILE_REQUIRED));
   }
 
   // Check if user has a schedule preference
   const hasSchedule = await checkUserHasSchedule(supabase, profileId);
   if (!hasSchedule) {
-    redirect("/schedule?message=Please set up your schedule first to find matches");
+    redirect(buildRedirectUrl("/schedule", MESSAGE_KEYS.SCHEDULE_REQUIRED));
   }
 
   return (
