@@ -34,7 +34,7 @@ export function MatchesBrowser({ profileId }: MatchesBrowserProps) {
   const [loadingMatches, setLoadingMatches] = useState(true);
   const [loadingInvites, setLoadingInvites] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [hideActiveInvites, setHideActiveInvites] = useState(false);
+  const [hideActiveInvites, setHideActiveInvites] = useState(true);
   const [inviteActionId, setInviteActionId] = useState<string | null>(null);
 
   const loadMatches = useCallback(async () => {
@@ -88,6 +88,11 @@ export function MatchesBrowser({ profileId }: MatchesBrowserProps) {
   const filteredAllHidden =
     hideActiveInvites && matches.length > 0 && visibleMatches.length === 0;
 
+  const handleInviteSent = useCallback(async () => {
+    await Promise.all([loadInvites(), loadMatches()]);
+    setHideActiveInvites(true);
+  }, [loadInvites, loadMatches]);
+
   // Loading state
   if (loadingMatches) {
     return (
@@ -122,46 +127,52 @@ export function MatchesBrowser({ profileId }: MatchesBrowserProps) {
     );
   }
 
-  // Empty state (based on visible matches)
-  if (visibleMatches.length === 0) {
-    return (
-      <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-8 text-center">
-        <Users className="mx-auto h-12 w-12 text-gray-400" />
-        <h3 className="mt-4 text-lg font-semibold text-gray-900 dark:text-gray-100">
-          {filteredAllHidden ? "All matches are hidden" : "No matches found yet"}
-        </h3>
-        <p className="mt-2 text-sm text-gray-500 dark:text-gray-400 max-w-md mx-auto">
-          {filteredAllHidden
-            ? "You’re currently hiding people you’ve already invited. Uncheck the filter to see them again."
-            : "We couldn’t find any practice partners that match your schedule and preferences. This could be because:"}
-        </p>
-        {!filteredAllHidden && (
-          <ul className="mt-3 text-sm text-gray-500 dark:text-gray-400 text-left max-w-sm mx-auto space-y-1">
-            <li>• Your availability windows don&apos;t overlap with others</li>
-            <li>• There aren&apos;t many dancers in your area yet</li>
-            <li>• Try expanding your available time slots</li>
-          </ul>
-        )}
-        <div className="mt-6 flex justify-center gap-3">
-          <Button asChild variant="outline">
-            <Link href="/schedule">
-              <Calendar className="mr-2 h-4 w-4" />
-              Update Schedule
-            </Link>
-          </Button>
-          <Button onClick={loadMatches} variant="secondary">
-            <RefreshCw className="mr-2 h-4 w-4" />
-            Refresh
-          </Button>
-        </div>
+  const matchesEmptyState = (
+    <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-8 text-center">
+      <Users className="mx-auto h-12 w-12 text-gray-400" />
+      <h3 className="mt-4 text-lg font-semibold text-gray-900 dark:text-gray-100">
+        {filteredAllHidden ? "All matches are hidden" : "No matches found yet"}
+      </h3>
+      <p className="mt-2 text-sm text-gray-500 dark:text-gray-400 max-w-md mx-auto">
+        {filteredAllHidden
+          ? "You’re currently hiding people you’ve already invited. Uncheck the filter to see them again."
+          : "We couldn’t find any practice partners that match your schedule and preferences. This could be because:"}
+      </p>
+      {!filteredAllHidden && (
+        <ul className="mt-3 text-sm text-gray-500 dark:text-gray-400 text-left max-w-sm mx-auto space-y-1">
+          <li>• Your availability windows don&apos;t overlap with others</li>
+          <li>• There aren&apos;t many dancers in your area yet</li>
+          <li>• Try expanding your available time slots</li>
+        </ul>
+      )}
+      <div className="mt-6 flex justify-center gap-3">
+        <Button asChild variant="outline">
+          <Link href="/schedule">
+            <Calendar className="mr-2 h-4 w-4" />
+            Update Schedule
+          </Link>
+        </Button>
+        <Button onClick={loadMatches} variant="secondary">
+          <RefreshCw className="mr-2 h-4 w-4" />
+          Refresh
+        </Button>
       </div>
-    );
-  }
+    </div>
+  );
 
-  const handleInviteResponse = async (inviteId: string, action: InviteResponseAction) => {
+  const handleInviteResponse = async (
+    inviteId: string,
+    action: InviteResponseAction,
+    inviteUpdatedAt?: string,
+  ) => {
     setInviteActionId(`${inviteId}-${action}`);
     try {
-      await respondToInvite(inviteId, action);
+      const result = await respondToInvite(inviteId, action);
+      if (action === "CANCEL" && inviteUpdatedAt && result.inviteStatus === "PENDING") {
+        // Invite was already processed server-side; treat as no-op
+        toast.info("That invite was already handled.");
+        return;
+      }
       toast.success(
         action === "ACCEPT"
           ? "Invite accepted"
@@ -171,6 +182,12 @@ export function MatchesBrowser({ profileId }: MatchesBrowserProps) {
       );
       await loadInvites();
     } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      if (/invite expired/i.test(message)) {
+        toast.info("That invite has already expired.");
+        await loadInvites();
+        return;
+      }
       console.error("Unable to update invite", err);
       toast.error("Unable to update invite. Please try again.");
     } finally {
@@ -211,46 +228,6 @@ export function MatchesBrowser({ profileId }: MatchesBrowserProps) {
 
   return (
     <div className="space-y-10">
-      <section>
-        <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-              Potential partners
-            </h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              Found {visibleMatches.length} practice{" "}
-              {visibleMatches.length === 1 ? "partner" : "partners"}
-              {hiddenCount > 0 && hideActiveInvites && (
-                <span className="ml-2 text-xs text-amber-600 dark:text-amber-300">
-                  ({hiddenCount} hidden)
-                </span>
-              )}
-            </p>
-          </div>
-          <Button
-            onClick={() => {
-              void loadMatches();
-              void loadInvites();
-            }}
-            variant="ghost"
-            size="sm"
-          >
-            <RefreshCw className="mr-2 h-4 w-4" />
-            Refresh
-          </Button>
-        </div>
-        <ul
-          role="list"
-          className="grid grid-cols-1 gap-6 md:grid-cols-3"
-        >
-          <AnimatePresence>
-            {visibleMatches.map((match) => (
-              <MatchCard key={match.profileId} match={match} />
-            ))}
-          </AnimatePresence>
-        </ul>
-      </section>
-
       <section>
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
@@ -325,7 +302,7 @@ export function MatchesBrowser({ profileId }: MatchesBrowserProps) {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handleInviteResponse(invite.id, "CANCEL")}
+                      onClick={() => handleInviteResponse(invite.id, "CANCEL", invite.updatedAt)}
                       disabled={inviteActionId === `${invite.id}-CANCEL`}
                     >
                       {inviteActionId === `${invite.id}-CANCEL` ? (
@@ -436,6 +413,50 @@ export function MatchesBrowser({ profileId }: MatchesBrowserProps) {
             );
           })}
         </div>
+      </section>
+
+      <section>
+        <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+              Potential partners
+            </h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Found {visibleMatches.length} practice{" "}
+              {visibleMatches.length === 1 ? "partner" : "partners"}
+              {hiddenCount > 0 && hideActiveInvites && (
+                <span className="ml-2 text-xs text-amber-600 dark:text-amber-300">
+                  ({hiddenCount} hidden)
+                </span>
+              )}
+            </p>
+          </div>
+          <Button
+            onClick={() => {
+              void loadMatches();
+              void loadInvites();
+            }}
+            variant="ghost"
+            size="sm"
+          >
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Refresh
+          </Button>
+        </div>
+        {visibleMatches.length === 0 ? (
+          matchesEmptyState
+        ) : (
+          <ul
+            role="list"
+            className="grid grid-cols-1 gap-6 md:grid-cols-3"
+          >
+            <AnimatePresence>
+              {visibleMatches.map((match) => (
+                <MatchCard key={match.profileId} match={match} onInviteSent={handleInviteSent} />
+              ))}
+            </AnimatePresence>
+          </ul>
+        )}
       </section>
     </div>
   );

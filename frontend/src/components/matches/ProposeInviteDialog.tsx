@@ -91,9 +91,10 @@ function nextOccurrence(day: string, time: string): Date {
 
 interface ProposeInviteDialogProps {
   match: EnrichedMatch;
+  onInviteSent?: () => void;
 }
 
-export function ProposeInviteDialog({ match }: ProposeInviteDialogProps) {
+export function ProposeInviteDialog({ match, onInviteSent }: ProposeInviteDialogProps) {
   const [open, setOpen] = useState(false);
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
@@ -293,6 +294,9 @@ export function ProposeInviteDialog({ match }: ProposeInviteDialogProps) {
       });
 
       setSuccess("Invite sent! They can accept or decline from their invites.");
+      if (onInviteSent) {
+        await onInviteSent();
+      }
       setOpen(false);
     } catch (err) {
       console.error("Failed to propose session", err);

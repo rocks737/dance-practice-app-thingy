@@ -163,7 +163,7 @@ describe("MatchesBrowser", () => {
     expect(screen.getByText("Found 2 practice partners")).toBeInTheDocument();
   });
 
-  it("hides matches that already have outgoing invites when toggle enabled", async () => {
+  it("hides matches that already have outgoing invites by default and shows them when toggled off", async () => {
     mockFetchEnrichedMatches.mockResolvedValue([
       createMatch({ firstName: "Visible", lastName: "One", profileId: "p1" }),
       createMatch({ firstName: "Hidden", lastName: "Two", profileId: "p2" }),
@@ -174,15 +174,13 @@ describe("MatchesBrowser", () => {
     render(<MatchesBrowser profileId={mockProfileId} />);
 
     await waitFor(() => expect(screen.getByText(/Visible One/)).toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByText(/Hidden Two/)).not.toBeInTheDocument());
+    expect(screen.getByText("(1 hidden)")).toBeInTheDocument();
+
     const toggle = screen.getByLabelText(/Hide people you’ve already invited/i);
     await user.click(toggle);
 
-    expect(mockFetchActiveInviteeIds).toHaveBeenCalledTimes(2);
-    expect(screen.getByText(/Visible One/)).toBeInTheDocument();
-    await waitFor(() => {
-      expect(screen.queryByText(/Hidden Two/)).not.toBeInTheDocument();
-    });
-    expect(screen.getByText("(1 hidden)")).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText(/Hidden Two/)).toBeInTheDocument());
   });
 
   it("renders sent invite cards with cancel action", async () => {

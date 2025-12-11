@@ -14,6 +14,7 @@ import { motion } from "framer-motion";
 
 interface MatchCardProps {
   match: EnrichedMatch;
+  onInviteSent?: () => void;
 }
 
 const COMPETITIVENESS_LABELS: Record<number, string> = {
@@ -49,7 +50,7 @@ function getCompetitivenessLabel(level: number): string {
   return COMPETITIVENESS_LABELS[level] ?? "Balanced";
 }
 
-export function MatchCard({ match }: MatchCardProps) {
+export function MatchCard({ match, onInviteSent }: MatchCardProps) {
   const roleInfo = getRoleIcon(match.primaryRole);
 
   return (
@@ -136,7 +137,7 @@ export function MatchCard({ match }: MatchCardProps) {
 
         {/* CTA */}
         <div className="mt-5">
-          <ProposeInviteDialog match={match} />
+          <ProposeInviteDialog match={match} onInviteSent={onInviteSent} />
         </div>
       </div>
 
