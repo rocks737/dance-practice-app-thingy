@@ -53,7 +53,7 @@ jobs:
           cat supabase.env >> $GITHUB_ENV
 
       - name: Reset database with migrations & seed
-        run: supabase db reset --force --seed
+        run: supabase db reset --local --yes
 
       - name: Run integration tests
         working-directory: frontend

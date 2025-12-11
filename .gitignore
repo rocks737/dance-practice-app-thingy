@@ -42,5 +42,6 @@ Thumbs.db
 .env
 .env.*
 config/*.local.*
+supabase.env
 
 scripts/
