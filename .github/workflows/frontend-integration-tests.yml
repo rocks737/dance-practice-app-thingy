@@ -49,8 +49,8 @@ jobs:
 
       - name: Export Supabase environment variables
         run: |
-          supabase status --env > supabase.env
-          sed -E 's/^export //' supabase.env >> $GITHUB_ENV
+          supabase status --output env > supabase.env
+          cat supabase.env >> $GITHUB_ENV
 
       - name: Reset database with migrations & seed
         run: supabase db reset --force --seed

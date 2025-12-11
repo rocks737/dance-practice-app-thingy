@@ -45,7 +45,9 @@ When you're ready to work on billing, you'll need to set up a Stripe account and
 
 - `npm test` / `npm run test:unit` — fast Jest suite (no Supabase required)
 - `npm run test:integration` — runs the Supabase-backed integration suite. Requires `supabase start`
-  running locally (or pointing env vars at a remote project).
+  running locally (or pointing env vars at a remote project). After `supabase start`, capture the CLI
+  output with `supabase status -o env > supabase.env && source supabase.env` so the tests can reach
+  the local services.
 
 ## Helpful Links
 
