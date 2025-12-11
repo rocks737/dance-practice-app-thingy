@@ -50,14 +50,87 @@ export interface EnrichedMatch {
   focusAreas: FocusArea[];
 }
 
+interface InviteUser {
+  id: string;
+  first_name: string;
+  last_name: string;
+  display_name: string | null;
+}
+
+interface InviteSession {
+  id: string;
+  title: string | null;
+  scheduled_start: string | null;
+  scheduled_end: string | null;
+}
+
+type InviteQueryRow = {
+  id: string;
+  status: string;
+  note: string | null;
+  created_at: string;
+  updated_at: string;
+  session: InviteSession | null;
+  invitee?: InviteUser | null;
+  proposer?: InviteUser | null;
+};
+
+export interface SentInviteSummary {
+  id: string;
+  status: string;
+  note: string | null;
+  createdAt: string;
+  updatedAt: string;
+  invitee: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    displayName: string | null;
+  } | null;
+  session: {
+    id: string;
+    title: string | null;
+    scheduledStart: string | null;
+    scheduledEnd: string | null;
+  } | null;
+}
+
+export interface ReceivedInviteSummary {
+  id: string;
+  status: string;
+  note: string | null;
+  createdAt: string;
+  updatedAt: string;
+  proposer: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    displayName: string | null;
+  } | null;
+  session: {
+    id: string;
+    title: string | null;
+    scheduledStart: string | null;
+    scheduledEnd: string | null;
+  } | null;
+}
+
+async function resolveCurrentProfileId() {
+  const supabase = createClient();
+  const { data: profileId, error } = await supabase.rpc("current_profile_id");
+  return {
+    supabase,
+    profileId: (profileId as string | null) ?? null,
+    error,
+  };
+}
+
 /**
  * Fetch invitee profile IDs for any active (pending) invites the current user has sent.
  */
 export async function fetchActiveInviteeIds(): Promise<Set<string>> {
-  const supabase = createClient();
-
-  const { data: profileId, error: profileError } = await supabase.rpc("current_profile_id");
-  if (profileError || !profileId) {
+  const { supabase, profileId, error: profileError } = await resolveCurrentProfileId();
+  if (!profileId) {
     console.warn("Unable to resolve current profile id for invite filtering", profileError);
     return new Set();
   }
@@ -74,6 +147,122 @@ export async function fetchActiveInviteeIds(): Promise<Set<string>> {
   }
 
   return new Set((data ?? []).map((row) => row.invitee_id).filter(Boolean));
+}
+
+const INVITE_BASE_SELECT = `
+  id,
+  status,
+  note,
+  created_at,
+  updated_at,
+  session:sessions!session_invites_session_id_fkey (
+    id,
+    title,
+    scheduled_start,
+    scheduled_end
+  )
+`;
+
+const SENT_INVITE_SELECT = `
+  ${INVITE_BASE_SELECT},
+  invitee:user_profiles!session_invites_invitee_id_fkey (
+    id,
+    first_name,
+    last_name,
+    display_name
+  )
+`;
+
+const RECEIVED_INVITE_SELECT = `
+  ${INVITE_BASE_SELECT},
+  proposer:user_profiles!session_invites_proposer_id_fkey (
+    id,
+    first_name,
+    last_name,
+    display_name
+  )
+`;
+
+function mapInviteUser(user?: InviteUser | null) {
+  if (!user) {
+    return null;
+  }
+  return {
+    id: user.id,
+    firstName: user.first_name,
+    lastName: user.last_name,
+    displayName: user.display_name,
+  };
+}
+
+function mapInviteSession(session?: InviteSession | null) {
+  if (!session) {
+    return null;
+  }
+  return {
+    id: session.id,
+    title: session.title,
+    scheduledStart: session.scheduled_start,
+    scheduledEnd: session.scheduled_end,
+  };
+}
+
+export async function fetchSentInvites(): Promise<SentInviteSummary[]> {
+  const { supabase, profileId } = await resolveCurrentProfileId();
+  if (!profileId) {
+    console.warn("Unable to resolve profile for sent invites");
+    return [];
+  }
+
+  const { data, error } = await supabase
+    .from("session_invites")
+    .select(SENT_INVITE_SELECT)
+    .eq("proposer_id", profileId)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.warn("Unable to load sent invites", error);
+    return [];
+  }
+
+  return (data as InviteQueryRow[]).map((invite) => ({
+    id: invite.id,
+    status: invite.status,
+    note: invite.note,
+    createdAt: invite.created_at,
+    updatedAt: invite.updated_at,
+    invitee: mapInviteUser(invite.invitee),
+    session: mapInviteSession(invite.session),
+  }));
+}
+
+export async function fetchReceivedInvites(): Promise<ReceivedInviteSummary[]> {
+  const { supabase, profileId } = await resolveCurrentProfileId();
+  if (!profileId) {
+    console.warn("Unable to resolve profile for received invites");
+    return [];
+  }
+
+  const { data, error } = await supabase
+    .from("session_invites")
+    .select(RECEIVED_INVITE_SELECT)
+    .eq("invitee_id", profileId)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.warn("Unable to load received invites", error);
+    return [];
+  }
+
+  return (data as InviteQueryRow[]).map((invite) => ({
+    id: invite.id,
+    status: invite.status,
+    note: invite.note,
+    createdAt: invite.created_at,
+    updatedAt: invite.updated_at,
+    proposer: mapInviteUser(invite.proposer),
+    session: mapInviteSession(invite.session),
+  }));
 }
 
 /**

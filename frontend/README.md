@@ -41,6 +41,12 @@ Adds a Nextjs starter app on top of [Basejump core](https://github.com/usebaseju
 
 When you're ready to work on billing, you'll need to set up a Stripe account and add your Stripe keys to your `supabase/functions/.env` file. There's an example file you can copy.
 
+## Testing
+
+- `npm test` / `npm run test:unit` — fast Jest suite (no Supabase required)
+- `npm run test:integration` — runs the Supabase-backed integration suite. Requires `supabase start`
+  running locally (or pointing env vars at a remote project).
+
 ## Helpful Links
 
 - [Basejump Docs](https://usebasejump.com/docs)

@@ -7,6 +7,9 @@ import {
   createAdminClient,
 } from "./integration-utils";
 
+const RUN_SUPABASE_INTEGRATION = process.env.RUN_SUPABASE_TESTS === "true";
+const describeIfSupabase = RUN_SUPABASE_INTEGRATION ? describe : describe.skip;
+
 interface MatchRow {
   candidate_profile_id: string;
   candidate_preference_id: string;
@@ -17,7 +20,7 @@ interface MatchRow {
   wsdc_level_diff: number;
 }
 
-describe("Matches - Scoring Integration", () => {
+describeIfSupabase("Matches - Scoring Integration", () => {
   const admin = createAdminClient();
   let baseUser: Awaited<ReturnType<typeof createTestUser>>;
   let sharedLocationId: string;
