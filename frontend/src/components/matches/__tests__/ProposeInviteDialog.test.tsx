@@ -94,6 +94,48 @@ describe("ProposeInviteDialog", () => {
     expect(endInput.value).toContain("T10:30");
   });
 
+  it("defaults to a 1-hour slot on open when the window is long enough", async () => {
+    mockFetchOverlapSuggestions.mockResolvedValueOnce([
+      {
+        dayOfWeek: "TUESDAY",
+        startTime: "18:00",
+        endTime: "21:00",
+        overlapMinutes: 180,
+      },
+    ]);
+
+    render(<ProposeInviteDialog match={baseMatch} />);
+    await userEvent.click(screen.getByRole("button", { name: /propose time/i }));
+    await waitFor(() => expect(mockFetchOverlapSuggestions).toHaveBeenCalled());
+
+    const startInput = await screen.findByLabelText(/Start time/i);
+    const endInput = await screen.findByLabelText(/End time/i);
+
+    expect((startInput as HTMLInputElement).value).toContain("T18:00");
+    expect((endInput as HTMLInputElement).value).toContain("T19:00");
+  });
+
+  it("clamps to the end of a short window on open (less than 1 hour)", async () => {
+    mockFetchOverlapSuggestions.mockResolvedValueOnce([
+      {
+        dayOfWeek: "TUESDAY",
+        startTime: "18:00",
+        endTime: "18:30",
+        overlapMinutes: 30,
+      },
+    ]);
+
+    render(<ProposeInviteDialog match={baseMatch} />);
+    await userEvent.click(screen.getByRole("button", { name: /propose time/i }));
+    await waitFor(() => expect(mockFetchOverlapSuggestions).toHaveBeenCalled());
+
+    const startInput = await screen.findByLabelText(/Start time/i);
+    const endInput = await screen.findByLabelText(/End time/i);
+
+    expect((startInput as HTMLInputElement).value).toContain("T18:00");
+    expect((endInput as HTMLInputElement).value).toContain("T18:30");
+  });
+
   it("selects a slot from the calendar and submits", async () => {
     render(<ProposeInviteDialog match={baseMatch} />);
 
