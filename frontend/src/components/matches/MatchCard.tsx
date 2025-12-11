@@ -10,6 +10,7 @@ import {
   WsdcSkillLevel,
 } from "@/lib/profiles/types";
 import { ProposeInviteDialog } from "./ProposeInviteDialog";
+import { motion } from "framer-motion";
 
 interface MatchCardProps {
   match: EnrichedMatch;
@@ -52,7 +53,14 @@ export function MatchCard({ match }: MatchCardProps) {
   const roleInfo = getRoleIcon(match.primaryRole);
 
   return (
-    <li className="col-span-1 flex flex-col divide-y divide-gray-200 dark:divide-gray-700 rounded-lg bg-white dark:bg-gray-800 text-center shadow-sm">
+    <motion.li
+      layout
+      initial={{ opacity: 0, scale: 0.97, y: 10 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.97, y: -6 }}
+      transition={{ type: "spring", stiffness: 380, damping: 30, mass: 0.6 }}
+      className="col-span-1 flex flex-col divide-y divide-gray-200 dark:divide-gray-700 rounded-lg bg-white dark:bg-gray-800 text-center shadow-sm"
+    >
       <div className="flex flex-1 flex-col p-6">
         {/* Role Icon */}
         <div className="mx-auto flex items-center justify-center">
@@ -148,7 +156,7 @@ export function MatchCard({ match }: MatchCardProps) {
           </span>
         </div>
       </div>
-    </li>
+    </motion.li>
   );
 }
 

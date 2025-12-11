@@ -16,8 +16,6 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll } from "@jest/globals";
-import { createClient } from "@supabase/supabase-js";
-import type { Database } from "@/lib/supabase/types";
 import {
   supabaseUrl,
   supabaseAnonKey,
@@ -40,33 +38,38 @@ interface MatchRow {
 }
 
 describe("Matches - Integration", () => {
-  let supabase: ReturnType<typeof createClient<Database>>;
-  let testSession: string | null = null;
+  let baseUser: TestUser;
+  let seedCandidate: TestUser;
+  let admin = createAdminClient();
+  let sharedLocationId: string;
 
   beforeAll(async () => {
-    supabase = createClient<Database>(supabaseUrl, supabaseAnonKey);
+    baseUser = await createTestUser("DANCER");
+    seedCandidate = await createTestUser("DANCER");
 
-    // Sign in as seeded test user (created by seed_via_api.py)
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email: "test@ex.com",
-      password: "test123", // see supabase/seed_via_api.py
-    });
+    const loc = await createTestLocation("Matches City", "Matches City", "CA");
+    sharedLocationId = loc.locationId;
+    await admin
+      .from("user_profiles")
+      .update({ home_location_id: sharedLocationId })
+      .in("id", [baseUser.profileId, seedCandidate.profileId]);
 
-    if (error || !data.session) {
-      throw new Error(`Failed to sign in seeded test user: ${error?.message}`);
-    }
-
-    // Store access token in memory for potential debugging
-    testSession = data.session.access_token;
+    // Overlapping prefs for base and seed candidate
+    await createTestSchedulePreference(baseUser.profileId, [
+      { dayOfWeek: "MONDAY", startTime: "10:00:00", endTime: "12:00:00" },
+    ]);
+    await createTestSchedulePreference(seedCandidate.profileId, [
+      { dayOfWeek: "MONDAY", startTime: "10:30:00", endTime: "11:30:00" },
+    ]);
   });
 
   afterAll(async () => {
-    // Sign out to clean up auth state
-    await supabase.auth.signOut();
+    await cleanupTestUser(baseUser);
+    await cleanupTestUser(seedCandidate);
   });
 
   it("returns at least one match candidate for seeded test user", async () => {
-    const { data, error } = await (supabase as any).rpc("find_matches_for_current_user", {
+    const { data, error } = await (baseUser.supabase as any).rpc("find_matches_for_current_user", {
       p_limit: 10,
     });
 
@@ -90,7 +93,7 @@ describe("Matches - Integration", () => {
   });
 
   it("honors the limit parameter", async () => {
-    const { data, error } = await (supabase as any).rpc("find_matches_for_current_user", {
+    const { data, error } = await (baseUser.supabase as any).rpc("find_matches_for_current_user", {
       p_limit: 1,
     });
 

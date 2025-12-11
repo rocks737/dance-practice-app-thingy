@@ -4,6 +4,8 @@ import { createClient } from "@/lib/supabase/client";
 import type { FocusArea } from "@/lib/schedule/types";
 import { FOCUS_AREA_VALUES } from "@/lib/schedule/types";
 
+const ACTIVE_INVITE_STATUSES = ["PENDING"];
+
 export interface MatchRow {
   candidate_profile_id: string;
   candidate_preference_id: string;
@@ -46,6 +48,32 @@ export interface EnrichedMatch {
   danceGoals: string | null;
   // Focus areas from their schedule preference
   focusAreas: FocusArea[];
+}
+
+/**
+ * Fetch invitee profile IDs for any active (pending) invites the current user has sent.
+ */
+export async function fetchActiveInviteeIds(): Promise<Set<string>> {
+  const supabase = createClient();
+
+  const { data: profileId, error: profileError } = await supabase.rpc("current_profile_id");
+  if (profileError || !profileId) {
+    console.warn("Unable to resolve current profile id for invite filtering", profileError);
+    return new Set();
+  }
+
+  const { data, error } = await supabase
+    .from("session_invites")
+    .select("invitee_id, status")
+    .eq("proposer_id", profileId as string)
+    .in("status", ACTIVE_INVITE_STATUSES);
+
+  if (error) {
+    console.warn("Unable to load active invites for filtering", error);
+    return new Set();
+  }
+
+  return new Set((data ?? []).map((row) => row.invitee_id).filter(Boolean));
 }
 
 /**

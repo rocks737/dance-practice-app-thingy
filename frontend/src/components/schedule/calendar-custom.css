@@ -18,6 +18,8 @@
 
 .rbc-time-view .rbc-day-slot {
   border-left: 1px solid hsl(var(--foreground) / 0.8);
+  /* Add a matching right border so day columns are fully outlined (prevents the visible gap on Tuesday) */
+  border-right: 1px solid hsl(var(--foreground) / 0.8);
 }
 
 .rbc-time-view .rbc-time-content > * + * > * {

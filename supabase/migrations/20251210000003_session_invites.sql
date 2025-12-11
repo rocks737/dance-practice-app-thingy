@@ -239,6 +239,14 @@ begin
     raise exception 'Invite not found';
   end if;
 
+  -- Enforce expiry before any action
+  if v_invite.expires_at is not null and v_invite.expires_at < now() then
+    update session_invites
+      set status = 'EXPIRED'
+    where id = v_invite.id;
+    raise exception 'Invite expired';
+  end if;
+
   if v_invite.status <> 'PENDING' then
     raise exception 'Invite already handled';
   end if;

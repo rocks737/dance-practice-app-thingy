@@ -1,21 +1,22 @@
 import { createClient } from "@/lib/supabase/client";
-import { fetchMatchesForCurrentUser, type MatchRow } from "../api";
+import { fetchActiveInviteeIds, fetchMatchesForCurrentUser, type MatchRow } from "../api";
 
 jest.mock("@/lib/supabase/client", () => ({
   createClient: jest.fn(),
 }));
 
+let mockSupabase: any;
+
+beforeEach(() => {
+  jest.clearAllMocks();
+  mockSupabase = {
+    rpc: jest.fn(),
+    from: jest.fn(),
+  };
+  (createClient as jest.Mock).mockReturnValue(mockSupabase);
+});
+
 describe("matches/api", () => {
-  let mockSupabase: any;
-
-  beforeEach(() => {
-    jest.clearAllMocks();
-    mockSupabase = {
-      rpc: jest.fn(),
-    };
-    (createClient as jest.Mock).mockReturnValue(mockSupabase);
-  });
-
   it("calls RPC with default limit and maps rows correctly", async () => {
     const rows: MatchRow[] = [
       {
@@ -72,6 +73,56 @@ describe("matches/api", () => {
     });
 
     await expect(fetchMatchesForCurrentUser()).rejects.toThrow("RPC failed");
+  });
+});
+
+describe("fetchActiveInviteeIds", () => {
+  let chain: any;
+
+  beforeEach(() => {
+    chain = {
+      select: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockReturnThis(),
+      in: jest.fn(),
+    };
+    mockSupabase.rpc.mockReset();
+    mockSupabase.from.mockReturnValue(chain);
+  });
+
+  it("returns invitee ids for pending invites", async () => {
+    mockSupabase.rpc.mockResolvedValue({ data: "profile-123", error: null });
+    chain.in.mockResolvedValue({
+      data: [
+        { invitee_id: "p1", status: "PENDING" },
+        { invitee_id: "p2", status: "PENDING" },
+      ],
+      error: null,
+    });
+
+    const ids = await fetchActiveInviteeIds();
+
+    expect(mockSupabase.from).toHaveBeenCalledWith("session_invites");
+    expect(chain.eq).toHaveBeenCalledWith("proposer_id", "profile-123");
+    expect(ids.has("p1")).toBe(true);
+    expect(ids.has("p2")).toBe(true);
+  });
+
+  it("returns empty set when profile id cannot be resolved", async () => {
+    mockSupabase.rpc.mockResolvedValue({ data: null, error: null });
+
+    const ids = await fetchActiveInviteeIds();
+
+    expect(ids.size).toBe(0);
+    expect(mockSupabase.from).not.toHaveBeenCalled();
+  });
+
+  it("returns empty set when invite query fails", async () => {
+    mockSupabase.rpc.mockResolvedValue({ data: "profile-123", error: null });
+    chain.in.mockResolvedValue({ data: null, error: { message: "fail" } });
+
+    const ids = await fetchActiveInviteeIds();
+
+    expect(ids.size).toBe(0);
   });
 });
 

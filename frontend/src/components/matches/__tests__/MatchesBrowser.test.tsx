@@ -11,10 +11,12 @@ import { PrimaryRole } from "@/lib/profiles/types";
 
 // Create a mock function that we can control
 const mockFetchEnrichedMatches = jest.fn();
+const mockFetchActiveInviteeIds = jest.fn();
 
 // Mock the matches API
 jest.mock("@/lib/matches/api", () => ({
   fetchEnrichedMatches: (...args: unknown[]) => mockFetchEnrichedMatches(...args),
+  fetchActiveInviteeIds: (...args: unknown[]) => mockFetchActiveInviteeIds(...args),
 }));
 
 // Mock next/link
@@ -55,6 +57,7 @@ describe("MatchesBrowser", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockFetchActiveInviteeIds.mockResolvedValue(new Set());
   });
 
   describe("Loading State", () => {
@@ -234,6 +237,73 @@ describe("MatchesBrowser", () => {
         const refreshButtons = screen.getAllByRole("button", { name: /refresh/i });
         expect(refreshButtons.length).toBeGreaterThan(0);
       });
+    });
+
+    it("hides matches with active outgoing invites when toggled", async () => {
+      const matches = [
+        createMockMatch({ firstName: "Alice", lastName: "Smith", profileId: "p1" }),
+        createMockMatch({ firstName: "Bob", lastName: "Jones", profileId: "p2" }),
+      ];
+
+      mockFetchEnrichedMatches.mockResolvedValue(matches);
+      mockFetchActiveInviteeIds.mockResolvedValue(new Set(["p2"]));
+
+      render(<MatchesBrowser profileId={mockProfileId} />);
+
+      await waitFor(() => {
+        expect(screen.getByText("Alice Smith")).toBeInTheDocument();
+        expect(screen.getByText("Bob Jones")).toBeInTheDocument();
+      });
+
+      const toggle = screen.getByLabelText(/hide people you’ve already invited/i);
+      await userEvent.click(toggle);
+
+      await waitFor(() => {
+        expect(screen.getByText("Alice Smith")).toBeInTheDocument();
+        expect(screen.queryByText("Bob Jones")).not.toBeInTheDocument();
+      });
+    });
+
+    it("shows hidden count when filtering hides matches", async () => {
+      const matches = [
+        createMockMatch({ firstName: "Alice", lastName: "Smith", profileId: "p1" }),
+        createMockMatch({ firstName: "Bob", lastName: "Jones", profileId: "p2" }),
+      ];
+
+      mockFetchEnrichedMatches.mockResolvedValue(matches);
+      mockFetchActiveInviteeIds.mockResolvedValue(new Set(["p2"]));
+
+      render(<MatchesBrowser profileId={mockProfileId} />);
+
+      await waitFor(() => {
+        expect(screen.getByText("Found 2 potential practice partners")).toBeInTheDocument();
+      });
+
+      const toggle = screen.getByLabelText(/hide people you’ve already invited/i);
+      await userEvent.click(toggle);
+
+      await waitFor(() => {
+        expect(screen.getByText(/Found 1 potential practice partner/)).toBeInTheDocument();
+        expect(screen.getByText(/\(1 hidden\)/)).toBeInTheDocument();
+      });
+    });
+
+    it("refreshes active invites when enabling the filter", async () => {
+      const matches = [createMockMatch({ profileId: "p1" })];
+      mockFetchEnrichedMatches.mockResolvedValue(matches);
+      mockFetchActiveInviteeIds.mockResolvedValue(new Set(["p1"]));
+
+      render(<MatchesBrowser profileId={mockProfileId} />);
+
+      await waitFor(() => {
+        expect(screen.getByText("Found 1 potential practice partner")).toBeInTheDocument();
+      });
+
+      const toggle = screen.getByLabelText(/hide people you’ve already invited/i);
+      await userEvent.click(toggle);
+
+      expect(mockFetchActiveInviteeIds).toHaveBeenCalledTimes(2); // initial + toggle
+      expect(screen.queryByText("Found 1 potential practice partner")).not.toBeInTheDocument();
     });
   });
 

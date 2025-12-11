@@ -20,12 +20,8 @@ import {
   fetchSessions as apiFetchSessions,
 } from "@/lib/sessions/api";
 
-// NOTE: This suite documents the intended session lifecycle behavior using the same
-// API layer as the app (`lib/sessions/api.ts`), but is currently skipped because
-// fully exercising RLS for sessions in a Jest/Node environment (without the app's
-// auth wiring) is non-trivial. Once session auth wiring is shared with tests,
-// this suite can be re-enabled.
-describe.skip("Session Lifecycle - Integration", () => {
+// NOTE: Uses real Supabase auth + RLS. Requires local Supabase running.
+describe("Session Lifecycle - Integration", () => {
   let organizer: TestUser;
   let participant1: TestUser;
   let participant2: TestUser;
