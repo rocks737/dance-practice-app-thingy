@@ -17,6 +17,7 @@ import {
   Users,
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
+import { dateToDatetimeLocal, datetimeLocalToIso } from "@/lib/datetime";
 import { fetchSessions, createSession, updateSession } from "@/lib/sessions/api";
 import {
   SESSION_STATUS_OPTIONS,
@@ -743,8 +744,18 @@ function CreateSessionDialog({
       return;
     }
 
-    const startDate = new Date(form.scheduledStart);
-    const endDate = new Date(form.scheduledEnd);
+    let startIso: string;
+    let endIso: string;
+    try {
+      startIso = datetimeLocalToIso(form.scheduledStart);
+      endIso = datetimeLocalToIso(form.scheduledEnd);
+    } catch {
+      setError("Provide a valid time range.");
+      return;
+    }
+
+    const startDate = new Date(startIso);
+    const endDate = new Date(endIso);
 
     if (
       Number.isNaN(startDate.getTime()) ||
@@ -772,8 +783,8 @@ function CreateSessionDialog({
         sessionType: form.sessionType,
         status: form.status,
         visibility: form.visibility,
-        scheduledStart: startDate.toISOString(),
-        scheduledEnd: endDate.toISOString(),
+        scheduledStart: startIso,
+        scheduledEnd: endIso,
         organizerId,
         capacity: capacityNumber,
       });
@@ -975,8 +986,8 @@ const createInitialSessionForm = (): SessionFormState => {
     sessionType: DEFAULT_SESSION_TYPE,
     status: DEFAULT_SESSION_STATUS,
     visibility: DEFAULT_SESSION_VISIBILITY,
-    scheduledStart: format(start, "yyyy-MM-dd'T'HH:mm"),
-    scheduledEnd: format(end, "yyyy-MM-dd'T'HH:mm"),
+    scheduledStart: dateToDatetimeLocal(start),
+    scheduledEnd: dateToDatetimeLocal(end),
     capacity: "",
   };
 };

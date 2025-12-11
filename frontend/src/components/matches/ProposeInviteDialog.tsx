@@ -38,6 +38,7 @@ import {
   fetchOverlapSuggestions,
   proposePracticeSession,
 } from "@/lib/matches/api";
+import { dateToDatetimeLocal, datetimeLocalToIso } from "@/lib/datetime";
 
 const DAY_INDEX: Record<string, number> = {
   SUNDAY: 0,
@@ -60,11 +61,6 @@ const DAY_LABEL: Record<string, string> = {
 };
 
 const DnDCalendar = withDragAndDrop(BigCalendar as any);
-
-function toInputValue(date: Date): string {
-  const pad = (v: number) => v.toString().padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
-}
 
 function parseTime(time: string): { hour: number; minute: number } {
   const [h, m] = time.split(":").map((v) => parseInt(v, 10));
@@ -165,8 +161,8 @@ export function ProposeInviteDialog({ match }: ProposeInviteDialogProps) {
     const preferredEnd = addMinutes(startDate, 60);
     const clampedEnd = preferredEnd <= endDate ? preferredEnd : endDate > startDate ? endDate : preferredEnd;
 
-    setStart(toInputValue(startDate));
-    setEnd(toInputValue(clampedEnd));
+    setStart(dateToDatetimeLocal(startDate));
+    setEnd(dateToDatetimeLocal(clampedEnd));
     setSelectedRange({ start: startDate, end: clampedEnd });
     setWeekStart(getWeekStart(startDate));
   }
@@ -254,8 +250,8 @@ export function ProposeInviteDialog({ match }: ProposeInviteDialogProps) {
     }
 
     setSelectedRange({ start: slotStart, end: slotEnd });
-    setStart(toInputValue(slotStart));
-    setEnd(toInputValue(slotEnd));
+    setStart(dateToDatetimeLocal(slotStart));
+    setEnd(dateToDatetimeLocal(slotEnd));
   };
 
   const handleEventDrop = (data: any) => {
@@ -271,8 +267,8 @@ export function ProposeInviteDialog({ match }: ProposeInviteDialogProps) {
     }
 
     setSelectedRange({ start: newStart, end: proposedEnd });
-    setStart(toInputValue(newStart));
-    setEnd(toInputValue(proposedEnd));
+    setStart(dateToDatetimeLocal(newStart));
+    setEnd(dateToDatetimeLocal(proposedEnd));
   };
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -286,8 +282,8 @@ export function ProposeInviteDialog({ match }: ProposeInviteDialogProps) {
         throw new Error("Please choose a start and end time.");
       }
 
-      const startIso = new Date(start).toISOString();
-      const endIso = new Date(end).toISOString();
+      const startIso = datetimeLocalToIso(start);
+      const endIso = datetimeLocalToIso(end);
 
       await proposePracticeSession({
         inviteeProfileId: match.profileId,
