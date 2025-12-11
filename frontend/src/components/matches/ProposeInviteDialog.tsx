@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { CalendarClock, Loader2, Send, Sparkles } from "lucide-react";
+import { format } from "date-fns";
 import { Calendar as BigCalendar, type SlotInfo } from "react-big-calendar";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 import "@/components/schedule/calendar-custom.css";
@@ -63,6 +64,10 @@ function toInputValue(date: Date): string {
 function parseTime(time: string): { hour: number; minute: number } {
   const [h, m] = time.split(":").map((v) => parseInt(v, 10));
   return { hour: h ?? 0, minute: m ?? 0 };
+}
+
+function addMinutes(date: Date, minutes: number): Date {
+  return new Date(date.getTime() + minutes * 60 * 1000);
 }
 
 function nextOccurrence(day: string, time: string): Date {
@@ -149,14 +154,13 @@ export function ProposeInviteDialog({ match }: ProposeInviteDialogProps) {
     const endParts = parseTime(suggestion.endTime);
     endDate.setHours(endParts.hour, endParts.minute, 0, 0);
 
-    // If end is before start (shouldn't happen), push by a day
-    if (endDate <= startDate) {
-      endDate.setDate(endDate.getDate() + 1);
-    }
+    // Default to a 1-hour slot inside the suggested window
+    const preferredEnd = addMinutes(startDate, 60);
+    const clampedEnd = preferredEnd <= endDate ? preferredEnd : endDate > startDate ? endDate : preferredEnd;
 
     setStart(toInputValue(startDate));
-    setEnd(toInputValue(endDate));
-    setSelectedRange({ start: startDate, end: endDate });
+    setEnd(toInputValue(clampedEnd));
+    setSelectedRange({ start: startDate, end: clampedEnd });
     setWeekStart(getWeekStart(startDate));
   }
 
@@ -164,14 +168,20 @@ export function ProposeInviteDialog({ match }: ProposeInviteDialogProps) {
     const mapped: AvailabilityWindow[] = [];
 
     for (const sugg of suggestions) {
-      const normalizedDay = (sugg.dayOfWeek ?? "").toUpperCase();
+      const normalizedDay = (sugg.dayOfWeek ?? "").trim().toUpperCase();
       if (!DAY_OF_WEEK_VALUES.includes(normalizedDay as any)) {
+        continue;
+      }
+      // Normalize times to HH:mm for calendar utilities
+      const startTime = sugg.startTime?.slice(0, 5);
+      const endTime = sugg.endTime?.slice(0, 5);
+      if (!startTime || !endTime) {
         continue;
       }
       mapped.push({
         dayOfWeek: normalizedDay as AvailabilityWindow["dayOfWeek"],
-        startTime: sugg.startTime,
-        endTime: sugg.endTime,
+        startTime,
+        endTime,
         recurring: true,
       });
     }
@@ -365,7 +375,6 @@ export function ProposeInviteDialog({ match }: ProposeInviteDialogProps) {
             </div>
             <p className="text-xs text-muted-foreground">
               Showing overlapping availability for this week. Drag on a block to set start/end.
-              Overlap blocks: {overlapEvents.length} • Selected: {selectedRange ? "Yes" : "No"}
             </p>
             <div className="h-[420px] rounded-md border bg-muted/20 p-2">
               {mounted ? (
