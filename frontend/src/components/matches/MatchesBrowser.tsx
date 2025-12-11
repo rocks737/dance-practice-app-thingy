@@ -226,6 +226,11 @@ export function MatchesBrowser({ profileId }: MatchesBrowserProps) {
     </div>
   );
 
+  const isInviteExpired = (expiresAt?: string | null) => {
+    if (!expiresAt) return false;
+    return new Date(expiresAt) < new Date();
+  };
+
   return (
     <div className="space-y-10">
       <section>
@@ -276,6 +281,7 @@ export function MatchesBrowser({ profileId }: MatchesBrowserProps) {
               invite.invitee?.lastName,
               invite.invitee?.displayName,
             );
+            const inviteExpired = isInviteExpired(invite.expiresAt);
             return (
               <div
                 key={invite.id}
@@ -297,7 +303,13 @@ export function MatchesBrowser({ profileId }: MatchesBrowserProps) {
                     <span className="font-medium">Note:</span> {invite.note}
                   </p>
                 )}
-                {invite.status === "PENDING" && (
+                {inviteExpired && (
+                  <p className="mt-3 text-xs text-amber-600 dark:text-amber-300">
+                    This invite expired before it could be accepted.
+                  </p>
+                )}
+
+                {invite.status === "PENDING" && !inviteExpired && (
                   <div className="mt-3 flex flex-wrap gap-2">
                     <Button
                       variant="outline"
@@ -350,6 +362,7 @@ export function MatchesBrowser({ profileId }: MatchesBrowserProps) {
               invite.proposer?.displayName,
             );
             const isPending = invite.status === "PENDING";
+            const inviteExpired = isInviteExpired(invite.expiresAt);
             return (
               <div
                 key={invite.id}
@@ -370,7 +383,7 @@ export function MatchesBrowser({ profileId }: MatchesBrowserProps) {
                   </p>
                 )}
                 <div className="mt-3 flex flex-wrap gap-2">
-                  {isPending ? (
+                  {isPending && !inviteExpired ? (
                     <>
                       <Button
                         size="sm"

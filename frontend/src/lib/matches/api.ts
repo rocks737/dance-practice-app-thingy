@@ -70,6 +70,7 @@ type InviteQueryRow = {
   note: string | null;
   created_at: string;
   updated_at: string;
+  expires_at: string | null;
   session: InviteSession | null;
   invitee?: InviteUser | null;
   proposer?: InviteUser | null;
@@ -81,6 +82,7 @@ export interface SentInviteSummary {
   note: string | null;
   createdAt: string;
   updatedAt: string;
+  expiresAt: string | null;
   invitee: {
     id: string;
     firstName: string;
@@ -101,6 +103,7 @@ export interface ReceivedInviteSummary {
   note: string | null;
   createdAt: string;
   updatedAt: string;
+  expiresAt: string | null;
   proposer: {
     id: string;
     firstName: string;
@@ -155,6 +158,7 @@ const INVITE_BASE_SELECT = `
   note,
   created_at,
   updated_at,
+  expires_at,
   session:sessions!session_invites_session_id_fkey (
     id,
     title,
@@ -231,6 +235,7 @@ export async function fetchSentInvites(): Promise<SentInviteSummary[]> {
     note: invite.note,
     createdAt: invite.created_at,
     updatedAt: invite.updated_at,
+    expiresAt: invite.expires_at,
     invitee: mapInviteUser(invite.invitee),
     session: mapInviteSession(invite.session),
   }));
@@ -260,6 +265,7 @@ export async function fetchReceivedInvites(): Promise<ReceivedInviteSummary[]> {
     note: invite.note,
     createdAt: invite.created_at,
     updatedAt: invite.updated_at,
+    expiresAt: invite.expires_at,
     proposer: mapInviteUser(invite.proposer),
     session: mapInviteSession(invite.session),
   }));

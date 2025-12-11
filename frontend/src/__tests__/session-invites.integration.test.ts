@@ -171,4 +171,26 @@ describe("Session Invites - Integration", () => {
     });
     expect(acceptError).toBeTruthy();
   });
+
+  it("allows proposer to cancel even if the invite expired", async () => {
+    const pastStart = new Date(Date.now() - 120 * 60 * 1000);
+    const pastEnd = new Date(Date.now() - 60 * 60 * 1000);
+    const { data, error } = await proposer.supabase.rpc("propose_practice_session", {
+      p_invitee_id: invitee.profileId,
+      p_start: pastStart.toISOString(),
+      p_end: pastEnd.toISOString(),
+      p_note: "Expired invite cancel",
+    });
+    if (error) throw error;
+    const row = (Array.isArray(data) ? data[0] : data) as RpcRow;
+    sessionId = row.session_id;
+
+    const { data: cancelData, error: cancelError } = await proposer.supabase.rpc(
+      "respond_to_session_invite",
+      { p_invite_id: row.invite_id, p_action: "CANCEL" },
+    );
+    expect(cancelError).toBeNull();
+    const cancelRow = (Array.isArray(cancelData) ? cancelData[0] : cancelData) as RpcRow;
+    expect((cancelRow.invite_status ?? "CANCELLED").toUpperCase()).toBe("CANCELLED");
+  });
 });
