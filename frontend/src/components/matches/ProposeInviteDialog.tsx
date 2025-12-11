@@ -16,6 +16,18 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { CalendarClock, Loader2, Send, Sparkles } from "lucide-react";
+import { Calendar as BigCalendar, type SlotInfo } from "react-big-calendar";
+import "react-big-calendar/lib/css/react-big-calendar.css";
+import "@/components/schedule/calendar-custom.css";
+import {
+  getWeekStart,
+  isValidDuration,
+  localizer,
+  roundToQuarterHour,
+  windowsToEvents,
+} from "@/lib/schedule/calendar";
+import { DAY_OF_WEEK_VALUES, type AvailabilityWindow } from "@/lib/schedule/types";
+import { toast } from "sonner";
 import {
   type EnrichedMatch,
   type OverlapSuggestion,
@@ -85,6 +97,13 @@ export function ProposeInviteDialog({ match }: ProposeInviteDialogProps) {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [weekStart, setWeekStart] = useState<Date>(() => getWeekStart(new Date()));
+  const [selectedRange, setSelectedRange] = useState<{ start: Date; end: Date } | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const displayName = useMemo(() => {
     return match.displayName || `${match.firstName} ${match.lastName}`.trim() || "your match";
@@ -97,6 +116,7 @@ export function ProposeInviteDialog({ match }: ProposeInviteDialogProps) {
       setStart("");
       setEnd("");
       setNote("");
+      setSelectedRange(null);
       return;
     }
 
@@ -136,7 +156,74 @@ export function ProposeInviteDialog({ match }: ProposeInviteDialogProps) {
 
     setStart(toInputValue(startDate));
     setEnd(toInputValue(endDate));
+    setSelectedRange({ start: startDate, end: endDate });
+    setWeekStart(getWeekStart(startDate));
   }
+
+  const overlapWindows: AvailabilityWindow[] = useMemo(() => {
+    const mapped: AvailabilityWindow[] = [];
+
+    for (const sugg of suggestions) {
+      const normalizedDay = (sugg.dayOfWeek ?? "").toUpperCase();
+      if (!DAY_OF_WEEK_VALUES.includes(normalizedDay as any)) {
+        continue;
+      }
+      mapped.push({
+        dayOfWeek: normalizedDay as AvailabilityWindow["dayOfWeek"],
+        startTime: sugg.startTime,
+        endTime: sugg.endTime,
+        recurring: true,
+      });
+    }
+
+    return mapped;
+  }, [suggestions]);
+
+  const overlapEvents = useMemo(
+    () => windowsToEvents(overlapWindows, weekStart),
+    [overlapWindows, weekStart],
+  );
+
+  const calendarEvents = useMemo(() => {
+    if (!selectedRange) {
+      return overlapEvents;
+    }
+    return [
+      ...overlapEvents,
+      {
+        id: "selected-range",
+        title: "Selected time",
+        start: selectedRange.start,
+        end: selectedRange.end,
+      },
+    ];
+  }, [overlapEvents, selectedRange]);
+
+  const handleSelectSlot = (slot: SlotInfo) => {
+    const slotStart = roundToQuarterHour(new Date(slot.start));
+    const slotEnd = roundToQuarterHour(new Date(slot.end));
+
+    if (!isValidDuration(slotStart, slotEnd, 15)) {
+      toast.error("Please select at least 15 minutes.");
+      return;
+    }
+
+    const isInsideOverlap = overlapEvents.some(
+      (event) =>
+        slotStart >= event.start &&
+        slotEnd <= event.end &&
+        event.start.toDateString() === slotStart.toDateString(),
+    );
+
+    if (!isInsideOverlap) {
+      toast.error("Pick a time inside the overlapping availability blocks.");
+      return;
+    }
+
+    setSelectedRange({ start: slotStart, end: slotEnd });
+    setStart(toInputValue(slotStart));
+    setEnd(toInputValue(slotEnd));
+  };
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -269,6 +356,94 @@ export function ProposeInviteDialog({ match }: ProposeInviteDialogProps) {
                 })}
               </div>
             )}
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <CalendarClock className="h-4 w-4 text-primary" />
+              <p className="text-sm font-medium">Pick a time inside the overlapping blocks</p>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Showing overlapping availability for this week. Drag on a block to set start/end.
+              Overlap blocks: {overlapEvents.length} • Selected: {selectedRange ? "Yes" : "No"}
+            </p>
+            <div className="h-[420px] rounded-md border bg-muted/20 p-2">
+              {mounted ? (
+                <BigCalendar
+                  localizer={localizer}
+                  events={calendarEvents}
+                  date={weekStart}
+                  view="week"
+                  toolbar={false}
+                  selectable
+                  onSelectSlot={handleSelectSlot}
+                  onNavigate={(date) => setWeekStart(getWeekStart(date))}
+                  min={
+                    new Date(
+                      weekStart.getFullYear(),
+                      weekStart.getMonth(),
+                      weekStart.getDate(),
+                      6,
+                      0,
+                      0,
+                    )
+                  }
+                  max={
+                    new Date(
+                      weekStart.getFullYear(),
+                      weekStart.getMonth(),
+                      weekStart.getDate(),
+                      23,
+                      59,
+                      59,
+                    )
+                  }
+                  step={15}
+                  timeslots={4}
+                  eventPropGetter={(event) => {
+                    const isSelected = (event as any)?.id === "selected-range";
+                    const overlapBg = "rgba(59, 130, 246, 0.35)"; // blue-500, translucent
+                    const overlapBorder = "rgba(59, 130, 246, 0.95)";
+                    const selectedBg = "rgba(52, 211, 153, 0.6)"; // emerald-400
+                    const selectedBorder = "rgba(52, 211, 153, 1)";
+
+                    if (isSelected) {
+                      return {
+                        style: {
+                          backgroundColor: selectedBg,
+                          borderColor: selectedBorder,
+                          color: "#0b0f19",
+                          boxShadow: `0 0 0 1px ${selectedBorder}`,
+                        },
+                      };
+                    }
+
+                    return {
+                      style: {
+                        backgroundColor: overlapBg,
+                        borderColor: overlapBorder,
+                        color: "#0b0f19",
+                        boxShadow: `inset 0 0 0 1px ${overlapBorder}, 0 0 0 1px ${overlapBorder}`,
+                        backgroundImage:
+                          "repeating-linear-gradient(45deg, rgba(59,130,246,0.45), rgba(59,130,246,0.45) 6px, rgba(59,130,246,0.2) 6px, rgba(59,130,246,0.2) 12px)",
+                      },
+                    };
+                  }}
+                  formats={{
+                    dayFormat: (date: Date) =>
+                      date.toLocaleDateString("en-US", {
+                        weekday: "long",
+                      }),
+                    dayHeaderFormat: "EEEE, MMM d",
+                    timeGutterFormat: "h a",
+                  }}
+                />
+              ) : (
+                <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+                  Loading calendar...
+                </div>
+              )}
+            </div>
           </div>
 
           <DialogFooter>
