@@ -204,7 +204,10 @@ export function windowsToEvents(
         return specificDateStart >= weekStart && specificDateStart <= weekEnd;
       }
       
-      // For recurring windows, always show them for the displayed week
+      // For recurring windows, only show current or future weeks
+      if (weekStart < currentWeekStart) {
+        return false;
+      }
       return true;
     });
   

@@ -15,10 +15,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { CalendarClock, Loader2, Send, Sparkles } from "lucide-react";
 import { format } from "date-fns";
 import { Calendar as BigCalendar, type SlotInfo } from "react-big-calendar";
+import withDragAndDrop from "react-big-calendar/lib/addons/dragAndDrop";
 import "react-big-calendar/lib/css/react-big-calendar.css";
+import "react-big-calendar/lib/addons/dragAndDrop/styles.css";
 import "@/components/schedule/calendar-custom.css";
 import {
   getWeekStart,
@@ -55,6 +58,8 @@ const DAY_LABEL: Record<string, string> = {
   FRIDAY: "Friday",
   SATURDAY: "Saturday",
 };
+
+const DnDCalendar = withDragAndDrop(BigCalendar as any);
 
 function toInputValue(date: Date): string {
   const pad = (v: number) => v.toString().padStart(2, "0");
@@ -105,6 +110,7 @@ export function ProposeInviteDialog({ match }: ProposeInviteDialogProps) {
   const [weekStart, setWeekStart] = useState<Date>(() => getWeekStart(new Date()));
   const [selectedRange, setSelectedRange] = useState<{ start: Date; end: Date } | null>(null);
   const [mounted, setMounted] = useState(false);
+  const [hideEmptyDays, setHideEmptyDays] = useState(true);
 
   useEffect(() => {
     setMounted(true);
@@ -122,6 +128,7 @@ export function ProposeInviteDialog({ match }: ProposeInviteDialogProps) {
       setEnd("");
       setNote("");
       setSelectedRange(null);
+      setHideEmptyDays(true);
       return;
     }
 
@@ -194,6 +201,29 @@ export function ProposeInviteDialog({ match }: ProposeInviteDialogProps) {
     [overlapWindows, weekStart],
   );
 
+  const overlapDays = useMemo(() => {
+    const days = new Set<number>();
+    overlapEvents.forEach((e) => days.add(e.start.getDay()));
+    return days;
+  }, [overlapEvents]);
+
+  const isWithinOverlap = useMemo(
+    () => (startDate: Date, endDate: Date) =>
+      overlapEvents.some((event) => {
+        const sameDay = event.start.getDay() === startDate.getDay();
+        if (!sameDay) return false;
+
+        const toMinutes = (d: Date) => d.getHours() * 60 + d.getMinutes();
+        const startMin = toMinutes(startDate);
+        const endMin = toMinutes(endDate);
+        const eventStart = toMinutes(event.start);
+        const eventEnd = toMinutes(event.end);
+
+        return startMin >= eventStart && endMin <= eventEnd;
+      }),
+    [overlapEvents],
+  );
+
   const calendarEvents = useMemo(() => {
     if (!selectedRange) {
       return overlapEvents;
@@ -218,14 +248,7 @@ export function ProposeInviteDialog({ match }: ProposeInviteDialogProps) {
       return;
     }
 
-    const isInsideOverlap = overlapEvents.some(
-      (event) =>
-        slotStart >= event.start &&
-        slotEnd <= event.end &&
-        event.start.toDateString() === slotStart.toDateString(),
-    );
-
-    if (!isInsideOverlap) {
+    if (!isWithinOverlap(slotStart, slotEnd)) {
       toast.error("Pick a time inside the overlapping availability blocks.");
       return;
     }
@@ -233,6 +256,23 @@ export function ProposeInviteDialog({ match }: ProposeInviteDialogProps) {
     setSelectedRange({ start: slotStart, end: slotEnd });
     setStart(toInputValue(slotStart));
     setEnd(toInputValue(slotEnd));
+  };
+
+  const handleEventDrop = (data: any) => {
+    if (!data?.event || !selectedRange) return;
+
+    const durationMs = selectedRange.end.getTime() - selectedRange.start.getTime();
+    const newStart = roundToQuarterHour(new Date(data.start));
+    const proposedEnd = new Date(newStart.getTime() + durationMs);
+
+    if (!isWithinOverlap(newStart, proposedEnd)) {
+      toast.error("Move the selected time inside overlapping availability.");
+      return;
+    }
+
+    setSelectedRange({ start: newStart, end: proposedEnd });
+    setStart(toInputValue(newStart));
+    setEnd(toInputValue(proposedEnd));
   };
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -376,15 +416,29 @@ export function ProposeInviteDialog({ match }: ProposeInviteDialogProps) {
             <p className="text-xs text-muted-foreground">
               Showing overlapping availability for this week. Drag on a block to set start/end.
             </p>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Checkbox
+                id="hide-empty-days"
+                checked={hideEmptyDays}
+                onCheckedChange={(v) => setHideEmptyDays(Boolean(v))}
+              />
+              <Label htmlFor="hide-empty-days" className="text-xs font-normal">
+                Hide days without overlap
+              </Label>
+            </div>
             <div className="h-[420px] rounded-md border bg-muted/20 p-2">
               {mounted ? (
-                <BigCalendar
+                <DnDCalendar
                   localizer={localizer}
                   events={calendarEvents}
                   date={weekStart}
                   view="week"
                   toolbar={false}
-                  selectable
+                  selectable="ignoreEvents"
+                  resizable={false}
+                  draggableAccessor={(event: any) => event?.id === "selected-range"}
+                  resizableAccessor={() => false}
+                  onEventDrop={handleEventDrop}
                   onSelectSlot={handleSelectSlot}
                   onNavigate={(date) => setWeekStart(getWeekStart(date))}
                   min={
@@ -437,6 +491,18 @@ export function ProposeInviteDialog({ match }: ProposeInviteDialogProps) {
                           "repeating-linear-gradient(45deg, rgba(59,130,246,0.45), rgba(59,130,246,0.45) 6px, rgba(59,130,246,0.2) 6px, rgba(59,130,246,0.2) 12px)",
                       },
                     };
+                  }}
+                  dayPropGetter={(date: Date) => {
+                    if (hideEmptyDays && !overlapDays.has(date.getDay())) {
+                      return { className: "no-overlap-day" };
+                    }
+                    return {};
+                  }}
+                  slotPropGetter={(date: Date) => {
+                    if (hideEmptyDays && !overlapDays.has(date.getDay())) {
+                      return { className: "no-overlap-day" };
+                    }
+                    return {};
                   }}
                   formats={{
                     dayFormat: (date: Date) =>

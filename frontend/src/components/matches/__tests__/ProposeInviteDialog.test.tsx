@@ -9,29 +9,60 @@ import {
   proposePracticeSession,
 } from "@/lib/matches/api";
 
+// JSDOM lacks ResizeObserver used by radix primitives
+if (typeof (global as any).ResizeObserver === "undefined") {
+  (global as any).ResizeObserver = class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  };
+}
+
 process.env.TZ = "UTC";
 
 // Mock react-big-calendar to expose onSelectSlot without rendering the real calendar
 jest.mock("react-big-calendar", () => {
   const React = require("react");
+  const Calendar = (props: any) => (
+    <div data-testid="mock-calendar">
+      <button
+        onClick={() =>
+          props.onSelectSlot?.({
+            start: new Date("2025-01-05T10:00:00Z"),
+            end: new Date("2025-01-05T10:30:00Z"),
+          })
+        }
+      >
+        trigger-slot
+      </button>
+      <button
+        onClick={() =>
+          props.onEventDrop?.({
+            event: { id: "selected-range" },
+            start: new Date("2025-01-05T11:00:00Z"),
+            end: new Date("2025-01-05T11:30:00Z"),
+          }) || props.onSelectSlot?.({
+            start: new Date("2025-01-05T11:00:00Z"),
+            end: new Date("2025-01-05T12:00:00Z"),
+          })
+        }
+      >
+        move-selected
+      </button>
+    </div>
+  );
+
   return {
     dateFnsLocalizer: () => ({}),
-    Calendar: (props: any) => (
-      <div data-testid="mock-calendar">
-        <button
-          onClick={() =>
-            props.onSelectSlot?.({
-              start: new Date("2025-01-05T10:00:00Z"),
-              end: new Date("2025-01-05T10:30:00Z"),
-            })
-          }
-        >
-          trigger-slot
-        </button>
-      </div>
-    ),
+    Calendar,
+    withDragAndDrop: () => Calendar,
   };
 });
+
+jest.mock("react-big-calendar/lib/addons/dragAndDrop", () => ({
+  __esModule: true,
+  default: (Comp: any) => Comp,
+}));
 
 jest.mock("@/lib/matches/api");
 
@@ -134,6 +165,46 @@ describe("ProposeInviteDialog", () => {
 
     expect((startInput as HTMLInputElement).value).toContain("T18:00");
     expect((endInput as HTMLInputElement).value).toContain("T18:30");
+  });
+
+  it("defaults to hiding empty days", async () => {
+    render(<ProposeInviteDialog match={baseMatch} />);
+
+    await userEvent.click(screen.getByRole("button", { name: /propose time/i }));
+
+    const checkbox = await screen.findByRole("checkbox", { name: /hide days without overlap/i });
+    expect(checkbox).toBeChecked();
+  });
+
+  it("lets the user toggle hiding empty days", async () => {
+    render(<ProposeInviteDialog match={baseMatch} />);
+
+    await userEvent.click(screen.getByRole("button", { name: /propose time/i }));
+
+    const checkbox = await screen.findByRole("checkbox", { name: /hide days without overlap/i });
+    expect(checkbox).toBeChecked();
+
+    await userEvent.click(checkbox);
+    expect(checkbox).not.toBeChecked();
+
+    await userEvent.click(checkbox);
+    expect(checkbox).toBeChecked();
+  });
+
+  it("resets hiding empty days to default when the dialog closes", async () => {
+    render(<ProposeInviteDialog match={baseMatch} />);
+
+    await userEvent.click(screen.getByRole("button", { name: /propose time/i }));
+
+    const checkbox = await screen.findByRole("checkbox", { name: /hide days without overlap/i });
+    await userEvent.click(checkbox);
+    expect(checkbox).not.toBeChecked();
+
+    await userEvent.click(screen.getByRole("button", { name: /cancel/i }));
+    await userEvent.click(screen.getByRole("button", { name: /propose time/i }));
+
+    const checkboxAfterReopen = await screen.findByRole("checkbox", { name: /hide days without overlap/i });
+    expect(checkboxAfterReopen).toBeChecked();
   });
 
   it("selects a slot from the calendar and submits", async () => {
