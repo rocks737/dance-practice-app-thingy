@@ -32,6 +32,7 @@ const integrationProjectFactory = createJestConfig({
   ...commonConfig,
   testMatch: ["<rootDir>/src/**/*.integration.test.[jt]s?(x)"],
   testTimeout: 60000,
+  testEnvironment: "node",
 });
 
 module.exports = async () => {

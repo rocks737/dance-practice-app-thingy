@@ -1,3 +1,5 @@
+/** @jest-environment jsdom */
+
 import { screen } from "@testing-library/react";
 import { render, mockUser } from "@/test/test-utils";
 import { AppSidebar } from "@/components/app/AppSidebar";
