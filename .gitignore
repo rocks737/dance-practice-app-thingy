@@ -19,6 +19,10 @@ dist/
 .next/
 out/
 coverage/
+frontend/tmp/
+
+# Misc build/tmp directories
+tmp/
 
 # React Native / Expo
 .expo/
@@ -38,5 +42,6 @@ Thumbs.db
 .env
 .env.*
 config/*.local.*
+supabase.env
 
 scripts/

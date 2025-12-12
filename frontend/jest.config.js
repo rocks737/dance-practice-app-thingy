@@ -1,30 +1,16 @@
 const nextJest = require("next/jest");
 
 const createJestConfig = nextJest({
-  // Provide the path to your Next.js app to load next.config.js and .env files in your test environment
   dir: "./",
 });
 
-// Check if we should skip integration tests (CI environment or explicit flag)
-const skipIntegration = process.env.CI === "true" || process.env.SKIP_INTEGRATION === "true";
-
-// Add any custom config to be passed to Jest
-const config = {
+const commonConfig = {
   coverageProvider: "v8",
   testEnvironment: "jsdom",
   setupFilesAfterEnv: ["<rootDir>/jest.setup.ts"],
   moduleNameMapper: {
     "^@/(.*)$": "<rootDir>/src/$1",
   },
-  testMatch: [
-    "**/__tests__/**/*.(test|spec).[jt]s?(x)",
-    "**/?(*.)+(spec|test).[jt]s?(x)",
-  ],
-  // Skip integration tests in CI or when SKIP_INTEGRATION=true
-  // Matches both: foo.integration.test.ts and foo-integration.test.ts
-  testPathIgnorePatterns: skipIntegration
-    ? ["/node_modules/", "[-.]integration\\.test\\.[jt]sx?$"]
-    : ["/node_modules/"],
   collectCoverageFrom: [
     "src/**/*.{js,jsx,ts,tsx}",
     "!src/**/*.d.ts",
@@ -33,5 +19,30 @@ const config = {
   ],
 };
 
-// createJestConfig is exported this way to ensure that next/jest can load the Next.js config which is async
-module.exports = createJestConfig(config);
+const unitProjectFactory = createJestConfig({
+  ...commonConfig,
+  testMatch: [
+    "<rootDir>/src/**/__tests__/**/*.(spec|test).[jt]s?(x)",
+    "<rootDir>/src/**/*.(spec|test).[jt]s?(x)",
+  ],
+  testPathIgnorePatterns: ["/node_modules/", "[-.]integration\\.test\\.[jt]sx?$"],
+});
+
+const integrationProjectFactory = createJestConfig({
+  ...commonConfig,
+  testMatch: ["<rootDir>/src/**/*.integration.test.[jt]s?(x)"],
+  testTimeout: 60000,
+  testEnvironment: "node",
+});
+
+module.exports = async () => {
+  const [unitConfig, integrationConfig] = await Promise.all([
+    unitProjectFactory(),
+    integrationProjectFactory(),
+  ]);
+  unitConfig.displayName = "unit";
+  integrationConfig.displayName = "integration";
+  return {
+    projects: [unitConfig, integrationConfig],
+  };
+};

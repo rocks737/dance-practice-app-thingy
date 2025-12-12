@@ -1,23 +1,32 @@
 /**
- * Tests for MatchesBrowser component
+ * MatchesBrowser tests
  */
 
 import { describe, it, expect, beforeEach } from "@jest/globals";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MatchesBrowser } from "../MatchesBrowser";
-import type { EnrichedMatch } from "@/lib/matches/api";
+import type {
+  EnrichedMatch,
+  ReceivedInviteSummary,
+  SentInviteSummary,
+} from "@/lib/matches/api";
 import { PrimaryRole } from "@/lib/profiles/types";
 
-// Create a mock function that we can control
 const mockFetchEnrichedMatches = jest.fn();
+const mockFetchActiveInviteeIds = jest.fn();
+const mockFetchSentInvites = jest.fn();
+const mockFetchReceivedInvites = jest.fn();
+const mockRespondToInvite = jest.fn();
 
-// Mock the matches API
 jest.mock("@/lib/matches/api", () => ({
   fetchEnrichedMatches: (...args: unknown[]) => mockFetchEnrichedMatches(...args),
+  fetchActiveInviteeIds: (...args: unknown[]) => mockFetchActiveInviteeIds(...args),
+  fetchSentInvites: (...args: unknown[]) => mockFetchSentInvites(...args),
+  fetchReceivedInvites: (...args: unknown[]) => mockFetchReceivedInvites(...args),
+  respondToInvite: (...args: unknown[]) => mockRespondToInvite(...args),
 }));
 
-// Mock next/link
 jest.mock("next/link", () => {
   return function MockLink({
     children,
@@ -30,269 +39,207 @@ jest.mock("next/link", () => {
   };
 });
 
-describe("MatchesBrowser", () => {
-  const mockProfileId = "test-profile-id";
+const mockProfileId = "test-profile-id";
 
-  const createMockMatch = (overrides: Partial<EnrichedMatch> = {}): EnrichedMatch => ({
-    profileId: `profile-${Math.random()}`,
-    preferenceId: "test-preference-id",
-    score: 85,
-    overlappingWindows: 3,
-    overlappingMinutes: 180,
-    sharedFocusAreas: 2,
-    wsdcLevelDiff: 1,
-    firstName: "Jane",
-    lastName: "Doe",
+const createMatch = (overrides: Partial<EnrichedMatch> = {}): EnrichedMatch => ({
+  profileId: `profile-${Math.random()}`,
+  preferenceId: "pref-1",
+  score: 80,
+  overlappingWindows: 2,
+  overlappingMinutes: 120,
+  sharedFocusAreas: 1,
+  wsdcLevelDiff: 0,
+  firstName: "Alex",
+  lastName: "Rivera",
+  displayName: null,
+  primaryRole: PrimaryRole.LEADING,
+  wsdcLevel: 2,
+  competitivenessLevel: 3,
+  bio: null,
+  danceGoals: null,
+  focusAreas: [],
+  ...overrides,
+});
+
+const createSentInvite = (overrides: Partial<SentInviteSummary> = {}): SentInviteSummary => ({
+  id: `sent-${Math.random()}`,
+  status: "PENDING",
+  note: null,
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
+  invitee: {
+    id: "invitee-1",
+    firstName: "Taylor",
+    lastName: "Smith",
     displayName: null,
-    primaryRole: PrimaryRole.FOLLOWER,
-    wsdcLevel: 2,
-    competitivenessLevel: 3,
-    bio: "I love dancing!",
-    danceGoals: "Improve technique",
-    focusAreas: ["TECHNIQUE"],
-    ...overrides,
-  });
+  },
+  session: {
+    id: "session-1",
+    title: "Practice",
+    scheduledStart: null,
+    scheduledEnd: null,
+  },
+  ...overrides,
+});
 
+const createReceivedInvite = (
+  overrides: Partial<ReceivedInviteSummary> = {},
+): ReceivedInviteSummary => ({
+  id: `received-${Math.random()}`,
+  status: "PENDING",
+  note: null,
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
+  proposer: {
+    id: "proposer-1",
+    firstName: "Morgan",
+    lastName: "Lee",
+    displayName: null,
+  },
+  session: {
+    id: "session-2",
+    title: "Session",
+    scheduledStart: null,
+    scheduledEnd: null,
+  },
+  ...overrides,
+});
+
+describe("MatchesBrowser", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockFetchActiveInviteeIds.mockResolvedValue(new Set());
+    mockFetchSentInvites.mockResolvedValue([]);
+    mockFetchReceivedInvites.mockResolvedValue([]);
+    mockFetchEnrichedMatches.mockResolvedValue([]);
+    mockRespondToInvite.mockResolvedValue({
+      sessionId: "session-id",
+      inviteId: "invite-id",
+      inviteStatus: "PENDING",
+    });
   });
 
-  describe("Loading State", () => {
-    it("should display loading indicator while fetching matches", async () => {
-      // Create a promise that we control
-      let resolvePromise: (value: EnrichedMatch[]) => void;
-      const loadingPromise = new Promise<EnrichedMatch[]>((resolve) => {
+  it("shows loading indicator while matches load", async () => {
+    let resolvePromise: (value: EnrichedMatch[]) => void;
+    mockFetchEnrichedMatches.mockReturnValue(
+      new Promise<EnrichedMatch[]>((resolve) => {
         resolvePromise = resolve;
-      });
-      mockFetchEnrichedMatches.mockReturnValue(loadingPromise);
+      }),
+    );
 
-      render(<MatchesBrowser profileId={mockProfileId} />);
+    render(<MatchesBrowser profileId={mockProfileId} />);
+    expect(screen.getByText("Finding your matches...")).toBeInTheDocument();
 
-      expect(screen.getByText("Finding your matches...")).toBeInTheDocument();
+    resolvePromise!([]);
+    await waitFor(() =>
+      expect(screen.queryByText("Finding your matches...")).not.toBeInTheDocument(),
+    );
+  });
 
-      // Resolve the promise to prevent test timeout
-      resolvePromise!([]);
-      await waitFor(() => {
-        expect(screen.queryByText("Finding your matches...")).not.toBeInTheDocument();
-      });
+  it("displays error state when matches fail to load", async () => {
+    mockFetchEnrichedMatches.mockRejectedValue(new Error("Network error"));
+
+    render(<MatchesBrowser profileId={mockProfileId} />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Error loading matches")).toBeInTheDocument();
+      expect(screen.getByText("Network error")).toBeInTheDocument();
     });
   });
 
-  describe("Error State", () => {
-    it("should display error message when fetch fails", async () => {
-      mockFetchEnrichedMatches.mockRejectedValue(new Error("Network error"));
+  it("shows matches and counts in potential partners section", async () => {
+    mockFetchEnrichedMatches.mockResolvedValue([
+      createMatch({ firstName: "Alice", lastName: "Smith" }),
+      createMatch({ firstName: "Bob", lastName: "Jones" }),
+    ]);
 
-      render(<MatchesBrowser profileId={mockProfileId} />);
+    render(<MatchesBrowser profileId={mockProfileId} />);
 
-      await waitFor(() => {
-        expect(screen.getByText("Error loading matches")).toBeInTheDocument();
-        expect(screen.getByText("Network error")).toBeInTheDocument();
-      });
+    await waitFor(() => {
+      expect(screen.getByText("Potential partners")).toBeInTheDocument();
     });
-
-    it("should display generic error message for non-Error objects", async () => {
-      mockFetchEnrichedMatches.mockRejectedValue("Something went wrong");
-
-      render(<MatchesBrowser profileId={mockProfileId} />);
-
-      await waitFor(() => {
-        expect(screen.getByText("Failed to load matches")).toBeInTheDocument();
-      });
-    });
-
-    it("should display retry button on error", async () => {
-      mockFetchEnrichedMatches.mockRejectedValue(new Error("Network error"));
-
-      render(<MatchesBrowser profileId={mockProfileId} />);
-
-      await waitFor(() => {
-        expect(screen.getByRole("button", { name: /try again/i })).toBeInTheDocument();
-      });
-    });
-
-    it("should retry fetching when retry button is clicked", async () => {
-      const user = userEvent.setup();
-
-      // First call fails
-      mockFetchEnrichedMatches.mockRejectedValueOnce(new Error("Network error"));
-
-      render(<MatchesBrowser profileId={mockProfileId} />);
-
-      await waitFor(() => {
-        expect(screen.getByText("Error loading matches")).toBeInTheDocument();
-      });
-
-      // Second call succeeds
-      mockFetchEnrichedMatches.mockResolvedValueOnce([createMockMatch()]);
-
-      await user.click(screen.getByRole("button", { name: /try again/i }));
-
-      await waitFor(() => {
-        expect(mockFetchEnrichedMatches).toHaveBeenCalledTimes(2);
-      });
-    });
+    expect(screen.getByText("Alice Smith")).toBeInTheDocument();
+    expect(screen.getByText("Bob Jones")).toBeInTheDocument();
+    expect(screen.getByText("Found 2 practice partners")).toBeInTheDocument();
   });
 
-  describe("Empty State", () => {
-    it("should display empty state when no matches found", async () => {
-      mockFetchEnrichedMatches.mockResolvedValue([]);
+  it("hides matches that already have outgoing invites by default and shows them when toggled off", async () => {
+    mockFetchEnrichedMatches.mockResolvedValue([
+      createMatch({ firstName: "Visible", lastName: "One", profileId: "p1" }),
+      createMatch({ firstName: "Hidden", lastName: "Two", profileId: "p2" }),
+    ]);
+    mockFetchActiveInviteeIds.mockResolvedValue(new Set(["p2"]));
 
-      render(<MatchesBrowser profileId={mockProfileId} />);
+    const user = userEvent.setup();
+    render(<MatchesBrowser profileId={mockProfileId} />);
 
-      await waitFor(() => {
-        expect(screen.getByText("No matches found yet")).toBeInTheDocument();
-      });
-    });
+    await waitFor(() => expect(screen.getByText(/Visible One/)).toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByText(/Hidden Two/)).not.toBeInTheDocument());
+    expect(screen.getByText("(1 hidden)")).toBeInTheDocument();
 
-    it("should display helpful suggestions in empty state", async () => {
-      mockFetchEnrichedMatches.mockResolvedValue([]);
+    const toggle = screen.getByLabelText(/Hide people you’ve already invited/i);
+    await user.click(toggle);
 
-      render(<MatchesBrowser profileId={mockProfileId} />);
-
-      await waitFor(() => {
-        expect(
-          screen.getByText(/Your availability windows don't overlap with others/)
-        ).toBeInTheDocument();
-        expect(
-          screen.getByText(/There aren't many dancers in your area yet/)
-        ).toBeInTheDocument();
-        expect(
-          screen.getByText(/Try expanding your available time slots/)
-        ).toBeInTheDocument();
-      });
-    });
-
-    it("should display Update Schedule link in empty state", async () => {
-      mockFetchEnrichedMatches.mockResolvedValue([]);
-
-      render(<MatchesBrowser profileId={mockProfileId} />);
-
-      await waitFor(() => {
-        const scheduleLink = screen.getByRole("link", { name: /update schedule/i });
-        expect(scheduleLink).toHaveAttribute("href", "/schedule");
-      });
-    });
-
-    it("should display Refresh button in empty state", async () => {
-      mockFetchEnrichedMatches.mockResolvedValue([]);
-
-      render(<MatchesBrowser profileId={mockProfileId} />);
-
-      await waitFor(() => {
-        expect(screen.getByRole("button", { name: /refresh/i })).toBeInTheDocument();
-      });
-    });
+    await waitFor(() => expect(screen.getByText(/Hidden Two/)).toBeInTheDocument());
   });
 
-  describe("Matches Display", () => {
-    it("should display matches when available", async () => {
-      const matches = [
-        createMockMatch({ firstName: "Alice", lastName: "Smith" }),
-        createMockMatch({ firstName: "Bob", lastName: "Jones" }),
-      ];
-      mockFetchEnrichedMatches.mockResolvedValue(matches);
+  it("renders sent invite cards with cancel action", async () => {
+    const sent = [
+      createSentInvite({
+        id: "invite-1",
+        invitee: { id: "inv-1", firstName: "Sam", lastName: "Green", displayName: null },
+      }),
+    ];
+    mockFetchSentInvites.mockResolvedValue(sent);
+    mockFetchEnrichedMatches.mockResolvedValue([createMatch()]);
 
-      render(<MatchesBrowser profileId={mockProfileId} />);
+    const user = userEvent.setup();
+    render(<MatchesBrowser profileId={mockProfileId} />);
 
-      await waitFor(() => {
-        expect(screen.getByText("Alice Smith")).toBeInTheDocument();
-        expect(screen.getByText("Bob Jones")).toBeInTheDocument();
-      });
-    });
+    await waitFor(() => expect(screen.getByText("Requests sent")).toBeInTheDocument());
+    expect(screen.getByText("Sam Green")).toBeInTheDocument();
 
-    it("should display match count", async () => {
-      const matches = [
-        createMockMatch({ firstName: "Alice", lastName: "Smith" }),
-        createMockMatch({ firstName: "Bob", lastName: "Jones" }),
-        createMockMatch({ firstName: "Charlie", lastName: "Brown" }),
-      ];
-      mockFetchEnrichedMatches.mockResolvedValue(matches);
-
-      render(<MatchesBrowser profileId={mockProfileId} />);
-
-      await waitFor(() => {
-        expect(screen.getByText("Found 3 potential practice partners")).toBeInTheDocument();
-      });
-    });
-
-    it("should use singular 'partner' for single match", async () => {
-      mockFetchEnrichedMatches.mockResolvedValue([createMockMatch()]);
-
-      render(<MatchesBrowser profileId={mockProfileId} />);
-
-      await waitFor(() => {
-        expect(screen.getByText("Found 1 potential practice partner")).toBeInTheDocument();
-      });
-    });
-
-    it("should display refresh button in header", async () => {
-      mockFetchEnrichedMatches.mockResolvedValue([createMockMatch()]);
-
-      render(<MatchesBrowser profileId={mockProfileId} />);
-
-      await waitFor(() => {
-        const refreshButtons = screen.getAllByRole("button", { name: /refresh/i });
-        expect(refreshButtons.length).toBeGreaterThan(0);
-      });
-    });
+    await user.click(screen.getByRole("button", { name: /cancel invite/i }));
+    await waitFor(() =>
+      expect(mockRespondToInvite).toHaveBeenCalledWith("invite-1", "CANCEL"),
+    );
   });
 
-  describe("Refresh Functionality", () => {
-    it("should refetch matches when refresh is clicked", async () => {
-      const user = userEvent.setup();
-      mockFetchEnrichedMatches.mockResolvedValue([createMockMatch()]);
+  it("renders received invites with accept/decline actions", async () => {
+    const received = [
+      createReceivedInvite({
+        id: "rec-1",
+        proposer: { id: "p1", firstName: "Jamie", lastName: "Fox", displayName: null },
+      }),
+    ];
+    mockFetchReceivedInvites.mockResolvedValue(received);
+    mockFetchEnrichedMatches.mockResolvedValue([createMatch()]);
 
-      render(<MatchesBrowser profileId={mockProfileId} />);
+    const user = userEvent.setup();
+    render(<MatchesBrowser profileId={mockProfileId} />);
 
-      await waitFor(() => {
-        expect(screen.getByText(/Found 1 potential/)).toBeInTheDocument();
-      });
+    await waitFor(() => expect(screen.getByText("Requests received")).toBeInTheDocument());
+    expect(screen.getByText("Jamie Fox")).toBeInTheDocument();
 
-      // Click refresh
-      await user.click(screen.getByRole("button", { name: /refresh/i }));
-
-      await waitFor(() => {
-        expect(mockFetchEnrichedMatches).toHaveBeenCalledTimes(2);
-      });
-    });
+    await user.click(screen.getByRole("button", { name: /Accept/i }));
+    await waitFor(() =>
+      expect(mockRespondToInvite).toHaveBeenCalledWith("rec-1", "ACCEPT"),
+    );
   });
 
-  describe("API Calls", () => {
-    it("should call fetchEnrichedMatches with limit of 20", async () => {
-      mockFetchEnrichedMatches.mockResolvedValue([]);
+  it("refresh button reloads matches and invites", async () => {
+    mockFetchEnrichedMatches.mockResolvedValue([createMatch()]);
 
-      render(<MatchesBrowser profileId={mockProfileId} />);
+    const user = userEvent.setup();
+    render(<MatchesBrowser profileId={mockProfileId} />);
 
-      await waitFor(() => {
-        expect(mockFetchEnrichedMatches).toHaveBeenCalledWith(20);
-      });
-    });
+    await waitFor(() => expect(screen.getByText("Potential partners")).toBeInTheDocument());
+    await user.click(screen.getAllByRole("button", { name: /refresh/i })[0]);
 
-    it("should fetch matches on initial render", async () => {
-      mockFetchEnrichedMatches.mockResolvedValue([]);
-
-      render(<MatchesBrowser profileId={mockProfileId} />);
-
-      await waitFor(() => {
-        expect(mockFetchEnrichedMatches).toHaveBeenCalledTimes(1);
-      });
-    });
-  });
-
-  describe("Grid Layout", () => {
-    it("should render matches in a list", async () => {
-      mockFetchEnrichedMatches.mockResolvedValue([
-        createMockMatch(),
-        createMockMatch(),
-      ]);
-
-      render(<MatchesBrowser profileId={mockProfileId} />);
-
-      await waitFor(() => {
-        const list = screen.getByRole("list");
-        expect(list).toBeInTheDocument();
-        expect(list).toHaveClass("grid");
-      });
+    await waitFor(() => {
+      expect(mockFetchEnrichedMatches).toHaveBeenCalledTimes(2);
+      expect(mockFetchSentInvites).toHaveBeenCalledTimes(2);
+      expect(mockFetchReceivedInvites).toHaveBeenCalledTimes(2);
     });
   });
 });

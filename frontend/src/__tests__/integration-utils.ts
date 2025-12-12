@@ -3,7 +3,7 @@
  * Provides common functions for creating and cleaning up test data
  */
 
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClientOptions } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
 import { execSync } from "child_process";
 
@@ -11,7 +11,26 @@ import { execSync } from "child_process";
  * Gets Supabase credentials from the local Supabase CLI
  * This avoids hardcoding keys and works with any local instance
  */
+function readEnvCredentials():
+  | { url: string; anonKey: string; serviceRoleKey: string }
+  | null {
+  const url = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL ?? null;
+  const anonKey =
+    process.env.SUPABASE_ANON_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? null;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? null;
+
+  if (url && anonKey && serviceRoleKey) {
+    return { url, anonKey, serviceRoleKey };
+  }
+  return null;
+}
+
 function getSupabaseCredentials(): { url: string; anonKey: string; serviceRoleKey: string } {
+  const envCreds = readEnvCredentials();
+  if (envCreds) {
+    return envCreds;
+  }
+
   try {
     // Run supabase status to get credentials
     const output = execSync("npx supabase status -o env", {
@@ -49,21 +68,58 @@ function getSupabaseCredentials(): { url: string; anonKey: string; serviceRoleKe
 }
 
 // Get credentials once at module load
-const { url: supabaseUrl, anonKey: supabaseAnonKey, serviceRoleKey: supabaseServiceRoleKey } = getSupabaseCredentials();
+const { url: supabaseUrl, anonKey: supabaseAnonKey, serviceRoleKey: supabaseServiceRoleKey } =
+  getSupabaseCredentials();
 
 export { supabaseUrl, supabaseAnonKey, supabaseServiceRoleKey };
+
+type StorageImpl = {
+  getItem: (key: string) => string | null;
+  setItem: (key: string, value: string) => void;
+  removeItem: (key: string) => void;
+};
+
+function createMemoryStorage(): StorageImpl {
+  const store = new Map<string, string>();
+  return {
+    getItem: (key) => store.get(key) ?? null,
+    setItem: (key, value) => {
+      store.set(key, value);
+    },
+    removeItem: (key) => {
+      store.delete(key);
+    },
+  };
+}
+
+function buildAuthOptions(label: string): SupabaseClientOptions<"public"> {
+  return {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+      multiTab: false,
+      storageKey: `jest-${label}-${process.pid}-${Math.random().toString(36).slice(2)}`,
+      storage: createMemoryStorage(),
+    },
+  };
+}
+
+const adminClient = createClient<Database>(
+  supabaseUrl,
+  supabaseServiceRoleKey,
+  buildAuthOptions("service"),
+);
 
 /**
  * Creates a Supabase client with service role (admin) privileges
  * Use this for operations that bypass RLS or need elevated permissions
  */
 export function createAdminClient() {
-  return createClient<Database>(supabaseUrl, supabaseServiceRoleKey, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
-  });
+  return adminClient;
+}
+
+function createBrowserClient() {
+  return createClient<Database>(supabaseUrl, supabaseAnonKey, buildAuthOptions("browser"));
 }
 
 export interface TestUser {
@@ -89,12 +145,7 @@ export interface TestLocation {
 export async function createTestUser(
   role: "DANCER" | "INSTRUCTOR" | "ORGANIZER" | "ADMIN" = "DANCER"
 ): Promise<TestUser> {
-  const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
-  });
+  const supabase = createBrowserClient();
   const timestamp = Date.now();
   const email = `test-${role.toLowerCase()}-${timestamp}@example.com`;
 
@@ -367,7 +418,7 @@ export async function cleanupTestUser(testUser: TestUser | undefined): Promise<v
  * Cleans up test location
  */
 export async function cleanupTestLocation(locationId: string): Promise<void> {
-  const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey);
+  const supabase = createAdminClient();
   await supabase.from("locations").delete().eq("id", locationId);
 }
 
@@ -375,7 +426,7 @@ export async function cleanupTestLocation(locationId: string): Promise<void> {
  * Cleans up test session
  */
 export async function cleanupTestSession(sessionId: string): Promise<void> {
-  const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey);
+  const supabase = createAdminClient();
   await supabase.from("sessions").delete().eq("id", sessionId);
 }
 

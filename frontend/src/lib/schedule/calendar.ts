@@ -204,9 +204,11 @@ export function windowsToEvents(
         return specificDateStart >= weekStart && specificDateStart <= weekEnd;
       }
       
-      // For recurring windows, only show them if they're in the current week or future
-      // This prevents showing recurring blocks in past weeks
-      return weekStart >= currentWeekStart;
+      // For recurring windows, only show current or future weeks
+      if (weekStart < currentWeekStart) {
+        return false;
+      }
+      return true;
     });
   
   console.log("[windowsToEvents] After filter:", filtered.length);
