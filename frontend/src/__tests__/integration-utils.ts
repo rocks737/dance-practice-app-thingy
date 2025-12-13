@@ -4,7 +4,7 @@
  */
 
 import { createClient, type SupabaseClientOptions } from "@supabase/supabase-js";
-import type { Database } from "@/lib/supabase/types";
+import type { Database } from "../lib/supabase/types";
 import { execSync } from "child_process";
 
 /**
@@ -97,7 +97,6 @@ function buildAuthOptions(label: string): SupabaseClientOptions<"public"> {
     auth: {
       autoRefreshToken: false,
       persistSession: false,
-      multiTab: false,
       storageKey: `jest-${label}-${process.pid}-${Math.random().toString(36).slice(2)}`,
       storage: createMemoryStorage(),
     },

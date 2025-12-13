@@ -313,7 +313,6 @@ on public.sessions
 for select
 to authenticated
 using (visibility = 'PUBLIC');
-
 drop policy if exists "sessions organizer / participant read" on public.sessions;
 create policy "sessions organizer / participant read"
 on public.sessions

@@ -333,6 +333,79 @@ FOCUS_PRESETS = {
     "focus3": FOCUS_AREAS,
 }
 
+# Scenario-specific availability + users
+SCENARIO1_AVAILABILITY = {
+    "scenario1_lead": [
+        # Single overlap window
+        {"day": "TUESDAY", "start": "18:00:00", "end": "19:00:00"},
+        # Non-overlapping windows
+        {"day": "WEDNESDAY", "start": "10:00:00", "end": "12:00:00"},
+        {"day": "FRIDAY", "start": "14:00:00", "end": "16:00:00"},
+    ],
+    "scenario1_follow": [
+        # Single overlap window (matches scenario1_lead)
+        {"day": "TUESDAY", "start": "18:00:00", "end": "19:00:00"},
+        # Non-overlapping windows
+        {"day": "MONDAY", "start": "08:00:00", "end": "10:00:00"},
+        {"day": "THURSDAY", "start": "20:00:00", "end": "22:00:00"},
+    ],
+}
+
+SCENARIO1_USERS = [
+    {
+        "email": "scenario1-lead@example.com",
+        "password": "scenario123",
+        "first_name": "Scenario",
+        "last_name": "Lead",
+        "display_name": "Scenario Lead",
+        "primary_role": 0,  # LEADER
+        "wsdc_level": 1,  # NOVICE
+        "competitiveness_level": 2,
+        "bio": "Lead for minimal overlap scenario (1 shared, 2 unique windows).",
+        "dance_goals": "Validate overlap edge cases.",
+        "availability_key": "scenario1_lead",
+        "roles": ["DANCER"],
+    },
+    {
+        "email": "scenario1-follow@example.com",
+        "password": "scenario123",
+        "first_name": "Scenario",
+        "last_name": "Follow",
+        "display_name": "Scenario Follow",
+        "primary_role": 1,  # FOLLOW
+        "wsdc_level": 1,  # NOVICE
+        "competitiveness_level": 2,
+        "bio": "Follow for minimal overlap scenario (1 shared, 2 unique windows).",
+        "dance_goals": "Validate overlap edge cases.",
+        "availability_key": "scenario1_follow",
+        "roles": ["DANCER"],
+    },
+]
+
+SCENARIOS = {
+    "full": {
+        "scenarioNumber": 0,
+        "scenarioDescription": "Full baseline dataset: core users, scoring fixtures, past sessions.",
+        "users": USERS,
+        "scoring_users": SCORING_USERS,
+        "availability": AVAILABILITY,
+        "create_past_sessions": True,
+        "include_scoring": True,
+        "allow_extra_users": True,
+    },
+    "overlap-minimal": {
+        "scenarioNumber": 1,
+        "scenarioDescription": "Two users with one overlapping window and two non-overlapping windows each.",
+        "users": SCENARIO1_USERS,
+        "availability": SCENARIO1_AVAILABILITY,
+        "create_past_sessions": False,
+        "include_scoring": False,
+        "allow_extra_users": False,
+    },
+}
+
+DEFAULT_SCENARIO_KEY = "full"
+
 
 # ------------------------------
 # Helpers
@@ -386,6 +459,19 @@ def resolve_config() -> Tuple[str, str, str]:
         sys.exit(1)
 
     return url.rstrip("/"), anon, service
+
+
+def get_scenario_config(choice: Optional[str]) -> Tuple[str, Dict[str, Any]]:
+    """
+    Normalize a scenario choice to a known scenario config.
+    Accepts the scenario key or its scenarioNumber as a string.
+    """
+    normalized = (choice or DEFAULT_SCENARIO_KEY).strip().lower()
+    for key, cfg in SCENARIOS.items():
+        if normalized == key.lower() or normalized == str(cfg.get("scenarioNumber")):
+            return key, cfg
+    available = ", ".join([f"{k} (#{cfg.get('scenarioNumber')})" for k, cfg in SCENARIOS.items()])
+    raise ValueError(f"Unknown scenario '{choice}'. Available: {available}")
 
 
 def http(
@@ -810,6 +896,7 @@ def seed_single_user(
     user: Dict[str, Any],
     location_id: str,
     windows_per_user: Optional[int] = None,
+    availability_map: Optional[Dict[str, list[Dict[str, str]]]] = None,
 ) -> Dict[str, Any]:
     """
     Creates or updates a single seeded user:
@@ -854,7 +941,8 @@ def seed_single_user(
 
     # Schedule prefs and windows (service key)
     availability_key = user.get("availability_key", "test")
-    windows = AVAILABILITY.get(availability_key, [])
+    windows_source = availability_map or AVAILABILITY
+    windows = windows_source.get(availability_key, [])
     if windows_per_user is not None:
         windows = windows[:windows_per_user]
 
@@ -883,6 +971,7 @@ def seed_single_user(
         "wsdc_level": user.get("wsdc_level"),
         "fixture_type": user.get("fixture_type"),
         "focus_areas": focus_override if focus_override is not None else FOCUS_AREAS,
+        "password": password,
     }
 
 
@@ -893,6 +982,7 @@ def create_scoring_profile(
     user: Dict[str, Any],
     location_id: str,
     windows_per_user: Optional[int] = None,
+    availability_map: Optional[Dict[str, list[Dict[str, str]]]] = None,
 ) -> Dict[str, Any]:
     """
     Create or reuse a profile purely for scoring fixtures.
@@ -944,7 +1034,8 @@ def create_scoring_profile(
 
     # Windows
     availability_key = user.get("availability_key", "scoring_base")
-    windows = AVAILABILITY.get(availability_key, [])
+    windows_source = availability_map or AVAILABILITY
+    windows = windows_source.get(availability_key, [])
     if windows_per_user is not None:
         windows = windows[:windows_per_user]
 
@@ -973,16 +1064,28 @@ def create_scoring_profile(
         "wsdc_level": user.get("wsdc_level"),
         "fixture_type": user.get("fixture_type"),
         "focus_areas": focus_override if focus_override is not None else FOCUS_AREAS,
+        "password": user.get("password"),
     }
 
 
-def main(extra_users: int = 0, windows_per_user: Optional[int] = None, emit_json: bool = False) -> int:
+def main(
+    extra_users: int = 0,
+    windows_per_user: Optional[int] = None,
+    emit_json: bool = False,
+    scenario: str = DEFAULT_SCENARIO_KEY,
+) -> int:
     base_url, anon_key, service_key = resolve_config()
+    scenario_key, scenario_cfg = get_scenario_config(scenario)
+    scenario_number = scenario_cfg.get("scenarioNumber")
 
     print("=" * 60)
     print("Seeding via Supabase APIs")
     print("=" * 60)
     print(f"API: {base_url}")
+    print(f"Scenario {scenario_number} ({scenario_key})")
+    print(f"Description: {scenario_cfg.get('scenarioDescription', '(no description)')}")
+
+    availability_map = scenario_cfg.get("availability", AVAILABILITY)
 
     # Shared location (use service key)
     print("\nCreating/verifying shared location...")
@@ -991,8 +1094,32 @@ def main(extra_users: int = 0, windows_per_user: Optional[int] = None, emit_json
 
     results: list[Dict[str, Any]] = []
 
-    # Seed core users from USERS config (auth-backed, used as real callers)
-    for user in USERS:
+    users_to_seed = list(scenario_cfg.get("users", []))
+
+    # Optionally seed additional generic users (scenario-controlled)
+    if extra_users:
+        if not scenario_cfg.get("allow_extra_users", True):
+            raise ValueError(f"Scenario '{scenario_key}' does not allow extra users.")
+        for i in range(extra_users):
+            extra_email = f"extra{i+1}@example.com"
+            extra_user = {
+                "email": extra_email,
+                "password": "extra123",
+                "first_name": "Extra",
+                "last_name": f"User{i+1}",
+                "display_name": f"Extra User {i+1}",
+                "primary_role": 0,
+                "wsdc_level": 1,
+                "competitiveness_level": 2,
+                "bio": "Additional seeded user for testing matching and filters.",
+                "dance_goals": "Explore practice partner matching.",
+                "availability_key": "test",
+                "roles": ["DANCER"],
+            }
+            users_to_seed.append(extra_user)
+
+    # Seed main users (auth-backed, used as real callers)
+    for user in users_to_seed:
         result = seed_single_user(
             base_url=base_url,
             anon_key=anon_key,
@@ -1000,198 +1127,193 @@ def main(extra_users: int = 0, windows_per_user: Optional[int] = None, emit_json
             user=user,
             location_id=location_id,
             windows_per_user=windows_per_user,
+            availability_map=availability_map,
         )
         results.append(result)
 
-    # Seed scoring fixture users (auth-backed, used as structured candidates)
-    print("\nCreating scoring fixture profiles...")
-    for user in SCORING_USERS:
-        result = seed_single_user(
-            base_url=base_url,
-            anon_key=anon_key,
-            service_key=service_key,
-            user=user,
-            location_id=location_id,
-            windows_per_user=windows_per_user,
-        )
-        results.append(result)
+    # Seed scoring fixture users when enabled by scenario
+    scoring_users: list[Dict[str, Any]] = []
+    if scenario_cfg.get("include_scoring"):
+        scoring_users = list(scenario_cfg.get("scoring_users", []))
 
-    # Optionally seed additional generic users
-    for i in range(extra_users):
-        extra_email = f"extra{i+1}@example.com"
-        extra_user = {
-            "email": extra_email,
-            "password": "extra123",
-            "first_name": "Extra",
-            "last_name": f"User{i+1}",
-            "display_name": f"Extra User {i+1}",
-            "primary_role": 0,
-            "wsdc_level": 1,
-            "competitiveness_level": 2,
-            "bio": "Additional seeded user for testing matching and filters.",
-            "dance_goals": "Explore practice partner matching.",
-            "availability_key": "test",
-            "roles": ["DANCER"],
-        }
-        result = seed_single_user(
-            base_url=base_url,
-            anon_key=anon_key,
-            service_key=service_key,
-            user=extra_user,
-            location_id=location_id,
-            windows_per_user=windows_per_user,
-        )
-        results.append(result)
+    if scoring_users:
+        print("\nCreating scoring fixture profiles...")
+        for user in scoring_users:
+            result = seed_single_user(
+                base_url=base_url,
+                anon_key=anon_key,
+                service_key=service_key,
+                user=user,
+                location_id=location_id,
+                windows_per_user=windows_per_user,
+                availability_map=availability_map,
+            )
+            results.append(result)
 
     # Verify via REST (service key)
-    print("\nVerifying via REST...")
-    verification = verify_created(base_url, service_key, [u["email"] for u in USERS])
-    profiles = verification["profiles"]
-    print(f"  Profiles found: {len(profiles)}")
-    for p in profiles:
-        print(f"   - {p['email']} (profile_id={p['id']})")
-    prefs = verification["preferences"]
-    for email, info in prefs.items():
-        print(f"   - {email}: {len(info.get('windows', []))} windows")
+    verification_emails = [u["email"] for u in users_to_seed + scoring_users]
+    if verification_emails:
+        print("\nVerifying via REST...")
+        verification = verify_created(base_url, service_key, verification_emails)
+        profiles = verification["profiles"]
+        print(f"  Profiles found: {len(profiles)}")
+        for p in profiles:
+            print(f"   - {p['email']} (profile_id={p['id']})")
+        prefs = verification["preferences"]
+        for email, info in prefs.items():
+            print(f"   - {email}: {len(info.get('windows', []))} windows")
+    else:
+        print("\nNo auth-backed users to verify for this scenario.")
 
-    # Create past sessions
-    print("\nCreating past sessions...")
-    profile_map = {r["email"]: r["profile_id"] for r in results}
-    alice_id = profile_map.get("alice@example.com")
-    bob_id = profile_map.get("bob@example.com")
-    test_id = profile_map.get("test@ex.com")
+    # Create past sessions (scenario-controlled)
+    if scenario_cfg.get("create_past_sessions"):
+        print("\nCreating past sessions...")
+        profile_map = {r["email"]: r["profile_id"] for r in results}
+        alice_id = profile_map.get("alice@example.com")
+        bob_id = profile_map.get("bob@example.com")
+        test_id = profile_map.get("test@ex.com")
 
-    if alice_id and bob_id:
-        now = datetime.now(timezone.utc)
-        
-        # Helper to find the most recent occurrence of a weekday
-        def find_most_recent_weekday(target_weekday: int, max_days_ago: int) -> datetime:
-            """Find the most recent occurrence of weekday (0=Monday, 1=Tuesday, etc.) within max_days_ago"""
-            for days_ago in range(max_days_ago + 1):
-                candidate = now - timedelta(days=days_ago)
-                if candidate.weekday() == target_weekday:
-                    return candidate
-            # Fallback: just go back max_days_ago and adjust to target weekday
-            return now - timedelta(days=max_days_ago - ((now.weekday() - target_weekday) % 7))
+        if alice_id and bob_id:
+            now = datetime.now(timezone.utc)
 
-        # Session 3 weeks ago (Tuesday)
-        tuesday_3w = find_most_recent_weekday(1, 21)  # Tuesday = 1
-        session1_start = tuesday_3w.replace(hour=18, minute=0, second=0, microsecond=0)
-        session1_end = session1_start + timedelta(hours=3)
-        session1_id = create_session(
-            base_url,
-            service_key,
-            service_key,
-            alice_id,
-            "Past Practice Session - Technique Focus",
-            "PARTNER_PRACTICE",
-            "COMPLETED",
-            session1_start,
-            session1_end,
-            location_id,
-            "PUBLIC",
-            capacity=4,
-        )
-        add_session_participant(base_url, service_key, service_key, session1_id, alice_id)
-        add_session_participant(base_url, service_key, service_key, session1_id, bob_id)
-        print(f"  ✓ Created session 3 weeks ago: {session1_start.strftime('%Y-%m-%d %H:%M')}")
+            # Helper to find the most recent occurrence of a weekday
+            def find_most_recent_weekday(target_weekday: int, max_days_ago: int) -> datetime:
+                """Find the most recent occurrence of weekday (0=Monday, 1=Tuesday, etc.) within max_days_ago"""
+                for days_ago in range(max_days_ago + 1):
+                    candidate = now - timedelta(days=days_ago)
+                    if candidate.weekday() == target_weekday:
+                        return candidate
+                # Fallback: just go back max_days_ago and adjust to target weekday
+                return now - timedelta(days=max_days_ago - ((now.weekday() - target_weekday) % 7))
 
-        # Session 2 weeks ago (Thursday)
-        thursday_2w = find_most_recent_weekday(3, 14)  # Thursday = 3
-        session2_start = thursday_2w.replace(hour=18, minute=0, second=0, microsecond=0)
-        session2_end = session2_start + timedelta(hours=3)
-        session2_id = create_session(
-            base_url,
-            service_key,
-            service_key,
-            bob_id,
-            "Past Group Practice - Musicality",
-            "GROUP_PRACTICE",
-            "COMPLETED",
-            session2_start,
-            session2_end,
-            location_id,
-            "PUBLIC",
-            capacity=6,
-        )
-        add_session_participant(base_url, service_key, service_key, session2_id, bob_id)
-        add_session_participant(base_url, service_key, service_key, session2_id, alice_id)
-        print(f"  ✓ Created session 2 weeks ago: {session2_start.strftime('%Y-%m-%d %H:%M')}")
-
-        # Session 1 week ago (Saturday)
-        saturday_1w = find_most_recent_weekday(5, 7)  # Saturday = 5
-        session3_start = saturday_1w.replace(hour=10, minute=0, second=0, microsecond=0)
-        session3_end = session3_start + timedelta(hours=4)
-        session3_id = create_session(
-            base_url,
-            service_key,
-            service_key,
-            alice_id,
-            "Past Saturday Practice - Connection",
-            "PARTNER_PRACTICE",
-            "COMPLETED",
-            session3_start,
-            session3_end,
-            location_id,
-            "PUBLIC",
-            capacity=4,
-        )
-        add_session_participant(base_url, service_key, service_key, session3_id, alice_id)
-        add_session_participant(base_url, service_key, service_key, session3_id, bob_id)
-        print(f"  ✓ Created session 1 week ago: {session3_start.strftime('%Y-%m-%d %H:%M')}")
-
-        # Session 3 days ago (Tuesday)
-        tuesday_3d = find_most_recent_weekday(1, 3)
-        session4_start = tuesday_3d.replace(hour=18, minute=0, second=0, microsecond=0)
-        session4_end = session4_start + timedelta(hours=3)
-        session4_id = create_session(
-            base_url,
-            service_key,
-            service_key,
-            bob_id,
-            "Recent Practice - Styling",
-            "PARTNER_PRACTICE",
-            "COMPLETED",
-            session4_start,
-            session4_end,
-            location_id,
-            "PUBLIC",
-            capacity=4,
-        )
-        add_session_participant(base_url, service_key, service_key, session4_id, bob_id)
-        add_session_participant(base_url, service_key, service_key, session4_id, alice_id)
-        if test_id:
-            add_session_participant(base_url, service_key, service_key, session4_id, test_id)
-        print(f"  ✓ Created session 3 days ago: {session4_start.strftime('%Y-%m-%d %H:%M')}")
-
-        # Session yesterday (if it was Tuesday, Thursday, or Saturday)
-        yesterday = now - timedelta(days=1)
-        if yesterday.weekday() in [1, 3, 5]:  # Tuesday, Thursday, or Saturday
-            session5_start = yesterday.replace(hour=18 if yesterday.weekday() != 5 else 10, minute=0, second=0, microsecond=0)
-            session5_end = session5_start + timedelta(hours=3 if yesterday.weekday() != 5 else 4)
-            session5_id = create_session(
+            # Session 3 weeks ago (Tuesday)
+            tuesday_3w = find_most_recent_weekday(1, 21)  # Tuesday = 1
+            session1_start = tuesday_3w.replace(hour=18, minute=0, second=0, microsecond=0)
+            session1_end = session1_start + timedelta(hours=3)
+            session1_id = create_session(
                 base_url,
                 service_key,
                 service_key,
                 alice_id,
-                "Yesterday's Practice Session",
+                "Past Practice Session - Technique Focus",
+                "PARTNER_PRACTICE",
+                "COMPLETED",
+                session1_start,
+                session1_end,
+                location_id,
+                "PUBLIC",
+                capacity=4,
+            )
+            add_session_participant(base_url, service_key, service_key, session1_id, alice_id)
+            add_session_participant(base_url, service_key, service_key, session1_id, bob_id)
+            print(f"  ✓ Created session 3 weeks ago: {session1_start.strftime('%Y-%m-%d %H:%M')}")
+
+            # Session 2 weeks ago (Thursday)
+            thursday_2w = find_most_recent_weekday(3, 14)  # Thursday = 3
+            session2_start = thursday_2w.replace(hour=18, minute=0, second=0, microsecond=0)
+            session2_end = session2_start + timedelta(hours=3)
+            session2_id = create_session(
+                base_url,
+                service_key,
+                service_key,
+                bob_id,
+                "Past Group Practice - Musicality",
                 "GROUP_PRACTICE",
                 "COMPLETED",
-                session5_start,
-                session5_end,
+                session2_start,
+                session2_end,
                 location_id,
                 "PUBLIC",
                 capacity=6,
             )
-            add_session_participant(base_url, service_key, service_key, session5_id, alice_id)
-            add_session_participant(base_url, service_key, service_key, session5_id, bob_id)
-            print(f"  ✓ Created session yesterday: {session5_start.strftime('%Y-%m-%d %H:%M')}")
+            add_session_participant(base_url, service_key, service_key, session2_id, bob_id)
+            add_session_participant(base_url, service_key, service_key, session2_id, alice_id)
+            print(f"  ✓ Created session 2 weeks ago: {session2_start.strftime('%Y-%m-%d %H:%M')}")
 
-    print("\n✅ Done.")
-    print("Overlapping availability times:")
-    print(" - Tuesday 18:00-21:00")
-    print(" - Thursday 18:00-21:00")
-    print(" - Saturday 10:00-14:00")
+            # Session 1 week ago (Saturday)
+            saturday_1w = find_most_recent_weekday(5, 7)  # Saturday = 5
+            session3_start = saturday_1w.replace(hour=10, minute=0, second=0, microsecond=0)
+            session3_end = session3_start + timedelta(hours=4)
+            session3_id = create_session(
+                base_url,
+                service_key,
+                service_key,
+                alice_id,
+                "Past Saturday Practice - Connection",
+                "PARTNER_PRACTICE",
+                "COMPLETED",
+                session3_start,
+                session3_end,
+                location_id,
+                "PUBLIC",
+                capacity=4,
+            )
+            add_session_participant(base_url, service_key, service_key, session3_id, alice_id)
+            add_session_participant(base_url, service_key, service_key, session3_id, bob_id)
+            print(f"  ✓ Created session 1 week ago: {session3_start.strftime('%Y-%m-%d %H:%M')}")
+
+            # Session 3 days ago (Tuesday)
+            tuesday_3d = find_most_recent_weekday(1, 3)
+            session4_start = tuesday_3d.replace(hour=18, minute=0, second=0, microsecond=0)
+            session4_end = session4_start + timedelta(hours=3)
+            session4_id = create_session(
+                base_url,
+                service_key,
+                service_key,
+                bob_id,
+                "Recent Practice - Styling",
+                "PARTNER_PRACTICE",
+                "COMPLETED",
+                session4_start,
+                session4_end,
+                location_id,
+                "PUBLIC",
+                capacity=4,
+            )
+            add_session_participant(base_url, service_key, service_key, session4_id, bob_id)
+            add_session_participant(base_url, service_key, service_key, session4_id, alice_id)
+            if test_id:
+                add_session_participant(base_url, service_key, service_key, session4_id, test_id)
+            print(f"  ✓ Created session 3 days ago: {session4_start.strftime('%Y-%m-%d %H:%M')}")
+
+            # Session yesterday (if it was Tuesday, Thursday, or Saturday)
+            yesterday = now - timedelta(days=1)
+            if yesterday.weekday() in [1, 3, 5]:  # Tuesday, Thursday, or Saturday
+                session5_start = yesterday.replace(hour=18 if yesterday.weekday() != 5 else 10, minute=0, second=0, microsecond=0)
+                session5_end = session5_start + timedelta(hours=3 if yesterday.weekday() != 5 else 4)
+                session5_id = create_session(
+                    base_url,
+                    service_key,
+                    service_key,
+                    alice_id,
+                    "Yesterday's Practice Session",
+                    "GROUP_PRACTICE",
+                    "COMPLETED",
+                    session5_start,
+                    session5_end,
+                    location_id,
+                    "PUBLIC",
+                    capacity=6,
+                )
+                add_session_participant(base_url, service_key, service_key, session5_id, alice_id)
+                add_session_participant(base_url, service_key, service_key, session5_id, bob_id)
+                print(f"  ✓ Created session yesterday: {session5_start.strftime('%Y-%m-%d %H:%M')}")
+    else:
+        print("\nSkipping past session creation for this scenario.")
+
+    print("\nSeeded credentials:")
+    for r in results:
+        if r.get("password"):
+            print(f" - {r['email']}: {r['password']}")
+
+    if scenario_key == "full":
+        print("\nOverlapping availability times:")
+        print(" - Tuesday 18:00-21:00")
+        print(" - Thursday 18:00-21:00")
+        print(" - Saturday 10:00-14:00")
+    elif scenario_key == "overlap-minimal":
+        print("\nOverlapping availability times (scenario #1):")
+        print(" - Tuesday 18:00-19:00 (single shared window)")
 
     if emit_json:
         # Emit a compact JSON representation of all seeded users so
@@ -1222,6 +1344,13 @@ if __name__ == "__main__":
         action="store_true",
         help="If set, emit a JSON array of seeded users (email, user_id, profile_id) on stdout.",
     )
+    parser.add_argument(
+        "--scenario",
+        type=str,
+        default=DEFAULT_SCENARIO_KEY,
+        help="Scenario key or number to run "
+        "(available: full (#0), overlap-minimal (#1)).",
+    )
 
     args = parser.parse_args()
 
@@ -1231,6 +1360,7 @@ if __name__ == "__main__":
                 extra_users=args.extra_users,
                 windows_per_user=args.windows_per_user,
                 emit_json=args.emit_json,
+                scenario=args.scenario,
             )
         )
     except Exception as e:
