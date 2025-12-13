@@ -45,12 +45,12 @@ describe("Session Invites - Integration", () => {
     return { start: start.toISOString(), end: end.toISOString() };
   }
 
-  async function propose(toProfileId: string) {
-    const { start, end } = rangeFrom(60, 60);
+  async function propose(toProfileId: string, start?: string, end?: string) {
+    const window = start && end ? { start, end } : rangeFrom(60, 60);
     const { data, error } = await proposer.supabase.rpc("propose_practice_session", {
       p_invitee_id: toProfileId,
-      p_start: start,
-      p_end: end,
+      p_start: window.start,
+      p_end: window.end,
       p_note: "Integration test invite",
     });
     if (error) throw error;
@@ -170,6 +170,51 @@ describe("Session Invites - Integration", () => {
       p_action: "ACCEPT",
     });
     expect(acceptError).toBeTruthy();
+  });
+
+  it("auto-accepts when invitee mirrors the same time back", async () => {
+    const { start, end } = rangeFrom(90, 60);
+    // Proposer -> Invitee (pending)
+    const invite = await propose(invitee.profileId, start, end);
+
+    // Invitee sends the same window back to proposer (should accept existing)
+    const { data: mirrorData, error: mirrorError } = await invitee.supabase.rpc("propose_practice_session", {
+      p_invitee_id: proposer.profileId,
+      p_start: start,
+      p_end: end,
+      p_note: "mirror",
+    });
+    expect(mirrorError).toBeNull();
+    const mirrorRow = (Array.isArray(mirrorData) ? mirrorData[0] : mirrorData) as RpcRow;
+    expect((mirrorRow.invite_status ?? "").toUpperCase()).toBe("ACCEPTED");
+
+    // Verify original invite is accepted
+    const { data: inviteRow, error: fetchError } = await proposer.supabase
+      .from("session_invites")
+      .select("status")
+      .eq("id", invite.invite_id)
+      .single();
+    expect(fetchError).toBeNull();
+    expect(inviteRow!.status).toBe("ACCEPTED");
+
+    // Session is scheduled and both participants present
+    const { data: sessionRow, error: sessionError } = await proposer.supabase
+      .from("sessions")
+      .select("status")
+      .eq("id", invite.session_id)
+      .single();
+    expect(sessionError).toBeNull();
+    expect(sessionRow!.status).toBe("SCHEDULED");
+
+    const { data: participants, error: partError } = await proposer.supabase
+      .from("session_participants")
+      .select("user_id")
+      .eq("session_id", invite.session_id);
+    expect(partError).toBeNull();
+    const ids = (participants ?? []).map((p) => p.user_id);
+    expect(ids).toEqual(expect.arrayContaining([proposer.profileId, invitee.profileId]));
+
+    sessionId = invite.session_id;
   });
 
 });

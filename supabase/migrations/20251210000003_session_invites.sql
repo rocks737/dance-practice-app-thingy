@@ -64,6 +64,21 @@ with check (
   and invitee_id <> public.current_profile_id()
 );
 
+-- Allow invitees to read sessions they were invited to (for proposed sessions)
+drop policy if exists "sessions invitee read" on public.sessions;
+create policy "sessions invitee read"
+on public.sessions
+for select
+to authenticated
+using (
+  exists (
+    select 1
+    from public.session_invites si
+    where si.session_id = sessions.id
+      and si.invitee_id = public.current_profile_id()
+  )
+);
+
 -- Update by invitee: accept or decline
 drop policy if exists "session_invites invitee respond" on session_invites;
 create policy "session_invites invitee respond"
@@ -141,6 +156,39 @@ begin
 
   -- Default expiry: sooner of proposed end time or 24 hours from now
   v_expires_at := least(p_end, now() + interval '24 hours');
+
+  -- If the invitee already sent a pending invite for the exact same window,
+  -- treat this as an acceptance of that existing request instead of creating
+  -- a new session + invite.
+  select si.id, si.session_id
+    into v_invite_id, v_session_id
+  from session_invites si
+  join sessions s on s.id = si.session_id
+  where si.proposer_id = p_invitee_id
+    and si.invitee_id = v_proposer_id
+    and si.status = 'PENDING'
+    and s.scheduled_start = p_start
+    and s.scheduled_end = p_end
+    and (si.expires_at is null or si.expires_at >= now())
+  limit 1;
+
+  if found then
+    update session_invites
+      set status = 'ACCEPTED'
+    where id = v_invite_id;
+
+    insert into session_participants (session_id, user_id)
+    values (v_session_id, v_proposer_id)
+    on conflict do nothing;
+
+    update sessions
+      set status = 'SCHEDULED'
+    where id = v_session_id;
+
+    return query
+    select v_session_id, v_invite_id, 'ACCEPTED'::text as invite_status;
+    return;
+  end if;
 
   insert into sessions (
     organizer_id,

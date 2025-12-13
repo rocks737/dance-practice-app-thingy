@@ -143,11 +143,17 @@ export default function Login({
         <label className="text-md" htmlFor="email">
           Email
         </label>
-        <Input name="email" placeholder="you@example.com" required />
+        <Input id="email" name="email" placeholder="you@example.com" required />
         <label className="text-md" htmlFor="password">
           Password
         </label>
-        <Input type="password" name="password" placeholder="••••••••" required />
+        <Input
+          id="password"
+          type="password"
+          name="password"
+          placeholder="••••••••"
+          required
+        />
         <LoginButton formAction={signIn} pendingText="Signing In...">
           Sign In
         </LoginButton>

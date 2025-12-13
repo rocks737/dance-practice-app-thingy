@@ -7,6 +7,7 @@
     "test": "jest --selectProjects unit",
     "test:unit": "jest --selectProjects unit",
     "test:integration": "RUN_SUPABASE_TESTS=true jest --selectProjects integration",
+    "test:e2e": "playwright test",
     "test:watch": "jest --watch --selectProjects unit",
     "test:coverage": "jest --selectProjects unit --coverage",
     "lint": "next lint",
@@ -71,6 +72,7 @@
     "eslint-plugin-prettier": "^5.5.4",
     "jest": "^29.7.0",
     "jest-environment-jsdom": "^29.7.0",
+    "@playwright/test": "^1.49.1",
     "prettier": "^3.6.2"
   }
 }
