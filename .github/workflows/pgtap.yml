@@ -30,8 +30,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install Supabase CLI
-        run: npm install -g supabase@latest
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
 
       - name: Apply migrations to test DB
         run: |
