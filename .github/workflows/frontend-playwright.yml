@@ -53,9 +53,9 @@ jobs:
         run: |
           supabase status --output env > supabase.env
           cat supabase.env >> $GITHUB_ENV
-          echo "NEXT_PUBLIC_SUPABASE_URL=$(grep API_URL supabase.env | cut -d'=' -f2)" >> $GITHUB_ENV
-          echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$(grep ANON_KEY supabase.env | cut -d'=' -f2)" >> $GITHUB_ENV
-          echo "SUPABASE_SERVICE_ROLE_KEY=$(grep SERVICE_ROLE_KEY supabase.env | cut -d'=' -f2)" >> $GITHUB_ENV
+          echo "NEXT_PUBLIC_SUPABASE_URL=$(grep API_URL supabase.env | cut -d'=' -f2 | tr -d '\"')" >> $GITHUB_ENV
+          echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$(grep ANON_KEY supabase.env | cut -d'=' -f2 | tr -d '\"')" >> $GITHUB_ENV
+          echo "SUPABASE_SERVICE_ROLE_KEY=$(grep SERVICE_ROLE_KEY supabase.env | cut -d'=' -f2 | tr -d '\"')" >> $GITHUB_ENV
 
       - name: Reset database with migrations & seed
         run: supabase db reset --local --yes

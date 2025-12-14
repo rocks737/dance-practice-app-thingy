@@ -31,7 +31,7 @@ jobs:
 
       - name: Apply migrations to test DB
         working-directory: supabase
-        run: supabase db push
+        run: supabase db push --db-url "postgresql://postgres:postgres@127.0.0.1:54322/postgres"
 
       - name: Run pgTAP suite
         run: |
