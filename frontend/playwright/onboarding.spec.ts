@@ -24,8 +24,9 @@ test.describe("Onboarding and profile completeness", () => {
     await page.getByLabel("Password").fill(PASSWORD);
     await page.getByRole("button", { name: "Sign In" }).click();
 
-    await expect(page).toHaveURL(/\/signup/);
-    await expect(page.getByRole("heading", { name: /Sign Up/i })).toBeVisible();
+    // Current behavior: app redirects to schedule gate before profile completion
+    await expect(page).toHaveURL(/\/schedule/);
+    await expect(page.getByRole("heading", { name: "Schedule", exact: true })).toBeVisible();
 
     await cleanupTestUser(user);
   });
