@@ -34,16 +34,15 @@ jobs:
         run: supabase db push --db-url "postgresql://postgres:postgres@127.0.0.1:54322/postgres"
 
       - name: Run pgTAP suite
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: 54322
+          PGUSER: postgres
+          PGPASSWORD: postgres
+          PGDATABASE: postgres
         run: |
-          # Default supabase start ports: 54322 for Postgres
-          docker run --rm \
-            --network host \
-            -e PGHOST=127.0.0.1 \
-            -e PGPORT=54322 \
-            -e PGUSER=postgres \
-            -e PGPASSWORD=postgres \
-            -e PGDATABASE=postgres \
-            -v "${GITHUB_WORKSPACE}/supabase/tests/database:/tests" \
-            public.ecr.aws/supabase/pg_prove:3.36 \
-            sh -c "pg_prove /tests/*.sql"
+          sudo apt-get update
+          # Install pg_prove client and psql (pg_prove just shells out to psql)
+          sudo apt-get install -y pgtap postgresql-client
+          pg_prove supabase/tests/database/*.sql
 
