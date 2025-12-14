@@ -10,22 +10,6 @@ jobs:
   pgtap:
     runs-on: ubuntu-latest
 
-    services:
-      db:
-        # Includes pgTAP + basejump-supabase_test_helpers (Docker Hub tag)
-        image: supabase/postgres:15.1.0.92
-        env:
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_USER: postgres
-          POSTGRES_DB: postgres
-        ports:
-          - 54322:5432
-        options: >-
-          --health-cmd "pg_isready -U postgres"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -35,13 +19,21 @@ jobs:
         with:
           version: latest
 
-      - name: Apply migrations to test DB
+      - name: Start Supabase stack
         run: |
-          supabase db push \
-            --db-url "postgresql://postgres:postgres@127.0.0.1:54322/postgres"
+          supabase start
+
+      - name: Export Supabase environment variables
+        run: |
+          supabase status --output env > supabase.env
+          cat supabase.env >> $GITHUB_ENV
+
+      - name: Apply migrations to test DB
+        run: supabase db push
 
       - name: Run pgTAP suite
         run: |
+          # Default supabase start ports: 54322 for Postgres
           docker run --rm \
             --network host \
             -e PGHOST=127.0.0.1 \
