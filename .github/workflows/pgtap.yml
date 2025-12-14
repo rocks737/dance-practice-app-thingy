@@ -9,20 +9,6 @@ on:
 jobs:
   pgtap:
     runs-on: ubuntu-latest
-    services:
-      db:
-        image: supabase/postgres:15.1.0.92
-        env:
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_USER: postgres
-          POSTGRES_DB: postgres
-        ports:
-          - 54322:5432
-        options: >-
-          --health-cmd "pg_isready -U postgres"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
 
     steps:
       - name: Checkout
@@ -33,9 +19,13 @@ jobs:
         with:
           version: latest
 
+      - name: Start Supabase stack
+        working-directory: supabase
+        run: supabase start
+
       - name: Apply migrations to test DB
         working-directory: supabase
-        run: supabase db push --db-url "postgresql://postgres:postgres@127.0.0.1:54322/postgres"
+        run: supabase db push
 
       - name: Run pgTAP suite
         env:
