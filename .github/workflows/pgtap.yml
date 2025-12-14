@@ -9,6 +9,20 @@ on:
 jobs:
   pgtap:
     runs-on: ubuntu-latest
+    services:
+      db:
+        image: supabase/postgres:15.1.0.92
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 54331:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     steps:
       - name: Checkout
@@ -24,37 +38,26 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y pgtap postgresql-client
 
-      - name: Start Supabase stack
+      - name: Apply migrations to test DB
         working-directory: supabase
-        run: supabase start
-
-      - name: Install basejump test helpers via dbdev
-        run: |
-          psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres?sslmode=disable" <<'SQL'
-          create extension if not exists dbdev;
-          select dbdev.install('basejump-supabase_test_helpers');
-          SQL
-
-      - name: Apply migrations to Supabase stack
-        working-directory: supabase
-        run: supabase db push --local
+        run: supabase db push --db-url "postgresql://postgres:postgres@127.0.0.1:54331/postgres?sslmode=disable"
 
       - name: Check basejump test helpers availability
         id: check_ext
         run: |
           set -e
-          if psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres?sslmode=disable" -Atc \
+          if psql "postgresql://postgres:postgres@127.0.0.1:54331/postgres?sslmode=disable" -Atc \
             "select default_version from pg_available_extensions where name='basejump-supabase_test_helpers';" | grep -qE '^[0-9]'; then
             echo "ext_available=true" >> "$GITHUB_OUTPUT"
           else
             echo "ext_available=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Run pgTAP suite against Supabase stack
+      - name: Run pgTAP suite
         if: steps.check_ext.outputs.ext_available == 'true'
         env:
           PGHOST: 127.0.0.1
-          PGPORT: 54322
+          PGPORT: 54331
           PGUSER: postgres
           PGPASSWORD: postgres
           PGDATABASE: postgres
@@ -64,6 +67,6 @@ jobs:
       - name: Fail fast if basejump helpers missing
         if: steps.check_ext.outputs.ext_available != 'true'
         run: |
-          echo "basejump-supabase_test_helpers extension not available on Supabase stack. Failing fast."
+          echo "basejump-supabase_test_helpers extension not available on service container. Failing fast."
           exit 1
 
