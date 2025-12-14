@@ -12,8 +12,8 @@ jobs:
 
     services:
       db:
-        # Includes pgTAP + basejump-supabase_test_helpers
-        image: public.ecr.aws/supabase/postgres:15.1.1
+        # Includes pgTAP + basejump-supabase_test_helpers (Docker Hub tag)
+        image: supabase/postgres:15.1.0
         env:
           POSTGRES_PASSWORD: postgres
           POSTGRES_USER: postgres
@@ -42,12 +42,12 @@ jobs:
       - name: Run pgTAP suite
         run: |
           docker run --rm \
-            --add-host=host.docker.internal:host-gateway \
-            -e PGHOST=host.docker.internal \
+            --network host \
+            -e PGHOST=127.0.0.1 \
             -e PGPORT=54322 \
             -e PGUSER=postgres \
             -e PGPASSWORD=postgres \
             -e PGDATABASE=postgres \
             -v "${GITHUB_WORKSPACE}/supabase/tests/database:/tests" \
-            public.ecr.aws/supabase/pg_prove:3.36 /tests/*.sql
+            supabase/pg_prove:latest /tests/*.sql
 
