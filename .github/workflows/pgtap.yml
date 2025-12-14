@@ -40,13 +40,18 @@ jobs:
 
       - name: Apply migrations to test DB
         working-directory: supabase
-        run: supabase db push --db-url "postgresql://postgres:postgres@127.0.0.1:54331/postgres?sslmode=disable"
+        env:
+          PGSSLMODE: disable
+        run: |
+          # Sanity check connectivity before push (plain connection, no TLS)
+          psql "postgres://postgres:postgres@127.0.0.1:54331/postgres?sslmode=disable" -c "select 1;"
+          supabase db push --db-url "postgres://postgres:postgres@127.0.0.1:54331/postgres?sslmode=disable"
 
       - name: Check basejump test helpers availability
         id: check_ext
         run: |
           set -e
-          if psql "postgresql://postgres:postgres@127.0.0.1:54331/postgres?sslmode=disable" -Atc \
+          if psql "postgres://postgres:postgres@127.0.0.1:54331/postgres?sslmode=disable" -Atc \
             "select default_version from pg_available_extensions where name='basejump-supabase_test_helpers';" | grep -qE '^[0-9]'; then
             echo "ext_available=true" >> "$GITHUB_OUTPUT"
           else
