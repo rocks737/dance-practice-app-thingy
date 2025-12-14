@@ -17,7 +17,8 @@ jobs:
           POSTGRES_USER: postgres
           POSTGRES_DB: postgres
         ports:
-          - 54322:5432
+          # Use a non-default host port so Supabase CLI can still bind 54322 if we need to fall back.
+          - 54331:5432
         options: >-
           --health-cmd "pg_isready -U postgres"
           --health-interval 10s
@@ -33,19 +34,53 @@ jobs:
         with:
           version: latest
 
+      - name: Install psql client and pgTAP
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pgtap postgresql-client
+
       - name: Apply migrations to test DB
         working-directory: supabase
-        run: supabase db push --db-url "postgresql://postgres:postgres@127.0.0.1:54322/postgres"
+        run: supabase db push --db-url "postgresql://postgres:postgres@127.0.0.1:54331/postgres"
+
+      - name: Check basejump test helpers availability
+        id: check_ext
+        run: |
+          set -e
+          if psql "postgresql://postgres:postgres@127.0.0.1:54331/postgres" -Atc \
+            "select default_version from pg_available_extensions where name='basejump-supabase_test_helpers';" | grep -qE '^[0-9]'; then
+            echo "ext_available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ext_available=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Run pgTAP suite
+        if: steps.check_ext.outputs.ext_available == 'true'
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: 54331
+          PGUSER: postgres
+          PGPASSWORD: postgres
+          PGDATABASE: postgres
+        run: pg_prove supabase/tests/database/*.sql
+
+      # Fallback: start Supabase stack (ships the basejump helpers), push, and rerun tests.
+      - name: Start Supabase stack (fallback)
+        if: steps.check_ext.outputs.ext_available != 'true'
+        run: supabase start
+
+      - name: Apply migrations to Supabase stack (fallback)
+        if: steps.check_ext.outputs.ext_available != 'true'
+        working-directory: supabase
+        run: supabase db push --local
+
+      - name: Run pgTAP suite against Supabase stack (fallback)
+        if: steps.check_ext.outputs.ext_available != 'true'
         env:
           PGHOST: 127.0.0.1
           PGPORT: 54322
           PGUSER: postgres
           PGPASSWORD: postgres
           PGDATABASE: postgres
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y pgtap postgresql-client
-          pg_prove supabase/tests/database/*.sql
+        run: pg_prove supabase/tests/database/*.sql
 
