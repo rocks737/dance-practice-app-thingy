@@ -50,5 +50,5 @@ jobs:
             -e PGPASSWORD=postgres \
             -e PGDATABASE=postgres \
             -v "${GITHUB_WORKSPACE}/supabase/tests/database:/tests" \
-            supabase/pg_prove:latest /tests/*.sql
+            public.ecr.aws/supabase/pg_prove:3.36 /tests/*.sql
 
