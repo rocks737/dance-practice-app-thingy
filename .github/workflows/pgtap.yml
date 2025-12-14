@@ -20,15 +20,17 @@ jobs:
           version: latest
 
       - name: Start Supabase stack
-        run: |
-          supabase start
+        working-directory: supabase
+        run: supabase start
 
       - name: Export Supabase environment variables
+        working-directory: supabase
         run: |
           supabase status --output env > supabase.env
           cat supabase.env >> $GITHUB_ENV
 
       - name: Apply migrations to test DB
+        working-directory: supabase
         run: supabase db push
 
       - name: Run pgTAP suite
