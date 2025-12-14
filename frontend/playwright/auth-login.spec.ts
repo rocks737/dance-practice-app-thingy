@@ -33,7 +33,7 @@ test.describe("Login flow", () => {
     await page.getByRole("button", { name: "Sign In" }).click();
 
     await expect(page).toHaveURL(/\/matches/);
-    await expect(page.getByRole("heading", { name: "Matches" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Matches", exact: true })).toBeVisible();
   });
 });
 
