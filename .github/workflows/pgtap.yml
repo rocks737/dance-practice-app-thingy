@@ -28,6 +28,13 @@ jobs:
         working-directory: supabase
         run: supabase start
 
+      - name: Install basejump test helpers via dbdev
+        run: |
+          psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres?sslmode=disable" <<'SQL'
+          create extension if not exists dbdev;
+          select dbdev.install('basejump-supabase_test_helpers');
+          SQL
+
       - name: Apply migrations to Supabase stack
         working-directory: supabase
         run: supabase db push --local
