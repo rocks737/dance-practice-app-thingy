@@ -9,6 +9,20 @@ on:
 jobs:
   pgtap:
     runs-on: ubuntu-latest
+    services:
+      db:
+        image: supabase/postgres:15.1.0.92
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 54322:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     steps:
       - name: Checkout
@@ -18,16 +32,6 @@ jobs:
         uses: supabase/setup-cli@v1
         with:
           version: latest
-
-      - name: Start Supabase stack
-        working-directory: supabase
-        run: supabase start
-
-      - name: Export Supabase environment variables
-        working-directory: supabase
-        run: |
-          supabase status --output env > supabase.env
-          cat supabase.env >> $GITHUB_ENV
 
       - name: Apply migrations to test DB
         working-directory: supabase
@@ -42,7 +46,6 @@ jobs:
           PGDATABASE: postgres
         run: |
           sudo apt-get update
-          # Install pg_prove client and psql (pg_prove just shells out to psql)
           sudo apt-get install -y pgtap postgresql-client
           pg_prove supabase/tests/database/*.sql
 
