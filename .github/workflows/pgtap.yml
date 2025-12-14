@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       db:
-        image: supabase/postgres:15.1.0.92
+        image: supabase/postgres:15.1.0.116
         env:
           POSTGRES_PASSWORD: postgres
           POSTGRES_USER: postgres
