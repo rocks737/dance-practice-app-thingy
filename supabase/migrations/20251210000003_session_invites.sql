@@ -177,9 +177,8 @@ begin
       set status = 'ACCEPTED'
     where id = v_invite_id;
 
-    insert into session_participants (session_id, user_id)
-    values (v_session_id, v_proposer_id)
-    on conflict do nothing;
+    -- Ensure both proposer (mirror sender) and original invitee are participants (idempotent, RLS-safe)
+    perform public.upsert_session_participants(v_session_id, array[v_proposer_id, p_invitee_id]);
 
     update sessions
       set status = 'SCHEDULED'
@@ -312,9 +311,11 @@ begin
       set status = 'ACCEPTED'
     where id = v_invite.id;
 
-    insert into session_participants (session_id, user_id)
-    values (v_invite.session_id, v_actor)
-    on conflict do nothing;
+    -- ensure both invitee and proposer are participants (idempotent, bypasses RLS)
+    perform public.upsert_session_participants(
+      v_invite.session_id,
+      array[v_actor, v_invite.proposer_id]
+    );
 
     update sessions
       set status = 'SCHEDULED'
