@@ -25,7 +25,7 @@ jobs:
 
       - name: Apply migrations to test DB
         working-directory: supabase
-        run: supabase db push
+        run: supabase db push --local
 
       - name: Run pgTAP suite
         env:
