@@ -35,6 +35,8 @@ jobs:
           psql "$DB_URL" -v ON_ERROR_STOP=1 <<'SQL'
           create extension if not exists http with schema extensions;
           create extension if not exists pg_tle;
+          -- pgtap is required by basejump helpers; ensure it's present before dbdev install
+          create extension if not exists pgtap;
           drop extension if exists "supabase-dbdev";
           select pgtle.uninstall_extension_if_exists('supabase-dbdev');
           select
@@ -71,8 +73,6 @@ jobs:
           # Install and enable basejump test helpers via dbdev
           psql "$DB_URL" -v ON_ERROR_STOP=1 -c "select dbdev.install('basejump-supabase_test_helpers');"
           psql "$DB_URL" -v ON_ERROR_STOP=1 -c "create extension if not exists \"basejump-supabase_test_helpers\" with schema public version '0.0.6';"
-          # Ensure pgtap server extension is present for test runner
-          psql "$DB_URL" -v ON_ERROR_STOP=1 -c "create extension if not exists pgtap;"
 
       - name: Apply migrations
         working-directory: supabase
