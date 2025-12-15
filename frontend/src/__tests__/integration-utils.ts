@@ -4,7 +4,7 @@
  */
 
 import { createClient, type SupabaseClientOptions } from "@supabase/supabase-js";
-import type { Database } from "@/lib/supabase/types";
+import type { Database } from "../lib/supabase/types";
 import { execSync } from "child_process";
 
 /**
@@ -97,7 +97,6 @@ function buildAuthOptions(label: string): SupabaseClientOptions<"public"> {
     auth: {
       autoRefreshToken: false,
       persistSession: false,
-      multiTab: false,
       storageKey: `jest-${label}-${process.pid}-${Math.random().toString(36).slice(2)}`,
       storage: createMemoryStorage(),
     },
@@ -146,16 +145,32 @@ export async function createTestUser(
   role: "DANCER" | "INSTRUCTOR" | "ORGANIZER" | "ADMIN" = "DANCER"
 ): Promise<TestUser> {
   const supabase = createBrowserClient();
-  const timestamp = Date.now();
-  const email = `test-${role.toLowerCase()}-${timestamp}@example.com`;
 
-  // Create auth user
-  const { data: authData, error: authError } = await supabase.auth.signUp({
-    email,
-    password: "testpassword123",
-  });
+  // Retry user creation a few times to avoid transient auth insert failures
+  let authData: Awaited<ReturnType<typeof supabase.auth.signUp>>["data"] | null = null;
+  let authError: Awaited<ReturnType<typeof supabase.auth.signUp>>["error"] | null = null;
+  let email = "";
 
-  if (authError || !authData.user) {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    email = `test-${role.toLowerCase()}-${suffix}@example.com`;
+
+    const result = await supabase.auth.signUp({
+      email,
+      password: "testpassword123",
+    });
+    authData = result.data;
+    authError = result.error;
+
+    if (authData?.user && !authError) {
+      break;
+    }
+
+    // Small delay before retry if it was a backend insert error
+    await new Promise((r) => setTimeout(r, 150));
+  }
+
+  if (authError || !authData?.user) {
     throw new Error(`Failed to create test user: ${authError?.message}`);
   }
 

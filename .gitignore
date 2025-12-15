@@ -20,6 +20,8 @@ dist/
 out/
 coverage/
 frontend/tmp/
+test-results/
+playwright-report/
 
 # Misc build/tmp directories
 tmp/

@@ -1,0 +1,84 @@
+name: "DB: pgTAP"
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  pgtap:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Install pgTAP client tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pgtap postgresql-client
+
+      - name: Start Supabase stack
+        working-directory: supabase
+        run: supabase start
+
+      - name: Install dbdev client and basejump test helpers
+        run: |
+          set -euo pipefail
+          DB_URL="postgres://postgres:postgres@127.0.0.1:54322/postgres"
+          psql "$DB_URL" -v ON_ERROR_STOP=1 <<'SQL'
+          create extension if not exists http with schema extensions;
+          create extension if not exists pg_tle;
+          -- pgtap is required by basejump helpers; ensure it's present before dbdev install
+          create extension if not exists pgtap;
+          drop extension if exists "supabase-dbdev";
+          select pgtle.uninstall_extension_if_exists('supabase-dbdev');
+          select
+              pgtle.install_extension(
+                  'supabase-dbdev',
+                  resp.contents ->> 'version',
+                  'PostgreSQL package manager',
+                  resp.contents ->> 'sql'
+              )
+          from http(
+              (
+                  'GET',
+                  'https://api.database.dev/rest/v1/'
+                  || 'package_versions?select=sql,version'
+                  || '&package_name=eq.supabase-dbdev'
+                  || '&order=version.desc'
+                  || '&limit=1',
+                  array[
+                      ('apiKey', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhtdXB0cHBsZnZpaWZyYndtbXR2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE2ODAxMDczNzIsImV4cCI6MTk5NTY4MzM3Mn0.z2CN0mvO2No8wSi46Gw59DFGCTJrzM0AQKsu_5k134s')::http_header
+                  ],
+                  null,
+                  null
+              )
+          ) x,
+          lateral (
+              select
+                  ((row_to_json(x) -> 'content') #>> '{}')::json -> 0
+          ) resp(contents);
+          create extension "supabase-dbdev";
+          select dbdev.install('supabase-dbdev');
+          drop extension if exists "supabase-dbdev";
+          create extension "supabase-dbdev";
+          SQL
+          # Install and enable basejump test helpers via dbdev
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -c "select dbdev.install('basejump-supabase_test_helpers');"
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -c "create extension if not exists \"basejump-supabase_test_helpers\" with schema public version '0.0.6';"
+
+      - name: Apply migrations
+        working-directory: supabase
+        run: supabase db push --local
+
+      - name: Run pgTAP suite via Supabase CLI runner
+        working-directory: supabase
+        run: supabase test db
+
