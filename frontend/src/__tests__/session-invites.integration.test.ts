@@ -214,7 +214,7 @@ describe("Session Invites - Integration", () => {
 
     // Run sweeper directly (cron will do this periodically in production)
     const { data: sweptCount, error: sweepError } = await admin.rpc(
-      "expire_session_invites" as any,
+      "expire_session_invites",
     );
     expect(sweepError).toBeNull();
     expect(Number(sweptCount ?? 0)).toBeGreaterThanOrEqual(1);

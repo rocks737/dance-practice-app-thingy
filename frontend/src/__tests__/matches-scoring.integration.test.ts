@@ -58,7 +58,7 @@ describeIfSupabase("Matches - Scoring Integration", () => {
   });
 
   async function fetchMatchesForBase(limit = 500): Promise<MatchRow[]> {
-    const { data, error } = await (baseUser.supabase as any).rpc("find_matches_for_current_user", {
+    const { data, error } = await baseUser.supabase.rpc("find_matches_for_current_user", {
       p_limit: limit,
     });
     if (error) {

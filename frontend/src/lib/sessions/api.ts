@@ -363,7 +363,7 @@ export async function updateSession(
     if (existingError) {
       throw new Error(existingError.message);
     }
-    if ((existing as any)?.session_type === "PARTNER_PRACTICE") {
+    if (existing?.session_type === "PARTNER_PRACTICE") {
       throw new Error("Partner practice capacity is fixed at 2");
     }
   }

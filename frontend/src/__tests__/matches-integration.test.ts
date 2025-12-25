@@ -69,7 +69,7 @@ describe("Matches - Integration", () => {
   });
 
   it("returns at least one match candidate for seeded test user", async () => {
-    const { data, error } = await (baseUser.supabase as any).rpc("find_matches_for_current_user", {
+    const { data, error } = await baseUser.supabase.rpc("find_matches_for_current_user", {
       p_limit: 10,
     });
 
@@ -93,7 +93,7 @@ describe("Matches - Integration", () => {
   });
 
   it("honors the limit parameter", async () => {
-    const { data, error } = await (baseUser.supabase as any).rpc("find_matches_for_current_user", {
+    const { data, error } = await baseUser.supabase.rpc("find_matches_for_current_user", {
       p_limit: 1,
     });
 
@@ -133,10 +133,10 @@ describe("Matches - Integration", () => {
       // Sanity: ensure RPC sees the correct caller profile
       const { data: userInfo } = await userA.supabase.auth.getUser();
       expect(userInfo.user?.id).toBe(userA.userId);
-      const { data: currentProfileId } = await (userA.supabase as any).rpc("current_profile_id");
+      const { data: currentProfileId } = await userA.supabase.rpc("current_profile_id");
       expect(currentProfileId).toBe(userA.profileId);
 
-      const { data, error } = await (userA.supabase as any).rpc("find_matches_for_current_user", {
+      const { data, error } = await userA.supabase.rpc("find_matches_for_current_user", {
         p_limit: 500, // ensure we include all candidates even if many share the same city
       });
 
@@ -170,7 +170,7 @@ describe("Matches - Integration", () => {
         { dayOfWeek: "MONDAY", startTime: "11:00:00", endTime: "13:00:00" },
       ]);
 
-      const { data, error } = await (userA.supabase as any).rpc("find_matches_for_current_user", {
+      const { data, error } = await userA.supabase.rpc("find_matches_for_current_user", {
         p_limit: 10,
       });
 
@@ -202,7 +202,7 @@ describe("Matches - Integration", () => {
       });
       expect(blockError).toBeNull();
 
-      const { data, error } = await (userA.supabase as any).rpc("find_matches_for_current_user", {
+      const { data, error } = await userA.supabase.rpc("find_matches_for_current_user", {
         p_limit: 10,
       });
 
@@ -281,7 +281,7 @@ describe("Matches - Integration", () => {
         { preference_id: prefC, focus_area: "MUSICALITY" },
       ]);
 
-      const { data, error } = await (userA.supabase as any).rpc("find_matches_for_current_user", {
+      const { data, error } = await userA.supabase.rpc("find_matches_for_current_user", {
         p_limit: 10,
       });
 
@@ -367,7 +367,7 @@ describe("Matches - Integration", () => {
         { dayOfWeek: "THURSDAY", startTime: "18:30:00", endTime: "20:30:00" },
       ]);
 
-      const { data, error } = await (userA.supabase as any).rpc("find_matches_for_current_user", {
+      const { data, error } = await userA.supabase.rpc("find_matches_for_current_user", {
         p_limit: 50,
       });
 
@@ -428,7 +428,7 @@ describe("Matches - Integration", () => {
         { dayOfWeek: "FRIDAY", startTime: "18:30:00", endTime: "20:30:00" },
       ]);
 
-      const { data, error } = await (userA.supabase as any).rpc("find_matches_for_current_user", {
+      const { data, error } = await userA.supabase.rpc("find_matches_for_current_user", {
         p_limit: 10,
       });
 

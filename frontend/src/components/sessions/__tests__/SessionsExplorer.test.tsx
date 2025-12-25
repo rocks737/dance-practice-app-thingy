@@ -20,6 +20,7 @@ const mockFetchSessionParticipantSummaries = jest.fn();
 const mockFetchLocationOptions = jest.fn();
 const mockJoinSession = jest.fn();
 const mockLeaveSession = jest.fn();
+const mockIsSessionJoinable = jest.fn();
 
 jest.mock("@/lib/sessions/api", () => ({
   fetchSessions: (...args: any[]) => mockFetchSessions(...args),
@@ -28,6 +29,7 @@ jest.mock("@/lib/sessions/api", () => ({
   fetchSessionParticipantSummaries: (...args: any[]) =>
     mockFetchSessionParticipantSummaries(...args),
   fetchLocationOptions: (...args: any[]) => mockFetchLocationOptions(...args),
+  isSessionJoinable: (...args: any[]) => mockIsSessionJoinable(...args),
   joinSession: (...args: any[]) => mockJoinSession(...args),
   leaveSession: (...args: any[]) => mockLeaveSession(...args),
 }));
@@ -58,6 +60,7 @@ describe("SessionsExplorer", () => {
       { id: "profile-1", displayName: "You", firstName: "Test", lastName: "User" },
       { id: "profile-2", displayName: null, firstName: "Sam", lastName: "Lee" },
     ]);
+    mockIsSessionJoinable.mockResolvedValue(true);
   });
 
   it("opens a modal with details when the card icon is clicked", async () => {

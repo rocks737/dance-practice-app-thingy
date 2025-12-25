@@ -76,7 +76,7 @@ const windowsPerUser = windowsPerUserEnv != null ? Number(windowsPerUserEnv) : u
 
   it("returns a bounded, well-formed list of matches at scale", async () => {
     const limit = 50;
-    const { data, error } = await (supabase as any).rpc("find_matches_for_current_user", {
+    const { data, error } = await supabase.rpc("find_matches_for_current_user", {
       p_limit: limit,
     });
 
@@ -163,7 +163,7 @@ const windowsPerUser = windowsPerUserEnv != null ? Number(windowsPerUserEnv) : u
         continue;
       }
 
-      const { data, error } = await (client as any).rpc("find_matches_for_current_user", {
+      const { data, error } = await client.rpc("find_matches_for_current_user", {
         // Ask for many results so we can see most/all candidates for this user.
         p_limit: 500,
       });
@@ -205,14 +205,14 @@ const windowsPerUser = windowsPerUserEnv != null ? Number(windowsPerUserEnv) : u
       });
 
       // None of the candidates should be the caller themself.
-      const authUserId = (authData as any).user.id as string;
-      const { data: profileData, error: profileError } = await (client as any)
+      const authUserId = authData.user.id as string;
+      const { data: profileData, error: profileError } = await client
         .from("user_profiles")
         .select("id")
         .eq("auth_user_id", authUserId)
         .single();
       expect(profileError).toBeNull();
-      const selfId = (profileData as { id: string }).id;
+      const selfId = profileData!.id;
 
       rows.forEach((row) => {
         expect(row.candidate_profile_id).not.toBe(selfId);

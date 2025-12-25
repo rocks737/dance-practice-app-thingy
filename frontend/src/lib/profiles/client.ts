@@ -7,6 +7,13 @@ import type { UserProfile, ProfileUpdateData, CreateProfileParams } from "./type
 type UserProfileRow = Database["public"]["Tables"]["user_profiles"]["Row"];
 type UserProfileUpdate = Database["public"]["Tables"]["user_profiles"]["Update"];
 
+function getPostgrestErrorCode(error: unknown): string | undefined {
+  if (!error || typeof error !== "object") return undefined;
+  if (!("code" in error)) return undefined;
+  const code = (error as { code?: unknown }).code;
+  return typeof code === "string" ? code : undefined;
+}
+
 export async function getProfileByAuthUserId(
   authUserId: string,
 ): Promise<UserProfile | null> {
@@ -18,7 +25,7 @@ export async function getProfileByAuthUserId(
     .single();
 
   if (error) {
-    if ((error as any).code === "PGRST116") {
+    if (getPostgrestErrorCode(error) === "PGRST116") {
       return null;
     }
     console.error("Error fetching profile:", error);
@@ -36,7 +43,7 @@ export async function getProfileById(profileId: string): Promise<UserProfile | n
     .single();
 
   if (error) {
-    if ((error as any).code === "PGRST116") {
+    if (getPostgrestErrorCode(error) === "PGRST116") {
       return null;
     }
     console.error("Error fetching profile:", error);
@@ -89,7 +96,6 @@ export async function createDefaultUserProfile(
     return mapProfileRow(data);
   }
 
-  // @ts-expect-error defaults populated by DB
   const insertData: Database["public"]["Tables"]["user_profiles"]["Insert"] = {
     auth_user_id: params.authUserId,
     email: params.email,

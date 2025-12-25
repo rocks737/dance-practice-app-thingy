@@ -55,17 +55,21 @@ export default function Login({
       });
 
       if (error) {
+        const errorCode =
+          typeof error === "object" && error && "code" in error
+            ? (error as { code?: string }).code
+            : undefined;
         console.error("[LOGIN ERROR] Supabase auth error:", {
           message: error.message,
           status: error.status,
-          code: (error as any).code,
+          code: errorCode,
           fullError: error,
         });
 
         const params = new URLSearchParams();
         // Show user-friendly error messages based on error code
         let errorMessage = "Could not authenticate user";
-        if ((error as any).code === "invalid_credentials") {
+        if (errorCode === "invalid_credentials") {
           errorMessage = "Invalid email or password";
         } else if (error.message) {
           errorMessage = error.message;
