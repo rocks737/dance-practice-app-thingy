@@ -9,7 +9,7 @@ test.describe("@smoke protected routes", () => {
 
   test("@smoke authenticated user reaches matches", async ({ authPage }) => {
     await expect(authPage).toHaveURL(/\/matches/);
-    await expect(authPage.getByRole("heading", { name: "Matches" })).toBeVisible();
+    await expect(authPage.getByRole("heading", { name: "Matches", exact: true, level: 1 })).toBeVisible();
   });
 
   test("@smoke authenticated user reaches profile", async ({ authPage }) => {

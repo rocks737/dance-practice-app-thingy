@@ -55,7 +55,7 @@ USERS = [
         "bio": "Love West Coast Swing! Looking for practice partners to work on musicality and connection.",
         "dance_goals": "Compete in intermediate division next year",
         "availability_key": "alice",
-        "roles": ["DANCER"],
+        "roles": ["DANCER", "ADMIN"],
     },
     {
         "email": "bob@example.com",

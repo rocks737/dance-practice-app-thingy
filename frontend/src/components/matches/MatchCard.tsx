@@ -15,6 +15,11 @@ import { motion } from "framer-motion";
 interface MatchCardProps {
   match: EnrichedMatch;
   onInviteSent?: () => void;
+  relationshipCounts?: {
+    sent: number;
+    received: number;
+    scheduled: number;
+  };
 }
 
 const COMPETITIVENESS_LABELS: Record<number, string> = {
@@ -50,8 +55,10 @@ function getCompetitivenessLabel(level: number): string {
   return COMPETITIVENESS_LABELS[level] ?? "Balanced";
 }
 
-export function MatchCard({ match, onInviteSent }: MatchCardProps) {
+export function MatchCard({ match, onInviteSent, relationshipCounts }: MatchCardProps) {
   const roleInfo = getRoleIcon(match.primaryRole);
+  const counts = relationshipCounts ?? { sent: 0, received: 0, scheduled: 0 };
+  const showCounts = counts.sent > 0 || counts.received > 0 || counts.scheduled > 0;
 
   return (
     <motion.li
@@ -138,6 +145,16 @@ export function MatchCard({ match, onInviteSent }: MatchCardProps) {
         {/* CTA */}
         <div className="mt-5">
           <ProposeInviteDialog match={match} onInviteSent={onInviteSent} />
+          {showCounts && (
+            <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+              <span className="font-medium text-gray-700 dark:text-gray-300">{counts.sent}</span>{" "}
+              sent <span aria-hidden="true">|</span>{" "}
+              <span className="font-medium text-gray-700 dark:text-gray-300">{counts.received}</span>{" "}
+              received <span aria-hidden="true">|</span>{" "}
+              <span className="font-medium text-gray-700 dark:text-gray-300">{counts.scheduled}</span>{" "}
+              scheduled
+            </div>
+          )}
         </div>
       </div>
 

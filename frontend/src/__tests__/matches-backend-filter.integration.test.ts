@@ -65,8 +65,8 @@ describe("Matches filter with backend data", () => {
     }
 
     // Issue invite to candidate
-    const start = new Date();
-    start.setHours(11, 0, 0, 0);
+    // Use a guaranteed-future window so the RPC doesn't reject it.
+    const start = new Date(Date.now() + 60 * 60 * 1000);
     const end = new Date(start.getTime() + 60 * 60 * 1000);
     const { data, error } = await current.supabase.rpc("propose_practice_session", {
       p_invitee_id: candidate.profileId,

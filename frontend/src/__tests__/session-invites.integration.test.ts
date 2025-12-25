@@ -9,6 +9,7 @@ import {
   createTestUser,
   cleanupTestUser,
   cleanupTestSession,
+  createAdminClient,
 } from "./integration-utils";
 
 type RpcRow = {
@@ -20,7 +21,7 @@ type RpcRow = {
 describe("Session Invites - Integration", () => {
   let proposer: Awaited<ReturnType<typeof createTestUser>>;
   let invitee: Awaited<ReturnType<typeof createTestUser>>;
-  let sessionId: string | undefined;
+  let sessionIds: string[] = [];
 
   beforeAll(async () => {
     proposer = await createTestUser("DANCER");
@@ -28,9 +29,10 @@ describe("Session Invites - Integration", () => {
   });
 
   afterEach(async () => {
-    if (sessionId) {
-      await cleanupTestSession(sessionId);
-      sessionId = undefined;
+    const ids = sessionIds;
+    sessionIds = [];
+    for (const id of ids) {
+      await cleanupTestSession(id);
     }
   });
 
@@ -58,7 +60,7 @@ describe("Session Invites - Integration", () => {
     if (!row?.session_id || !row?.invite_id) {
       throw new Error("Invite RPC returned no ids");
     }
-    sessionId = row.session_id;
+    sessionIds.push(row.session_id);
     return row;
   }
 
@@ -123,33 +125,107 @@ describe("Session Invites - Integration", () => {
   });
 
   it("rejects accepting an expired invite", async () => {
-    // Create an invite that expires immediately by setting end in the past
-    const pastStart = new Date(Date.now() - 120 * 60 * 1000);
-    const pastEnd = new Date(Date.now() - 60 * 60 * 1000);
+    // Create a normal invite in the future, then force-expire it via admin update.
+    const invite = await propose(invitee.profileId);
 
-    const { data, error } = await proposer.supabase.rpc("propose_practice_session", {
-      p_invitee_id: invitee.profileId,
-      p_start: pastStart.toISOString(),
-      p_end: pastEnd.toISOString(),
-      p_note: "Expired invite",
-    });
-    if (error) throw error;
-    const row = (Array.isArray(data) ? data[0] : data) as RpcRow;
-    sessionId = row.session_id;
+    const admin = createAdminClient();
+    const { error: expireError } = await admin
+      .from("session_invites")
+      .update({ expires_at: new Date(Date.now() - 60 * 1000).toISOString() })
+      .eq("id", invite.invite_id);
+    expect(expireError).toBeNull();
 
-    const { data: acceptData, error: acceptError } = await invitee.supabase.rpc("respond_to_session_invite", {
-      p_invite_id: row.invite_id,
+    const { data: acceptData, error: acceptError } = await invitee.supabase.rpc(
+      "respond_to_session_invite",
+      {
+      p_invite_id: invite.invite_id,
       p_action: "ACCEPT",
-    });
-    // With expiry enforcement, accept should fail
-    expect(acceptError).toBeTruthy();
+      },
+    );
+    expect(acceptError).toBeNull();
+    const acceptRow = (Array.isArray(acceptData) ? acceptData[0] : acceptData) as RpcRow;
+    expect((acceptRow.invite_status ?? "").toUpperCase()).toBe("EXPIRED");
 
+    // Expiry is persisted on the row
+    const { data: inviteRow, error: fetchError } = await proposer.supabase
+      .from("session_invites")
+      .select("status, expires_at")
+      .eq("id", invite.invite_id)
+      .single();
+    expect(fetchError).toBeNull();
+    expect(inviteRow!.status).toBe("EXPIRED");
+    expect(inviteRow!.expires_at).toBeTruthy();
+    expect(new Date(inviteRow!.expires_at as string).getTime()).toBeLessThan(Date.now());
+
+    // Should not add invitee as a participant
     const { data: participants } = await invitee.supabase
       .from("session_participants")
       .select("user_id")
-      .eq("session_id", row.session_id)
+      .eq("session_id", invite.session_id)
       .eq("user_id", invitee.profileId);
     expect(participants ?? []).toHaveLength(0);
+  });
+
+  it("rejects proposing a session in the past", async () => {
+    // Two days ago, 1 hour window.
+    const pastStart = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000 - 60 * 60 * 1000);
+    const pastEnd = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000);
+
+    const { error } = await proposer.supabase.rpc("propose_practice_session", {
+      p_invitee_id: invitee.profileId,
+      p_start: pastStart.toISOString(),
+      p_end: pastEnd.toISOString(),
+      p_note: "Past invite should be rejected",
+    });
+
+    expect(error).toBeTruthy();
+    expect((error as any)?.message ?? "").toMatch(/start time must be in the future/i);
+  });
+
+  it("rejects proposing a session that overlaps an existing pending invite", async () => {
+    const start1 = new Date(Date.now() + 60 * 60 * 1000);
+    const end1 = new Date(start1.getTime() + 60 * 60 * 1000);
+    await propose(invitee.profileId, start1.toISOString(), end1.toISOString());
+
+    // Overlaps by 30 minutes
+    const start2 = new Date(start1.getTime() + 30 * 60 * 1000);
+    const end2 = new Date(start2.getTime() + 60 * 60 * 1000);
+    const { error } = await proposer.supabase.rpc("propose_practice_session", {
+      p_invitee_id: invitee.profileId,
+      p_start: start2.toISOString(),
+      p_end: end2.toISOString(),
+      p_note: "Overlapping invite should be rejected",
+    });
+
+    expect(error).toBeTruthy();
+    expect((error as any)?.message ?? "").toMatch(/overlaps this time/i);
+  });
+
+  it("sweeper persists status=EXPIRED for expired pending invites", async () => {
+    const invite = await propose(invitee.profileId);
+
+    // Force expiry
+    const admin = createAdminClient();
+    const { error: expireError } = await admin
+      .from("session_invites")
+      .update({ expires_at: new Date(Date.now() - 60 * 1000).toISOString() })
+      .eq("id", invite.invite_id);
+    expect(expireError).toBeNull();
+
+    // Run sweeper directly (cron will do this periodically in production)
+    const { data: sweptCount, error: sweepError } = await admin.rpc(
+      "expire_session_invites" as any,
+    );
+    expect(sweepError).toBeNull();
+    expect(Number(sweptCount ?? 0)).toBeGreaterThanOrEqual(1);
+
+    const { data: inviteRow, error: fetchError } = await proposer.supabase
+      .from("session_invites")
+      .select("status")
+      .eq("id", invite.invite_id)
+      .single();
+    expect(fetchError).toBeNull();
+    expect(inviteRow!.status).toBe("EXPIRED");
   });
 
   it("allows proposer to cancel a pending invite", async () => {
@@ -213,8 +289,6 @@ describe("Session Invites - Integration", () => {
     expect(partError).toBeNull();
     const ids = (participants ?? []).map((p) => p.user_id);
     expect(ids).toEqual(expect.arrayContaining([proposer.profileId, invitee.profileId]));
-
-    sessionId = invite.session_id;
   });
 
 });

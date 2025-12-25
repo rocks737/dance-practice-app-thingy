@@ -62,6 +62,7 @@ interface InviteSession {
   title: string | null;
   scheduled_start: string | null;
   scheduled_end: string | null;
+  status: string;
 }
 
 type InviteQueryRow = {
@@ -94,6 +95,7 @@ export interface SentInviteSummary {
     title: string | null;
     scheduledStart: string | null;
     scheduledEnd: string | null;
+    status: string;
   } | null;
 }
 
@@ -115,6 +117,27 @@ export interface ReceivedInviteSummary {
     title: string | null;
     scheduledStart: string | null;
     scheduledEnd: string | null;
+    status: string;
+  } | null;
+}
+
+export interface PendingInviteBlock {
+  inviteId: string;
+  status: string;
+  expiresAt: string | null;
+  direction: "SENT" | "RECEIVED";
+  otherUser: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    displayName: string | null;
+  } | null;
+  session: {
+    id: string;
+    title: string | null;
+    scheduledStart: string | null;
+    scheduledEnd: string | null;
+    status: string;
   } | null;
 }
 
@@ -163,7 +186,8 @@ const INVITE_BASE_SELECT = `
     id,
     title,
     scheduled_start,
-    scheduled_end
+    scheduled_end,
+    status
   )
 `;
 
@@ -179,6 +203,33 @@ const SENT_INVITE_SELECT = `
 
 const RECEIVED_INVITE_SELECT = `
   ${INVITE_BASE_SELECT},
+  proposer:user_profiles!session_invites_proposer_id_fkey (
+    id,
+    first_name,
+    last_name,
+    display_name
+  )
+`;
+
+const PENDING_INVITE_BLOCK_SELECT = `
+  id,
+  status,
+  expires_at,
+  proposer_id,
+  invitee_id,
+  session:sessions!session_invites_session_id_fkey (
+    id,
+    title,
+    scheduled_start,
+    scheduled_end,
+    status
+  ),
+  invitee:user_profiles!session_invites_invitee_id_fkey (
+    id,
+    first_name,
+    last_name,
+    display_name
+  ),
   proposer:user_profiles!session_invites_proposer_id_fkey (
     id,
     first_name,
@@ -208,6 +259,7 @@ function mapInviteSession(session?: InviteSession | null) {
     title: session.title,
     scheduledStart: session.scheduled_start,
     scheduledEnd: session.scheduled_end,
+    status: session.status,
   };
 }
 
@@ -269,6 +321,56 @@ export async function fetchReceivedInvites(): Promise<ReceivedInviteSummary[]> {
     proposer: mapInviteUser(invite.proposer),
     session: mapInviteSession(invite.session),
   }));
+}
+
+type PendingInviteBlockRow = {
+  id: string;
+  status: string;
+  expires_at: string | null;
+  proposer_id: string;
+  invitee_id: string;
+  session: InviteSession | null;
+  invitee?: InviteUser | null;
+  proposer?: InviteUser | null;
+};
+
+/**
+ * Fetches all pending invites involving the current user (sent or received),
+ * including the associated session time window. Used to render "busy" blocks
+ * in the propose-time calendar and to prevent overlapping proposals.
+ */
+export async function fetchPendingInviteBlocks(): Promise<PendingInviteBlock[]> {
+  const { supabase, profileId } = await resolveCurrentProfileId();
+  if (!profileId) {
+    console.warn("Unable to resolve profile for pending invites");
+    return [];
+  }
+
+  const { data, error } = await supabase
+    .from("session_invites")
+    .select(PENDING_INVITE_BLOCK_SELECT)
+    .eq("status", "PENDING")
+    .or(`proposer_id.eq.${profileId},invitee_id.eq.${profileId}`)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data as PendingInviteBlockRow[]).map((row) => {
+    const direction: PendingInviteBlock["direction"] =
+      row.proposer_id === profileId ? "SENT" : "RECEIVED";
+    const other = direction === "SENT" ? row.invitee : row.proposer;
+
+    return {
+      inviteId: row.id,
+      status: row.status,
+      expiresAt: row.expires_at,
+      direction,
+      otherUser: mapInviteUser(other),
+      session: mapInviteSession(row.session),
+    };
+  });
 }
 
 /**
@@ -469,8 +571,8 @@ export async function proposePracticeSession(input: {
     p_invitee_id: input.inviteeProfileId,
     p_start: input.start,
     p_end: input.end,
-    p_location_id: input.locationId ?? null,
-    p_note: input.note ?? null,
+    p_location_id: input.locationId ?? undefined,
+    p_note: input.note ?? undefined,
   });
 
   if (error) {
@@ -509,6 +611,12 @@ export async function respondToInvite(
   const row = (Array.isArray(data) ? data[0] : data) as InviteRpcRow | null;
   if (!row?.session_id || !row?.invite_id) {
     throw new Error("Unable to update invite");
+  }
+
+  // The DB RPC returns EXPIRED as a terminal state (instead of raising),
+  // so we can persist status='EXPIRED' and still surface a friendly error to the UI.
+  if ((row.invite_status ?? "").toUpperCase() === "EXPIRED") {
+    throw new Error("Invite expired");
   }
 
   return {

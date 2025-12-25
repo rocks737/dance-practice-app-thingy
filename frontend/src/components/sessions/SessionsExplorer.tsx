@@ -2,15 +2,13 @@
 
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
 import {
   Calendar,
-  ChevronDown,
-  ChevronUp,
   Clock,
   Eye,
   Loader2,
   MapPin,
+  Pencil,
   Plus,
   RefreshCcw,
   Search,
@@ -84,7 +82,7 @@ export function SessionsExplorer({ authUserId }: SessionsExplorerProps) {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [openSessionId, setOpenSessionId] = useState<string | null>(null);
   const [filtersExpanded, setFiltersExpanded] = useState(false);
   const fetchIdRef = useRef(0);
   const focusAfterFetchRef = useRef<string | null>(null);
@@ -114,7 +112,7 @@ export function SessionsExplorer({ authUserId }: SessionsExplorerProps) {
       if (focusAfterFetchRef.current) {
         const match = data.find((session) => session.id === focusAfterFetchRef.current);
         if (match) {
-          setExpandedId(match.id);
+          setOpenSessionId(match.id);
           focusAfterFetchRef.current = null;
         }
       }
@@ -388,48 +386,71 @@ export function SessionsExplorer({ authUserId }: SessionsExplorerProps) {
             <SessionCard
               key={session.id}
               session={session}
-              expanded={expandedId === session.id}
-              onToggle={() =>
-                setExpandedId((current) => (current === session.id ? null : session.id))
-              }
+              onOpen={() => setOpenSessionId(session.id)}
               canEdit={Boolean(organizerId) && session.organizer?.id === organizerId}
               onSessionUpdated={handleSessionUpdated}
             />
           ))}
         </div>
       </div>
+
+      <SessionDetailsDialog
+        open={Boolean(openSessionId)}
+        session={sessions.find((s) => s.id === openSessionId) ?? null}
+        canEdit={
+          Boolean(organizerId) &&
+          Boolean(openSessionId) &&
+          sessions.find((s) => s.id === openSessionId)?.organizer?.id === organizerId
+        }
+        onOpenChange={(next) => {
+          if (!next) setOpenSessionId(null);
+        }}
+        onSessionUpdated={handleSessionUpdated}
+      />
     </div>
   );
 }
 
 interface SessionCardProps {
   session: SessionListItem;
-  expanded: boolean;
-  onToggle: () => void;
+  onOpen: () => void;
   canEdit: boolean;
   onSessionUpdated: (session: SessionListItem) => void;
 }
 
 function SessionCard({
   session,
-  expanded,
-  onToggle,
+  onOpen,
   canEdit,
-  onSessionUpdated,
 }: SessionCardProps) {
   const startDate = new Date(session.scheduledStart);
   const endDate = new Date(session.scheduledEnd);
   const typeLabel = SESSION_TYPE_LABELS[session.sessionType] ?? session.sessionType;
   const statusLabel = SESSION_STATUS_LABELS[session.status] ?? session.status;
-  const visibilityLabel =
-    SESSION_VISIBILITY_LABELS[session.visibility] ?? session.visibility;
 
   return (
-    <div className="rounded-lg border bg-card p-5 shadow-sm">
+    <div className="relative rounded-lg border bg-card p-5 shadow-sm">
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={onOpen}
+        aria-label="Open session details"
+        title="Open session details"
+        className="absolute right-3 top-3"
+      >
+        <Pencil className="h-4 w-4" />
+      </Button>
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="space-y-2">
           <div className="flex flex-wrap items-center gap-2">
-            <h3 className="text-lg font-semibold">{session.title}</h3>
+            <button
+              type="button"
+              onClick={onOpen}
+              className="text-left text-lg font-semibold hover:underline underline-offset-4"
+              aria-label={`Open session details for ${session.title}`}
+            >
+              {session.title}
+            </button>
             <Badge variant="secondary">{typeLabel}</Badge>
             <Badge variant="outline">{statusLabel}</Badge>
           </div>
@@ -461,24 +482,57 @@ function SessionCard({
               {session.capacity ? ` / ${session.capacity} spots` : " participants"}
             </span>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            className="w-full justify-between"
-            onClick={onToggle}
-          >
-            {expanded ? "Hide details" : "View details"}
-            {expanded ? (
-              <ChevronUp className="h-4 w-4" />
-            ) : (
-              <ChevronDown className="h-4 w-4" />
-            )}
-          </Button>
+          {canEdit ? (
+            <span className="text-xs text-muted-foreground">You’re the organizer</span>
+          ) : null}
         </div>
       </div>
+    </div>
+  );
+}
 
-      {expanded && (
-        <div className="mt-4 border-t pt-4 text-sm">
+function SessionDetailsDialog({
+  open,
+  session,
+  canEdit,
+  onOpenChange,
+  onSessionUpdated,
+}: {
+  open: boolean;
+  session: SessionListItem | null;
+  canEdit: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSessionUpdated: (session: SessionListItem) => void;
+}) {
+  if (!session) {
+    return null;
+  }
+
+  const startDate = new Date(session.scheduledStart);
+  const endDate = new Date(session.scheduledEnd);
+  const typeLabel = SESSION_TYPE_LABELS[session.sessionType] ?? session.sessionType;
+  const statusLabel = SESSION_STATUS_LABELS[session.status] ?? session.status;
+  const visibilityLabel = SESSION_VISIBILITY_LABELS[session.visibility] ?? session.visibility;
+  const organizerLabel = session.organizer
+    ? (session.organizer.displayName ??
+      `${session.organizer.firstName} ${session.organizer.lastName}`)
+    : "Unknown organizer";
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-2xl">
+        <DialogHeader>
+          <DialogTitle className="flex flex-wrap items-center gap-2">
+            <span>{session.title}</span>
+            <Badge variant="secondary">{typeLabel}</Badge>
+            <Badge variant="outline">{statusLabel}</Badge>
+          </DialogTitle>
+          <DialogDescription>
+            {format(startDate, "EEE, MMM d • h:mm a")} — {format(endDate, "h:mm a")}
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4 text-sm">
           <div className="grid gap-4 md:grid-cols-2">
             <DetailRow
               icon={<Calendar className="h-4 w-4" />}
@@ -493,40 +547,49 @@ function SessionCard({
             <DetailRow
               icon={<Users className="h-4 w-4" />}
               label="Organizer"
+              value={organizerLabel}
+            />
+            <DetailRow
+              icon={<Users className="h-4 w-4" />}
+              label="Participants"
+              value={`${session.participantCount}${session.capacity ? ` / ${session.capacity}` : ""}`}
+            />
+          </div>
+
+          {session.location && (
+            <DetailRow
+              icon={<MapPin className="h-4 w-4" />}
+              label="Location"
               value={
-                session.organizer
-                  ? (session.organizer.displayName ??
-                    `${session.organizer.firstName} ${session.organizer.lastName}`)
-                  : "Unknown organizer"
+                session.location.name ||
+                [session.location.city, session.location.state].filter(Boolean).join(", ") ||
+                "Location TBD"
               }
             />
-          </div>
-          <div className="mt-2">
-            <DetailRow
-              icon={<Clock className="h-4 w-4" />}
-              label="Last updated"
-              value={formatDistanceToNow(new Date(session.updatedAt), {
-                addSuffix: true,
-              })}
-            />
-          </div>
+          )}
+
+          <DetailRow
+            icon={<Clock className="h-4 w-4" />}
+            label="Last updated"
+            value={formatDistanceToNow(new Date(session.updatedAt), { addSuffix: true })}
+          />
 
           {canEdit ? (
             <SessionQuickEdit session={session} onSessionUpdated={onSessionUpdated} />
           ) : (
-            <p className="mt-4 text-xs text-muted-foreground">
+            <p className="text-xs text-muted-foreground">
               Only the session organizer can edit these details.
             </p>
           )}
-
-          <div className="mt-4 flex flex-wrap gap-2">
-            <Link href={`/sessions/${session.id}`}>
-              <Button size="sm">Open session</Button>
-            </Link>
-          </div>
         </div>
-      )}
-    </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Close
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 

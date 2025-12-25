@@ -6,8 +6,20 @@ import userEvent from "@testing-library/user-event";
 import { ProposeInviteDialog } from "../ProposeInviteDialog";
 import {
   fetchOverlapSuggestions,
+  fetchPendingInviteBlocks,
   proposePracticeSession,
 } from "@/lib/matches/api";
+import { dateToDatetimeLocal } from "@/lib/datetime";
+
+jest.mock("sonner", () => ({
+  toast: {
+    error: jest.fn(),
+    success: jest.fn(),
+    info: jest.fn(),
+  },
+}));
+
+import { toast } from "sonner";
 
 // JSDOM lacks ResizeObserver used by radix primitives
 if (typeof (global as any).ResizeObserver === "undefined") {
@@ -25,6 +37,23 @@ jest.mock("react-big-calendar", () => {
   const React = require("react");
   const Calendar = (props: any) => (
     <div data-testid="mock-calendar">
+      <div data-testid="calendar-events">
+        {JSON.stringify(
+          (props.events ?? []).map((e: any) => ({
+            id: e.id,
+            title: e.title,
+            kind: e.kind,
+          })),
+        )}
+      </div>
+      <div data-testid="calendar-date">
+        {props.date instanceof Date ? props.date.toISOString() : String(props.date)}
+      </div>
+      <div data-testid="calendar-header-day-0">
+        {typeof props.formats?.dayFormat === "function"
+          ? props.formats.dayFormat(props.date)
+          : "no-day-format"}
+      </div>
       <button
         onClick={() =>
           props.onSelectSlot?.({
@@ -67,6 +96,7 @@ jest.mock("react-big-calendar/lib/addons/dragAndDrop", () => ({
 jest.mock("@/lib/matches/api");
 
 const mockFetchOverlapSuggestions = fetchOverlapSuggestions as jest.Mock;
+const mockFetchPendingInviteBlocks = fetchPendingInviteBlocks as jest.Mock;
 const mockProposePracticeSession = proposePracticeSession as jest.Mock;
 
 const baseMatch = {
@@ -103,6 +133,7 @@ describe("ProposeInviteDialog", () => {
       inviteId: "invite-1",
       inviteStatus: "PENDING",
     });
+    mockFetchPendingInviteBlocks.mockResolvedValue([]);
   });
 
   afterEach(() => {
@@ -231,6 +262,191 @@ describe("ProposeInviteDialog", () => {
     expect(typeof payload.start).toBe("string");
     expect(typeof payload.end).toBe("string");
     expect(payload.note).toBeNull();
+  });
+
+  it("shows user-visible feedback when the backend rejects a past time", async () => {
+    mockProposePracticeSession.mockRejectedValueOnce(new Error("Start time must be in the future"));
+
+    render(<ProposeInviteDialog match={baseMatch} />);
+
+    await userEvent.click(screen.getByRole("button", { name: /propose time/i }));
+
+    await waitFor(() => expect(mockFetchOverlapSuggestions).toHaveBeenCalled());
+    await screen.findByRole("heading", { name: /propose a practice time/i });
+
+    const startInput = screen.getByLabelText(/Start time/i) as HTMLInputElement;
+    const endInput = screen.getByLabelText(/End time/i) as HTMLInputElement;
+
+    await userEvent.clear(startInput);
+    await userEvent.type(startInput, "2020-01-01T10:00");
+    await userEvent.clear(endInput);
+    await userEvent.type(endInput, "2020-01-01T11:00");
+
+    await userEvent.click(screen.getByRole("button", { name: /send invite/i }));
+
+    // Inline error banner should show (fallback feedback)
+    await screen.findByText(/start time must be in the future/i);
+
+    // And a toast should fire so the user gets feedback even if they're scrolled.
+    expect(toast.error).toHaveBeenCalledWith(expect.stringMatching(/start time must be in the future/i));
+  });
+
+  it("renders pending invite blocks and prevents proposing an overlapping time", async () => {
+    const busyStart = new Date(Date.now() + 2 * 60 * 60 * 1000);
+    busyStart.setMinutes(0, 0, 0);
+    const busyEnd = new Date(busyStart.getTime() + 60 * 60 * 1000);
+    const busyStartIso = busyStart.toISOString();
+    const busyEndIso = busyEnd.toISOString();
+
+    mockFetchPendingInviteBlocks.mockResolvedValueOnce([
+      {
+        inviteId: "pending-1",
+        status: "PENDING",
+        expiresAt: null,
+        direction: "SENT",
+        otherUser: { id: "u2", firstName: "Grace", lastName: "Hopper", displayName: null },
+        session: {
+          id: "s2",
+          title: "Proposed practice session",
+          scheduledStart: busyStartIso,
+          scheduledEnd: busyEndIso,
+        },
+      },
+    ]);
+
+    render(<ProposeInviteDialog match={baseMatch} />);
+
+    await userEvent.click(screen.getByRole("button", { name: /propose time/i }));
+
+    await waitFor(() => expect(mockFetchOverlapSuggestions).toHaveBeenCalled());
+    // Pending invites are loaded and should show the helper text for gray blocks.
+    await screen.findByText(/Gray blocks show your existing pending invites/i);
+
+    // Try to submit an overlapping window
+    const startInput = screen.getByLabelText(/Start time/i) as HTMLInputElement;
+    const endInput = screen.getByLabelText(/End time/i) as HTMLInputElement;
+
+    const overlapEnd = new Date(busyEnd.getTime() + 30 * 60 * 1000);
+    const startLocal = dateToDatetimeLocal(busyStart);
+    const endLocal = dateToDatetimeLocal(overlapEnd);
+
+    await userEvent.clear(startInput);
+    await userEvent.type(startInput, startLocal);
+    await userEvent.clear(endInput);
+    await userEvent.type(endInput, endLocal);
+
+    expect(startInput.value).toBe(startLocal);
+    expect(endInput.value).toBe(endLocal);
+
+    await userEvent.click(screen.getByRole("button", { name: /send invite/i }));
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith(expect.stringMatching(/overlaps this time/i));
+    });
+    expect(mockProposePracticeSession).not.toHaveBeenCalled();
+  });
+
+  it("warns (but allows) when the selected time overlaps an incoming pending invite", async () => {
+    const busyStart = new Date(Date.now() + 2 * 60 * 60 * 1000);
+    busyStart.setMinutes(0, 0, 0);
+    const busyEnd = new Date(busyStart.getTime() + 60 * 60 * 1000);
+
+    mockFetchPendingInviteBlocks.mockResolvedValueOnce([
+      {
+        inviteId: "pending-incoming-1",
+        status: "PENDING",
+        expiresAt: null,
+        direction: "RECEIVED",
+        otherUser: { id: "u3", firstName: "Linus", lastName: "Torvalds", displayName: null },
+        session: {
+          id: "s3",
+          title: "Proposed practice session",
+          scheduledStart: busyStart.toISOString(),
+          scheduledEnd: busyEnd.toISOString(),
+        },
+      },
+    ]);
+
+    // Keep the dialog open long enough to assert the warning (submit normally closes on success).
+    let resolveInvite: ((v: any) => void) | null = null;
+    mockProposePracticeSession.mockImplementationOnce(
+      () =>
+        new Promise((res) => {
+          resolveInvite = res;
+        }),
+    );
+
+    render(<ProposeInviteDialog match={baseMatch} />);
+    await userEvent.click(screen.getByRole("button", { name: /propose time/i }));
+
+    await waitFor(() => expect(mockFetchOverlapSuggestions).toHaveBeenCalled());
+    await screen.findByText(/Gray blocks show your existing pending invites/i);
+
+    const startLocal = dateToDatetimeLocal(busyStart);
+    const endLocal = dateToDatetimeLocal(busyEnd);
+
+    await userEvent.clear(screen.getByLabelText(/Start time/i));
+    await userEvent.type(screen.getByLabelText(/Start time/i), startLocal);
+    await userEvent.clear(screen.getByLabelText(/End time/i));
+    await userEvent.type(screen.getByLabelText(/End time/i), endLocal);
+
+    await userEvent.click(screen.getByRole("button", { name: /send invite/i }));
+
+    // Warning banner should appear, but the submit should still proceed to the RPC.
+    await screen.findByText(/pending invite from linus torvalds/i);
+    expect(mockProposePracticeSession).toHaveBeenCalledTimes(1);
+
+    resolveInvite?.({ sessionId: "session-1", inviteId: "invite-1", inviteStatus: "PENDING" });
+  });
+
+  it("shows the current week range and updates it when navigating weeks", async () => {
+    render(<ProposeInviteDialog match={baseMatch} />);
+
+    await userEvent.click(screen.getByRole("button", { name: /propose time/i }));
+    await screen.findByRole("heading", { name: /propose a practice time/i });
+
+    const weekRangeEl = screen.getByText(/[A-Z][a-z]{2} \d{1,2} – [A-Z][a-z]{2} \d{1,2}/);
+    const initialWeekRange = weekRangeEl.textContent;
+    const initialDateIso = screen.getByTestId("calendar-date").textContent;
+
+    expect(initialWeekRange).toBeTruthy();
+    expect(initialDateIso).toBeTruthy();
+
+    await userEvent.click(screen.getByRole("button", { name: /^Next$/i }));
+    await waitFor(() => {
+      expect(screen.getByTestId("calendar-date").textContent).not.toBe(initialDateIso);
+    });
+    expect(screen.getByText(/[A-Z][a-z]{2} \d{1,2} – [A-Z][a-z]{2} \d{1,2}/).textContent).not.toBe(
+      initialWeekRange,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: /^Prev$/i }));
+    await waitFor(() => {
+      expect(screen.getByTestId("calendar-date").textContent).toBe(initialDateIso);
+    });
+    expect(screen.getByText(/[A-Z][a-z]{2} \d{1,2} – [A-Z][a-z]{2} \d{1,2}/).textContent).toBe(
+      initialWeekRange,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: /^Today$/i }));
+    await waitFor(() => {
+      expect(screen.getByTestId("calendar-date").textContent).not.toBeNull();
+    });
+    // "Today" always navigates to a Sunday weekStart.
+    const todayWeekStart = new Date(screen.getByTestId("calendar-date").textContent as string);
+    expect(todayWeekStart.getDay()).toBe(0);
+  });
+
+  it("formats the week column header with day name + date (EEEE, MMM d)", async () => {
+    render(<ProposeInviteDialog match={baseMatch} />);
+
+    await userEvent.click(screen.getByRole("button", { name: /propose time/i }));
+    await waitFor(() => expect(mockFetchOverlapSuggestions).toHaveBeenCalled());
+
+    // Our calendar mock renders dayFormat(props.date) in calendar-header-day-0
+    expect(screen.getByTestId("calendar-header-day-0")).toHaveTextContent(
+      /^Sunday,\s+[A-Z][a-z]{2}\s+\d{1,2}$/,
+    );
   });
 });
 

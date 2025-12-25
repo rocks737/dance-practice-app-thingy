@@ -2,8 +2,10 @@
  * MatchesBrowser tests
  */
 
+import "@testing-library/jest-dom/jest-globals";
+
 import { describe, it, expect, beforeEach } from "@jest/globals";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MatchesBrowser } from "../MatchesBrowser";
 import type {
@@ -14,14 +16,12 @@ import type {
 import { PrimaryRole } from "@/lib/profiles/types";
 
 const mockFetchEnrichedMatches = jest.fn();
-const mockFetchActiveInviteeIds = jest.fn();
 const mockFetchSentInvites = jest.fn();
 const mockFetchReceivedInvites = jest.fn();
 const mockRespondToInvite = jest.fn();
 
 jest.mock("@/lib/matches/api", () => ({
   fetchEnrichedMatches: (...args: unknown[]) => mockFetchEnrichedMatches(...args),
-  fetchActiveInviteeIds: (...args: unknown[]) => mockFetchActiveInviteeIds(...args),
   fetchSentInvites: (...args: unknown[]) => mockFetchSentInvites(...args),
   fetchReceivedInvites: (...args: unknown[]) => mockFetchReceivedInvites(...args),
   respondToInvite: (...args: unknown[]) => mockRespondToInvite(...args),
@@ -52,7 +52,7 @@ const createMatch = (overrides: Partial<EnrichedMatch> = {}): EnrichedMatch => (
   firstName: "Alex",
   lastName: "Rivera",
   displayName: null,
-  primaryRole: PrimaryRole.LEADING,
+  primaryRole: PrimaryRole.LEADER,
   wsdcLevel: 2,
   competitivenessLevel: 3,
   bio: null,
@@ -67,6 +67,7 @@ const createSentInvite = (overrides: Partial<SentInviteSummary> = {}): SentInvit
   note: null,
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
+  expiresAt: null,
   invitee: {
     id: "invitee-1",
     firstName: "Taylor",
@@ -78,6 +79,7 @@ const createSentInvite = (overrides: Partial<SentInviteSummary> = {}): SentInvit
     title: "Practice",
     scheduledStart: null,
     scheduledEnd: null,
+    status: "PROPOSED",
   },
   ...overrides,
 });
@@ -90,6 +92,7 @@ const createReceivedInvite = (
   note: null,
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
+  expiresAt: null,
   proposer: {
     id: "proposer-1",
     firstName: "Morgan",
@@ -101,6 +104,7 @@ const createReceivedInvite = (
     title: "Session",
     scheduledStart: null,
     scheduledEnd: null,
+    status: "PROPOSED",
   },
   ...overrides,
 });
@@ -108,7 +112,6 @@ const createReceivedInvite = (
 describe("MatchesBrowser", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockFetchActiveInviteeIds.mockResolvedValue(new Set());
     mockFetchSentInvites.mockResolvedValue([]);
     mockFetchReceivedInvites.mockResolvedValue([]);
     mockFetchEnrichedMatches.mockResolvedValue([]);
@@ -163,24 +166,52 @@ describe("MatchesBrowser", () => {
     expect(screen.getByText("Found 2 practice partners")).toBeInTheDocument();
   });
 
-  it("hides matches that already have outgoing invites by default and shows them when toggled off", async () => {
+  it("shows per-person request counts on potential partner cards", async () => {
+    const matchId = "person-1";
     mockFetchEnrichedMatches.mockResolvedValue([
-      createMatch({ firstName: "Visible", lastName: "One", profileId: "p1" }),
-      createMatch({ firstName: "Hidden", lastName: "Two", profileId: "p2" }),
+      createMatch({ profileId: matchId, firstName: "Casey", lastName: "Ng" }),
     ]);
-    mockFetchActiveInviteeIds.mockResolvedValue(new Set(["p2"]));
 
-    const user = userEvent.setup();
+    const now = Date.now();
+    mockFetchSentInvites.mockResolvedValue([
+      createSentInvite({
+        status: "PENDING",
+        invitee: { id: matchId, firstName: "Casey", lastName: "Ng", displayName: null },
+      }),
+      createSentInvite({
+        status: "ACCEPTED",
+        invitee: { id: matchId, firstName: "Casey", lastName: "Ng", displayName: null },
+        session: {
+          id: "session-accepted",
+          title: "Practice",
+          scheduledStart: new Date(now + 60 * 60 * 1000).toISOString(),
+          scheduledEnd: new Date(now + 2 * 60 * 60 * 1000).toISOString(),
+          status: "SCHEDULED",
+        },
+      }),
+    ]);
+    mockFetchReceivedInvites.mockResolvedValue([
+      createReceivedInvite({
+        status: "PENDING",
+        proposer: { id: matchId, firstName: "Casey", lastName: "Ng", displayName: null },
+      }),
+    ]);
+
     render(<MatchesBrowser profileId={mockProfileId} />);
 
-    await waitFor(() => expect(screen.getByText(/Visible One/)).toBeInTheDocument());
-    await waitFor(() => expect(screen.queryByText(/Hidden Two/)).not.toBeInTheDocument());
-    expect(screen.getByText("(1 hidden)")).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText("Potential partners")).toBeInTheDocument());
+    const heading = screen.getByRole("heading", { name: "Potential partners" });
+    const section = heading.closest("section");
+    expect(section).not.toBeNull();
+    const scoped = within(section!);
 
-    const toggle = screen.getByLabelText(/Hide people you’ve already invited/i);
-    await user.click(toggle);
-
-    await waitFor(() => expect(screen.getByText(/Hidden Two/)).toBeInTheDocument());
+    expect(scoped.getByText("Casey Ng")).toBeInTheDocument();
+    await waitFor(() => expect(scoped.getByText(/\bsent\b/i)).toBeInTheDocument());
+    const bar = scoped.getByText(/\bsent\b/i).closest("div");
+    expect(bar).not.toBeNull();
+    expect(bar!).toHaveTextContent(/1\s*sent/i);
+    expect(bar!).toHaveTextContent(/1\s*received/i);
+    expect(bar!).toHaveTextContent(/1\s*scheduled/i);
   });
 
   it("renders sent invite cards with cancel action", async () => {

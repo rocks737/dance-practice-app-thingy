@@ -17,28 +17,35 @@ function forceLoginWithReturn(request: NextRequest) {
  * Check if user profile is complete
  * Returns true if profile exists and has required fields filled
  */
-async function checkProfileComplete(supabase: any, userId: string): Promise<boolean> {
+type ProfileGate = {
+  hasProfile: boolean;
+  isComplete: boolean;
+  accountStatus: number | null;
+};
+
+async function getProfileGate(supabase: any, userId: string): Promise<ProfileGate> {
   try {
     const { data: profile } = await supabase
       .from("user_profiles")
-      .select("id, first_name, last_name")
+      .select("id, first_name, last_name, account_status")
       .eq("auth_user_id", userId)
       .maybeSingle();
 
     // Profile doesn't exist
     if (!profile) {
-      return false;
+      return { hasProfile: false, isComplete: false, accountStatus: null };
     }
 
     // Profile exists but missing required fields
-    if (!profile.first_name || !profile.last_name) {
-      return false;
-    }
-
-    return true;
+    const isComplete = Boolean(profile.first_name && profile.last_name);
+    return {
+      hasProfile: true,
+      isComplete,
+      accountStatus: typeof profile.account_status === "number" ? profile.account_status : null,
+    };
   } catch (error) {
     console.error("Error checking profile:", error);
-    return false;
+    return { hasProfile: false, isComplete: false, accountStatus: null };
   }
 }
 
@@ -121,25 +128,31 @@ export const validateSession = async (request: NextRequest) => {
     const isProtectedRoute = protectedRoutes.some((path) => currentPath.startsWith(path));
     const isSignupRoute = currentPath.startsWith("/signup");
     const isAuthCallback = currentPath.startsWith("/auth/callback");
+    const isAccountDisabledRoute = currentPath.startsWith("/account-disabled");
 
     // If not authenticated and trying to access protected route, redirect to login
     if (!user && isProtectedRoute) {
       return forceLoginWithReturn(request);
     }
 
-    // If authenticated, check if profile is complete (except for signup and auth callback routes)
-    if (user && !isSignupRoute && !isAuthCallback) {
-      const profileComplete = await checkProfileComplete(supabase, user.id);
-      
-      if (!profileComplete && isProtectedRoute) {
-        // Profile incomplete, redirect to signup to complete onboarding
-        console.log("[MIDDLEWARE] Redirecting user to complete onboarding:", user.email);
-        return NextResponse.redirect(
-          new URL(
-            `/signup?returnUrl=${encodeURIComponent(currentPath)}`,
-            request.url,
-          ),
-        );
+    if (user && !isAuthCallback) {
+      const gate = await getProfileGate(supabase, user.id);
+
+      // If the account is suspended/deleted, send them to an informational page.
+      // (Avoid redirect loops by allowing /account-disabled itself.)
+      if ((gate.accountStatus ?? 0) !== 0 && !isAccountDisabledRoute) {
+        return NextResponse.redirect(new URL("/account-disabled", request.url));
+      }
+
+      // If authenticated, check if profile is complete (except for signup and the disabled page).
+      if (!isSignupRoute && !isAccountDisabledRoute) {
+        if (!gate.isComplete && isProtectedRoute) {
+          // Profile incomplete, redirect to signup to complete onboarding
+          console.log("[MIDDLEWARE] Redirecting user to complete onboarding:", user.email);
+          return NextResponse.redirect(
+            new URL(`/signup?returnUrl=${encodeURIComponent(currentPath)}`, request.url),
+          );
+        }
       }
     }
 

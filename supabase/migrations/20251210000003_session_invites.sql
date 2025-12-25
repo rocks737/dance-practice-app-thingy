@@ -8,6 +8,9 @@
 
 set search_path = public;
 
+-- Needed for scheduled expiry sweeper
+create extension if not exists pg_cron;
+
 -- ----------------------------
 -- Table
 -- ----------------------------
@@ -136,7 +139,11 @@ declare
   v_session_id uuid;
   v_invite_id uuid;
   v_expires_at timestamptz;
+  v_active_invites integer;
 begin
+  -- Keep status as source of truth: sweep expired rows before applying business rules.
+  perform public.expire_session_invites();
+
   v_proposer_id := public.current_profile_id();
   if v_proposer_id is null then
     raise exception 'Missing profile for current user';
@@ -154,8 +161,26 @@ begin
     raise exception 'End time must be after start time';
   end if;
 
+  -- Disallow proposing sessions that start in the past.
+  -- Prevents creating invites that are instantly expired.
+  if p_start < now() then
+    raise exception 'Start time must be in the future';
+  end if;
+
   -- Default expiry: sooner of proposed end time or 24 hours from now
   v_expires_at := least(p_end, now() + interval '24 hours');
+
+  -- Limit: max 3 active outgoing invites per invitee at a time.
+  -- "Active" = PENDING. (Expired rows are swept above.)
+  select count(*) into v_active_invites
+  from session_invites si
+  where si.proposer_id = v_proposer_id
+    and si.invitee_id = p_invitee_id
+    and si.status = 'PENDING';
+
+  if v_active_invites >= 3 then
+    raise exception 'You already have 3 active practice requests to this person. Please wait for a response or cancel an existing request.';
+  end if;
 
   -- If the invitee already sent a pending invite for the exact same window,
   -- treat this as an acceptance of that existing request instead of creating
@@ -169,7 +194,6 @@ begin
     and si.status = 'PENDING'
     and s.scheduled_start = p_start
     and s.scheduled_end = p_end
-    and (si.expires_at is null or si.expires_at >= now())
   limit 1;
 
   if found then
@@ -187,6 +211,24 @@ begin
     return query
     select v_session_id, v_invite_id, 'ACCEPTED'::text as invite_status;
     return;
+  end if;
+
+  -- Prevent double-booking: disallow proposing a time that overlaps any other
+  -- active (pending) invite that the current user has sent (outgoing only).
+  -- Incoming invites are soft-blocked in the UI (warning) but not rejected here.
+  --
+  -- NOTE: We check AFTER the "mirror accept" path above so that accepting an
+  -- exact-matching pending invite is still allowed.
+  if exists (
+    select 1
+    from session_invites si
+    join sessions s on s.id = si.session_id
+    where si.status = 'PENDING'
+      and si.proposer_id = v_proposer_id
+      and s.scheduled_start < p_end
+      and s.scheduled_end > p_start
+  ) then
+    raise exception 'You already have a proposed session that overlaps this time. Please pick a different slot.';
   end if;
 
   insert into sessions (
@@ -273,6 +315,9 @@ declare
   v_actor uuid;
   v_invite session_invites%rowtype;
 begin
+  -- Sweep expired rows so status is reliable for the invite we are about to handle.
+  perform public.expire_session_invites();
+
   v_actor := public.current_profile_id();
   if v_actor is null then
     raise exception 'Missing profile for current user';
@@ -286,12 +331,25 @@ begin
     raise exception 'Invite not found';
   end if;
 
+  -- If the sweeper already marked it expired, return terminal status.
+  if v_invite.status = 'EXPIRED' then
+    return query
+    select v_invite.id, v_invite.session_id, 'EXPIRED'::text;
+    return;
+  end if;
+
   -- Enforce expiry before any action
   if v_invite.expires_at is not null and v_invite.expires_at < now() then
     update session_invites
       set status = 'EXPIRED'
-    where id = v_invite.id;
-    raise exception 'Invite expired';
+    where id = v_invite.id
+      and status = 'PENDING';
+
+    -- Important: do NOT raise an exception here, or the update above will be rolled back.
+    -- Instead, return a terminal status that the application can interpret as a failure.
+    return query
+    select v_invite.id, v_invite.session_id, 'EXPIRED'::text;
+    return;
   end if;
 
   if v_invite.status <> 'PENDING' then
@@ -419,4 +477,45 @@ as $$
 $$;
 
 grant execute on function public.suggest_overlapping_windows(uuid) to authenticated;
+
+-- ----------------------------
+-- Sweeper: persist EXPIRED status for expired pending invites
+-- ----------------------------
+create or replace function public.expire_session_invites()
+returns integer
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_updated integer;
+begin
+  update public.session_invites
+    set status = 'EXPIRED'
+  where status = 'PENDING'
+    and expires_at is not null
+    and expires_at < now();
+
+  get diagnostics v_updated = row_count;
+  return v_updated;
+end;
+$$;
+
+-- Schedule the sweeper to run every 5 minutes.
+-- Use a named job so it can be updated idempotently.
+do $$
+begin
+  -- If the job exists from a prior run/reset, remove it first.
+  perform cron.unschedule('expire_session_invites');
+exception when others then
+  -- ignore if job doesn't exist yet
+  null;
+end;
+$$;
+
+select cron.schedule(
+  'expire_session_invites',
+  '*/5 * * * *',
+  $$select public.expire_session_invites();$$
+);
 

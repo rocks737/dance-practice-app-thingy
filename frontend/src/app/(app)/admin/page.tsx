@@ -2,8 +2,33 @@ import { Shield, Users, Home, AlertTriangle } from "lucide-react";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { createClient } from "@/lib/supabase/server";
 
-export default function AdminPage() {
+export default async function AdminPage() {
+  const supabase = await createClient();
+
+  const nowIso = new Date().toISOString();
+
+  const [usersRes, sessionsRes, reportsRes] = await Promise.all([
+    supabase
+      .from("user_profiles")
+      .select("id", { count: "exact", head: true })
+      .is("deleted_at", null),
+    supabase
+      .from("sessions")
+      .select("id", { count: "exact", head: true })
+      .in("status", ["SCHEDULED", "PROPOSED"])
+      .gt("scheduled_end", nowIso),
+    supabase
+      .from("abuse_reports")
+      .select("id", { count: "exact", head: true })
+      .not("status", "in", "(RESOLVED,DISMISSED)"),
+  ]);
+
+  const totalUsers = usersRes.count ?? 0;
+  const activeSessions = sessionsRes.count ?? 0;
+  const pendingReports = reportsRes.count ?? 0;
+
   return (
     <div className="max-w-6xl">
       <div className="flex items-center space-x-3 mb-6">
@@ -18,7 +43,7 @@ export default function AdminPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Total Users</p>
-                <p className="text-2xl font-bold">---</p>
+                <p className="text-2xl font-bold">{totalUsers.toLocaleString()}</p>
               </div>
               <Users className="w-10 h-10 text-primary" />
             </div>
@@ -30,7 +55,7 @@ export default function AdminPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Active Sessions</p>
-                <p className="text-2xl font-bold">---</p>
+                <p className="text-2xl font-bold">{activeSessions.toLocaleString()}</p>
               </div>
               <Home className="w-10 h-10 text-primary" />
             </div>
@@ -42,7 +67,7 @@ export default function AdminPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Pending Reports</p>
-                <p className="text-2xl font-bold">---</p>
+                <p className="text-2xl font-bold">{pendingReports.toLocaleString()}</p>
               </div>
               <AlertTriangle className="w-10 h-10 text-destructive" />
             </div>
@@ -53,7 +78,7 @@ export default function AdminPage() {
       <Card>
         <CardContent className="p-6">
           <h2 className="text-xl font-semibold mb-4">Quick Actions</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Link
               href="/admin/users"
               className="p-4 border rounded-lg hover:border-primary hover:bg-accent transition-colors"
@@ -72,6 +97,16 @@ export default function AdminPage() {
               <h3 className="font-medium">Review Reports</h3>
               <p className="text-sm text-muted-foreground">
                 Handle abuse reports and moderation
+              </p>
+            </Link>
+            <Link
+              href="/admin/sessions"
+              className="p-4 border rounded-lg hover:border-primary hover:bg-accent transition-colors"
+            >
+              <Home className="w-6 h-6 mb-2" />
+              <h3 className="font-medium">View Sessions</h3>
+              <p className="text-sm text-muted-foreground">
+                Read-only overview of all sessions
               </p>
             </Link>
           </div>

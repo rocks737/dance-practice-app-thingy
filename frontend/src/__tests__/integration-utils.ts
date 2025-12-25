@@ -442,6 +442,11 @@ export async function cleanupTestLocation(locationId: string): Promise<void> {
  */
 export async function cleanupTestSession(sessionId: string): Promise<void> {
   const supabase = createAdminClient();
+  // Be explicit here: tests frequently create pending invites; if for any reason
+  // cascade rules change, we still want cleanup to fully remove related rows so
+  // later tests don't see "overlap" conflicts.
+  await supabase.from("session_invites").delete().eq("session_id", sessionId);
+  await supabase.from("session_participants").delete().eq("session_id", sessionId);
   await supabase.from("sessions").delete().eq("id", sessionId);
 }
 

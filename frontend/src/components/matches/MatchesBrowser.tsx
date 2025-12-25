@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { MatchCard } from "./MatchCard";
 import {
-  fetchActiveInviteeIds,
   fetchEnrichedMatches,
   fetchReceivedInvites,
   fetchSentInvites,
@@ -14,7 +13,6 @@ import {
   type InviteResponseAction,
 } from "@/lib/matches/api";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Users, RefreshCw, AlertCircle, Calendar, Inbox, Send, Clock } from "lucide-react";
 import Link from "next/link";
@@ -28,13 +26,11 @@ interface MatchesBrowserProps {
 
 export function MatchesBrowser({ profileId }: MatchesBrowserProps) {
   const [matches, setMatches] = useState<EnrichedMatch[]>([]);
-  const [activeInviteeIds, setActiveInviteeIds] = useState<Set<string>>(new Set());
   const [sentInvites, setSentInvites] = useState<SentInviteSummary[]>([]);
   const [receivedInvites, setReceivedInvites] = useState<ReceivedInviteSummary[]>([]);
   const [loadingMatches, setLoadingMatches] = useState(true);
   const [loadingInvites, setLoadingInvites] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [hideActiveInvites, setHideActiveInvites] = useState(true);
   const [inviteActionId, setInviteActionId] = useState<string | null>(null);
 
   const loadMatches = useCallback(async () => {
@@ -54,17 +50,11 @@ export function MatchesBrowser({ profileId }: MatchesBrowserProps) {
   const loadInvites = useCallback(async () => {
     setLoadingInvites(true);
     try {
-      const [ids, sent, received] = await Promise.all([
-        fetchActiveInviteeIds(),
-        fetchSentInvites(),
-        fetchReceivedInvites(),
-      ]);
-      setActiveInviteeIds(ids);
+      const [sent, received] = await Promise.all([fetchSentInvites(), fetchReceivedInvites()]);
       setSentInvites(sent);
       setReceivedInvites(received);
     } catch (err) {
       console.warn("Unable to load invites", err);
-      setActiveInviteeIds(new Set());
       setSentInvites([]);
       setReceivedInvites([]);
     } finally {
@@ -73,25 +63,74 @@ export function MatchesBrowser({ profileId }: MatchesBrowserProps) {
   }, []);
 
   useEffect(() => {
-    // Fetch both matches and active invites on first load
+    // Fetch matches + invite inbox/outbox on first load
     void loadMatches();
     void loadInvites();
   }, [loadMatches, loadInvites, profileId]);
 
-  const visibleMatches = useMemo(() => {
-    return hideActiveInvites
-      ? matches.filter((match) => !activeInviteeIds.has(match.profileId))
-      : matches;
-  }, [hideActiveInvites, matches, activeInviteeIds]);
-
-  const hiddenCount = matches.length - visibleMatches.length;
-  const filteredAllHidden =
-    hideActiveInvites && matches.length > 0 && visibleMatches.length === 0;
+  const hasMatches = matches.length > 0;
 
   const handleInviteSent = useCallback(async () => {
     await Promise.all([loadInvites(), loadMatches()]);
-    setHideActiveInvites(true);
   }, [loadInvites, loadMatches]);
+
+  const isInviteExpired = (status?: string, expiresAt?: string | null) => {
+    if ((status ?? "").toUpperCase() === "EXPIRED") return true;
+    // Fallback during cron lag (or if expires_at is set but status hasn’t been swept yet)
+    if (!expiresAt) return false;
+    return new Date(expiresAt) < new Date();
+  };
+
+  const relationshipCountsByProfileId = useMemo(() => {
+    const now = new Date();
+    const counts = new Map<string, { sent: number; received: number; scheduled: number }>();
+
+    const ensure = (id: string) => {
+      const existing = counts.get(id);
+      if (existing) return existing;
+      const created = { sent: 0, received: 0, scheduled: 0 };
+      counts.set(id, created);
+      return created;
+    };
+
+    for (const invite of sentInvites) {
+      const otherId = invite.invitee?.id;
+      if (!otherId) continue;
+      const entry = ensure(otherId);
+
+      if (invite.status === "PENDING" && !isInviteExpired(invite.status, invite.expiresAt)) {
+        entry.sent += 1;
+      }
+
+      if (invite.status === "ACCEPTED") {
+        const status = (invite.session?.status ?? "").toUpperCase();
+        const start = invite.session?.scheduledStart ? new Date(invite.session.scheduledStart) : null;
+        if (status === "SCHEDULED" && start && !Number.isNaN(start.getTime()) && start > now) {
+          entry.scheduled += 1;
+        }
+      }
+    }
+
+    for (const invite of receivedInvites) {
+      const otherId = invite.proposer?.id;
+      if (!otherId) continue;
+      const entry = ensure(otherId);
+
+      if (invite.status === "PENDING" && !isInviteExpired(invite.status, invite.expiresAt)) {
+        entry.received += 1;
+      }
+
+      if (invite.status === "ACCEPTED") {
+        const status = (invite.session?.status ?? "").toUpperCase();
+        const start = invite.session?.scheduledStart ? new Date(invite.session.scheduledStart) : null;
+        if (status === "SCHEDULED" && start && !Number.isNaN(start.getTime()) && start > now) {
+          entry.scheduled += 1;
+        }
+      }
+    }
+
+    return counts;
+  }, [sentInvites, receivedInvites]);
 
   // Loading state
   if (loadingMatches) {
@@ -131,20 +170,16 @@ export function MatchesBrowser({ profileId }: MatchesBrowserProps) {
     <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-8 text-center">
       <Users className="mx-auto h-12 w-12 text-gray-400" />
       <h3 className="mt-4 text-lg font-semibold text-gray-900 dark:text-gray-100">
-        {filteredAllHidden ? "All matches are hidden" : "No matches found yet"}
+        No matches found yet
       </h3>
       <p className="mt-2 text-sm text-gray-500 dark:text-gray-400 max-w-md mx-auto">
-        {filteredAllHidden
-          ? "You’re currently hiding people you’ve already invited. Uncheck the filter to see them again."
-          : "We couldn’t find any practice partners that match your schedule and preferences. This could be because:"}
+        We couldn’t find any practice partners that match your schedule and preferences. This could be because:
       </p>
-      {!filteredAllHidden && (
-        <ul className="mt-3 text-sm text-gray-500 dark:text-gray-400 text-left max-w-sm mx-auto space-y-1">
-          <li>• Your availability windows don&apos;t overlap with others</li>
-          <li>• There aren&apos;t many dancers in your area yet</li>
-          <li>• Try expanding your available time slots</li>
-        </ul>
-      )}
+      <ul className="mt-3 text-sm text-gray-500 dark:text-gray-400 text-left max-w-sm mx-auto space-y-1">
+        <li>• Your availability windows don&apos;t overlap with others</li>
+        <li>• There aren&apos;t many dancers in your area yet</li>
+        <li>• Try expanding your available time slots</li>
+      </ul>
       <div className="mt-6 flex justify-center gap-3">
         <Button asChild variant="outline">
           <Link href="/schedule">
@@ -226,11 +261,6 @@ export function MatchesBrowser({ profileId }: MatchesBrowserProps) {
     </div>
   );
 
-  const isInviteExpired = (expiresAt?: string | null) => {
-    if (!expiresAt) return false;
-    return new Date(expiresAt) < new Date();
-  };
-
   return (
     <div className="space-y-10">
       <section>
@@ -245,23 +275,6 @@ export function MatchesBrowser({ profileId }: MatchesBrowserProps) {
               Track pending invites and cancel ones you no longer need.
             </p>
           </div>
-          <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
-            <Checkbox
-              checked={hideActiveInvites}
-              onCheckedChange={async (val) => {
-                const next = Boolean(val);
-                if (next) {
-                  await loadInvites();
-                }
-                setHideActiveInvites(next);
-              }}
-              aria-label="Hide people you have active invites out to"
-            />
-            <span>Hide people you’ve already invited</span>
-            {loadingInvites && (
-              <span className="text-xs text-gray-400">(updating invites...)</span>
-            )}
-          </label>
         </div>
         <div className="mt-4 space-y-4">
           {sentInvites.length === 0 && !loadingInvites && (
@@ -281,7 +294,7 @@ export function MatchesBrowser({ profileId }: MatchesBrowserProps) {
               invite.invitee?.lastName,
               invite.invitee?.displayName,
             );
-            const inviteExpired = isInviteExpired(invite.expiresAt);
+            const inviteExpired = isInviteExpired(invite.status, invite.expiresAt);
             return (
               <div
                 key={invite.id}
@@ -362,7 +375,7 @@ export function MatchesBrowser({ profileId }: MatchesBrowserProps) {
               invite.proposer?.displayName,
             );
             const isPending = invite.status === "PENDING";
-            const inviteExpired = isInviteExpired(invite.expiresAt);
+            const inviteExpired = isInviteExpired(invite.status, invite.expiresAt);
             return (
               <div
                 key={invite.id}
@@ -435,13 +448,7 @@ export function MatchesBrowser({ profileId }: MatchesBrowserProps) {
               Potential partners
             </h2>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Found {visibleMatches.length} practice{" "}
-              {visibleMatches.length === 1 ? "partner" : "partners"}
-              {hiddenCount > 0 && hideActiveInvites && (
-                <span className="ml-2 text-xs text-amber-600 dark:text-amber-300">
-                  ({hiddenCount} hidden)
-                </span>
-              )}
+              Found {matches.length} practice {matches.length === 1 ? "partner" : "partners"}
             </p>
           </div>
           <Button
@@ -456,7 +463,7 @@ export function MatchesBrowser({ profileId }: MatchesBrowserProps) {
             Refresh
           </Button>
         </div>
-        {visibleMatches.length === 0 ? (
+        {matches.length === 0 ? (
           matchesEmptyState
         ) : (
           <ul
@@ -464,8 +471,13 @@ export function MatchesBrowser({ profileId }: MatchesBrowserProps) {
             className="grid grid-cols-1 gap-6 md:grid-cols-3"
           >
             <AnimatePresence>
-              {visibleMatches.map((match) => (
-                <MatchCard key={match.profileId} match={match} onInviteSent={handleInviteSent} />
+              {matches.map((match) => (
+                <MatchCard
+                  key={match.profileId}
+                  match={match}
+                  onInviteSent={handleInviteSent}
+                  relationshipCounts={relationshipCountsByProfileId.get(match.profileId)}
+                />
               ))}
             </AnimatePresence>
           </ul>
