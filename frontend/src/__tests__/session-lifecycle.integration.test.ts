@@ -69,8 +69,8 @@ describe("Session Lifecycle - Integration", () => {
         {
           organizerId: organizer.profileId,
           locationId: testLocation.locationId,
-          title: "Partner Practice Session",
-          sessionType: "PARTNER_PRACTICE",
+          title: "Group Practice Session",
+          sessionType: "GROUP_PRACTICE",
           status: "SCHEDULED",
           visibility: "PUBLIC",
           scheduledStart: scheduledStart.toISOString(),
@@ -80,7 +80,7 @@ describe("Session Lifecycle - Integration", () => {
         organizer.supabase,
       );
 
-      expect(created.title).toBe("Partner Practice Session");
+      expect(created.title).toBe("Group Practice Session");
       expect(created.organizer?.id).toBe(organizer.profileId);
       expect(created.location?.id).toBe(testLocation.locationId);
       expect(created.capacity).toBe(10);
@@ -157,7 +157,7 @@ describe("Session Lifecycle - Integration", () => {
           organizerId: organizer.profileId,
           locationId: testLocation.locationId,
           title: "Test Session",
-          sessionType: "PARTNER_PRACTICE",
+          sessionType: "GROUP_PRACTICE",
           status: "SCHEDULED",
           visibility: "PUBLIC",
           scheduledStart: scheduledStart.toISOString(),
@@ -334,7 +334,7 @@ describe("Session Lifecycle - Integration", () => {
           organizerId: organizer.profileId,
           locationId: testLocation.locationId,
           title: "Test Session",
-          sessionType: "PARTNER_PRACTICE",
+          sessionType: "GROUP_PRACTICE",
           status: "SCHEDULED",
           visibility: "PUBLIC",
           scheduledStart: scheduledStart.toISOString(),
@@ -364,6 +364,44 @@ describe("Session Lifecycle - Integration", () => {
       );
 
       expect(updated.capacity).toBe(15);
+    });
+
+    it("should enforce partner practice fixed capacity", async () => {
+      if (!testLocation) {
+        throw new Error("Test location not initialized");
+      }
+      const now = new Date();
+      const scheduledStart = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+      const scheduledEnd = new Date(scheduledStart.getTime() + 2 * 60 * 60 * 1000);
+
+      const partner = await apiCreateSession(
+        {
+          organizerId: organizer.profileId,
+          locationId: testLocation.locationId,
+          title: "Partner Practice Fixed",
+          sessionType: "PARTNER_PRACTICE",
+          status: "SCHEDULED",
+          visibility: "PUBLIC",
+          scheduledStart: scheduledStart.toISOString(),
+          scheduledEnd: scheduledEnd.toISOString(),
+          capacity: 10,
+        },
+        organizer.supabase,
+      );
+
+      expect(partner.capacity).toBe(2);
+
+      await expect(
+        apiUpdateSession(
+          {
+            id: partner.id,
+            patch: { capacity: 15 },
+          },
+          organizer.supabase,
+        ),
+      ).rejects.toThrow("Partner practice capacity is fixed at 2");
+
+      await cleanupTestSession(partner.id);
     });
 
     it("should update session status", async () => {
@@ -417,7 +455,7 @@ describe("Session Lifecycle - Integration", () => {
           organizerId: organizer.profileId,
           locationId: testLocation.locationId,
           title: "Test Session",
-          sessionType: "PARTNER_PRACTICE",
+          sessionType: "GROUP_PRACTICE",
           status: "SCHEDULED",
           visibility: "PUBLIC",
           scheduledStart: tomorrow.toISOString(),

@@ -59,10 +59,12 @@ test.describe("Admin reports panel", () => {
 
       await page.goto("/admin/reports");
       await expect(page.getByRole("heading", { name: "Abuse Reports" })).toBeVisible();
+      await page.waitForLoadState("networkidle");
 
       // Search for our report
       await page.getByPlaceholder("Search descriptions / notes…").fill(unique);
       await page.getByRole("button", { name: "Apply" }).click();
+      await page.waitForLoadState("networkidle");
 
       const row = page.locator("tr", { hasText: unique });
       await expect(row).toBeVisible();
@@ -70,22 +72,43 @@ test.describe("Admin reports panel", () => {
       // Update status and notes, then save
       await row.locator('select[aria-label="Report status"]').selectOption("IN_REVIEW");
       await row.locator("textarea").fill("Reviewed by admin (playwright)");
+      const saveRespPromise = page.waitForResponse((r) => {
+        return r.url().includes(`/api/admin/reports/${reportId}`) && r.request().method() === "PATCH";
+      }, { timeout: 30_000 });
       await row.getByRole("button", { name: "Save" }).click();
+      const saveResp = await saveRespPromise;
+      expect(saveResp.ok()).toBeTruthy();
 
-      // Mark handled
-      await row.getByRole("button", { name: "Mark handled" }).click();
-
-      // Verify persisted in DB
+      // Verify status + notes persisted in DB (router.refresh can be async; poll DB instead).
       const adminDb = createAdminClient();
-      const { data: persisted, error: persistedErr } = await adminDb
-        .from("abuse_reports")
-        .select("status, admin_notes, handled_at")
-        .eq("id", reportId!)
-        .single();
-      expect(persistedErr).toBeNull();
-      expect((persisted as any)?.status).toBe("IN_REVIEW");
-      expect((persisted as any)?.admin_notes).toMatch(/Reviewed by admin/);
-      expect((persisted as any)?.handled_at).toBeTruthy();
+      await expect
+        .poll(async () => {
+          const { data } = await adminDb
+            .from("abuse_reports")
+            .select("status, admin_notes")
+            .eq("id", reportId!)
+            .single();
+          return { status: (data as any)?.status, notes: (data as any)?.admin_notes };
+        })
+        .toEqual({ status: "IN_REVIEW", notes: "Reviewed by admin (playwright)" });
+
+      // Mark handled, then poll handled_at
+      const handledRespPromise = page.waitForResponse((r) => {
+        return r.url().includes(`/api/admin/reports/${reportId}`) && r.request().method() === "PATCH";
+      }, { timeout: 30_000 });
+      await row.getByRole("button", { name: "Mark handled" }).click();
+      const handledResp = await handledRespPromise;
+      expect(handledResp.ok()).toBeTruthy();
+      await expect
+        .poll(async () => {
+          const { data } = await adminDb
+            .from("abuse_reports")
+            .select("handled_at")
+            .eq("id", reportId!)
+            .single();
+          return Boolean((data as any)?.handled_at);
+        })
+        .toBe(true);
     } finally {
       // Cleanup report if still around; it will be cascaded if we delete profiles, but be explicit.
       if (reportId) {

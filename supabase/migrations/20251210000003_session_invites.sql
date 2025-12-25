@@ -20,7 +20,7 @@ create table if not exists session_invites (
     updated_at timestamptz not null default now(),
     deleted_at timestamptz,
     version bigint not null default 0,
-    session_id uuid not null references sessions,
+    session_id uuid not null references sessions on delete cascade,
     proposer_id uuid not null references user_profiles,
     invitee_id uuid not null references user_profiles,
     note varchar(500),

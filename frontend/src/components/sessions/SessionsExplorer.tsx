@@ -4,6 +4,8 @@ import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Calendar,
+  ChevronDown,
+  ChevronUp,
   Clock,
   Eye,
   Loader2,
@@ -16,7 +18,17 @@ import {
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { dateToDatetimeLocal, datetimeLocalToIso } from "@/lib/datetime";
-import { fetchSessions, createSession, updateSession } from "@/lib/sessions/api";
+import {
+  fetchSessionParticipantSummaries,
+  fetchLocationOptions,
+  fetchSessions,
+  joinSession,
+  leaveSession,
+  createSession,
+  updateSession,
+  type LocationOption,
+  type SessionParticipantSummary,
+} from "@/lib/sessions/api";
 import {
   SESSION_STATUS_OPTIONS,
   SESSION_STATUS_LABELS,
@@ -397,6 +409,7 @@ export function SessionsExplorer({ authUserId }: SessionsExplorerProps) {
       <SessionDetailsDialog
         open={Boolean(openSessionId)}
         session={sessions.find((s) => s.id === openSessionId) ?? null}
+        currentProfileId={organizerId}
         canEdit={
           Boolean(organizerId) &&
           Boolean(openSessionId) &&
@@ -406,6 +419,16 @@ export function SessionsExplorer({ authUserId }: SessionsExplorerProps) {
           if (!next) setOpenSessionId(null);
         }}
         onSessionUpdated={handleSessionUpdated}
+        onParticipantCountChange={(delta) => {
+          if (!openSessionId) return;
+          setSessions((prev) =>
+            prev.map((s) =>
+              s.id === openSessionId
+                ? { ...s, participantCount: Math.max(0, (s.participantCount ?? 0) + delta) }
+                : s,
+            ),
+          );
+        }}
       />
     </div>
   );
@@ -494,19 +517,53 @@ function SessionCard({
 function SessionDetailsDialog({
   open,
   session,
+  currentProfileId,
   canEdit,
   onOpenChange,
   onSessionUpdated,
+  onParticipantCountChange,
 }: {
   open: boolean;
   session: SessionListItem | null;
+  currentProfileId: string | null;
   canEdit: boolean;
   onOpenChange: (open: boolean) => void;
   onSessionUpdated: (session: SessionListItem) => void;
+  onParticipantCountChange: (delta: number) => void;
 }) {
   if (!session) {
     return null;
   }
+
+  const [participants, setParticipants] = useState<SessionParticipantSummary[]>([]);
+  const [participantsLoading, setParticipantsLoading] = useState(false);
+  const [participantsError, setParticipantsError] = useState<string | null>(null);
+  const [joining, setJoining] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    setParticipantsLoading(true);
+    setParticipantsError(null);
+    void fetchSessionParticipantSummaries(session.id)
+      .then((rows) => {
+        if (cancelled) return;
+        setParticipants(rows);
+      })
+      .catch((e) => {
+        if (cancelled) return;
+        setParticipantsError(e instanceof Error ? e.message : "Unable to load participants.");
+        setParticipants([]);
+      })
+      .finally(() => {
+        if (cancelled) return;
+        setParticipantsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, session.id]);
 
   const startDate = new Date(session.scheduledStart);
   const endDate = new Date(session.scheduledEnd);
@@ -517,6 +574,15 @@ function SessionDetailsDialog({
     ? (session.organizer.displayName ??
       `${session.organizer.firstName} ${session.organizer.lastName}`)
     : "Unknown organizer";
+
+  const isParticipant =
+    Boolean(currentProfileId) && participants.some((p) => p.id === currentProfileId);
+  const canJoin =
+    Boolean(currentProfileId) &&
+    !isParticipant &&
+    session.visibility === "PUBLIC" &&
+    (session.status === "PROPOSED" || session.status === "SCHEDULED");
+  const canLeave = Boolean(currentProfileId) && isParticipant;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -554,6 +620,95 @@ function SessionDetailsDialog({
               label="Participants"
               value={`${session.participantCount}${session.capacity ? ` / ${session.capacity}` : ""}`}
             />
+          </div>
+
+          <div className="rounded-lg border bg-muted/30 p-4">
+            <p className="mb-2 text-sm font-semibold">Signed up participants</p>
+            <div className="mb-3 flex flex-wrap items-center gap-2">
+              {canJoin ? (
+                <Button
+                  size="sm"
+                  disabled={joining || participantsLoading}
+                  onClick={async () => {
+                    if (!currentProfileId) return;
+                    setJoining(true);
+                    setParticipantsError(null);
+                    try {
+                      await joinSession(session.id, currentProfileId);
+                      onParticipantCountChange(1);
+                      const refreshed = await fetchSessionParticipantSummaries(session.id);
+                      setParticipants(refreshed);
+                    } catch (e) {
+                      setParticipantsError(e instanceof Error ? e.message : "Unable to join.");
+                    } finally {
+                      setJoining(false);
+                    }
+                  }}
+                >
+                  {joining ? "Joining..." : "Join session"}
+                </Button>
+              ) : null}
+              {canLeave ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={joining || participantsLoading}
+                  onClick={async () => {
+                    if (!currentProfileId) return;
+                    setJoining(true);
+                    setParticipantsError(null);
+                    try {
+                      await leaveSession(session.id, currentProfileId);
+                      onParticipantCountChange(-1);
+                      const refreshed = await fetchSessionParticipantSummaries(session.id);
+                      setParticipants(refreshed);
+                    } catch (e) {
+                      setParticipantsError(e instanceof Error ? e.message : "Unable to leave.");
+                    } finally {
+                      setJoining(false);
+                    }
+                  }}
+                >
+                  {joining ? "Leaving..." : "Leave session"}
+                </Button>
+              ) : null}
+              {!currentProfileId ? (
+                <span className="text-xs text-muted-foreground">
+                  Complete your profile to join sessions.
+                </span>
+              ) : session.visibility !== "PUBLIC" ? (
+                <span className="text-xs text-muted-foreground">
+                  Only public sessions can be joined directly (for now).
+                </span>
+              ) : null}
+            </div>
+            {participantsLoading ? (
+              <p className="text-sm text-muted-foreground">Loading participants…</p>
+            ) : participantsError ? (
+              <p className="text-sm text-destructive">{participantsError}</p>
+            ) : participants.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No one has joined yet.</p>
+            ) : (
+              <ul className="space-y-1 text-sm">
+                {participants.map((p) => {
+                  const label =
+                    p.displayName ||
+                    [p.firstName, p.lastName].filter(Boolean).join(" ") ||
+                    `User ${p.id.slice(0, 8)}…`;
+                  const isOrganizer = session.organizer?.id === p.id;
+                  return (
+                    <li key={p.id} className="flex items-center justify-between gap-2">
+                      <span className="truncate">{label}</span>
+                      {isOrganizer ? (
+                        <Badge variant="secondary" className="flex-shrink-0">
+                          Organizer
+                        </Badge>
+                      ) : null}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
           </div>
 
           {session.location && (
@@ -608,23 +763,28 @@ function SessionQuickEdit({ session, onSessionUpdated }: SessionQuickEditProps) 
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const capacityLocked = session.sessionType === "PARTNER_PRACTICE";
 
   useEffect(() => {
     setStatusValue(session.status);
     setVisibilityValue(session.visibility);
-    setCapacityValue(session.capacity != null ? String(session.capacity) : "");
+    setCapacityValue(
+      capacityLocked ? "2" : session.capacity != null ? String(session.capacity) : "",
+    );
     setError(null);
-  }, [session.id, session.status, session.visibility, session.capacity]);
+  }, [session.id, session.status, session.visibility, session.capacity, capacityLocked]);
 
   const dirty =
     statusValue !== session.status ||
     visibilityValue !== session.visibility ||
-    capacityValue !== (session.capacity?.toString() ?? "");
+    (!capacityLocked && capacityValue !== (session.capacity?.toString() ?? ""));
 
   const handleReset = () => {
     setStatusValue(session.status);
     setVisibilityValue(session.visibility);
-    setCapacityValue(session.capacity != null ? String(session.capacity) : "");
+    setCapacityValue(
+      capacityLocked ? "2" : session.capacity != null ? String(session.capacity) : "",
+    );
     setError(null);
   };
 
@@ -633,7 +793,7 @@ function SessionQuickEdit({ session, onSessionUpdated }: SessionQuickEditProps) 
       return;
     }
     let capacityNumber: number | null = null;
-    if (capacityValue.trim().length > 0) {
+    if (!capacityLocked && capacityValue.trim().length > 0) {
       capacityNumber = Number(capacityValue);
       if (!Number.isFinite(capacityNumber) || capacityNumber < 0) {
         setError("Capacity must be a positive number.");
@@ -649,7 +809,7 @@ function SessionQuickEdit({ session, onSessionUpdated }: SessionQuickEditProps) 
         patch: {
           status: statusValue,
           visibility: visibilityValue,
-          capacity: capacityNumber,
+          capacity: capacityLocked ? undefined : capacityNumber,
         },
       });
       onSessionUpdated(updated);
@@ -703,14 +863,22 @@ function SessionQuickEdit({ session, onSessionUpdated }: SessionQuickEditProps) 
           </Select>
         </div>
         <div className="space-y-2">
-          <Label htmlFor={`capacity-${session.id}`}>Capacity</Label>
+          <Label htmlFor={`capacity-${session.id}`}>
+            Capacity{capacityLocked ? " (fixed)" : ""}
+          </Label>
           <Input
             id={`capacity-${session.id}`}
             type="number"
             min={0}
             value={capacityValue}
             onChange={(event) => setCapacityValue(event.target.value)}
+            disabled={capacityLocked}
           />
+          {capacityLocked && (
+            <p className="text-xs text-muted-foreground">
+              Partner practice sessions are always 1:1 (capacity 2).
+            </p>
+          )}
         </div>
       </div>
       {error && <p className="mt-3 text-sm text-destructive">{error}</p>}
@@ -770,6 +938,7 @@ interface SessionFormState {
   scheduledStart: string;
   scheduledEnd: string;
   capacity: string;
+  locationId: string;
 }
 
 function CreateSessionDialog({
@@ -780,6 +949,8 @@ function CreateSessionDialog({
 }: CreateSessionDialogProps) {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<SessionFormState>(() => createInitialSessionForm());
+  const [locations, setLocations] = useState<LocationOption[]>([]);
+  const [locationsLoading, setLocationsLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -787,7 +958,13 @@ function CreateSessionDialog({
     if (!open) {
       setForm(createInitialSessionForm());
       setError(null);
+      return;
     }
+    setLocationsLoading(true);
+    void fetchLocationOptions()
+      .then((rows) => setLocations(rows))
+      .catch(() => setLocations([]))
+      .finally(() => setLocationsLoading(false));
   }, [open]);
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -830,7 +1007,10 @@ function CreateSessionDialog({
     }
 
     let capacityNumber: number | null = null;
-    if (form.capacity.trim().length > 0) {
+    const capacityLocked = form.sessionType === "PARTNER_PRACTICE";
+    if (capacityLocked) {
+      capacityNumber = 2;
+    } else if (form.capacity.trim().length > 0) {
       capacityNumber = Number(form.capacity);
       if (!Number.isFinite(capacityNumber) || capacityNumber < 0) {
         setError("Capacity must be a positive number.");
@@ -850,6 +1030,7 @@ function CreateSessionDialog({
         scheduledEnd: endIso,
         organizerId,
         capacity: capacityNumber,
+        locationId: form.locationId || null,
       });
       onSessionCreated(created.id);
       setOpen(false);
@@ -905,6 +1086,8 @@ function CreateSessionDialog({
                   setForm((prev) => ({
                     ...prev,
                     sessionType: value as SessionType,
+                    capacity:
+                      (value as SessionType) === "PARTNER_PRACTICE" ? "2" : prev.capacity,
                   }))
                 }
               >
@@ -1003,7 +1186,37 @@ function CreateSessionDialog({
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="session-capacity">Capacity (optional)</Label>
+              <Label htmlFor="session-location">Location</Label>
+              <select
+                id="session-location"
+                value={form.locationId}
+                onChange={(event) =>
+                  setForm((prev) => ({ ...prev, locationId: event.target.value }))
+                }
+                className="w-full rounded-md border bg-background px-2 py-2 text-sm"
+                aria-label="Session location"
+                disabled={locationsLoading}
+              >
+                <option value="">Location TBD</option>
+                {locations.map((loc) => (
+                  <option key={loc.id} value={loc.id}>
+                    {loc.name ?? "Unnamed location"}
+                    {loc.city ? ` — ${loc.city}` : ""}
+                    {loc.state ? `, ${loc.state}` : ""}
+                  </option>
+                ))}
+              </select>
+              {locationsLoading && (
+                <p className="text-xs text-muted-foreground">Loading locations…</p>
+              )}
+            </div>
+          </div>
+
+          <div className="space-y-2">
+              <Label htmlFor="session-capacity">
+                Capacity{" "}
+                {form.sessionType === "PARTNER_PRACTICE" ? "(fixed)" : "(optional)"}
+              </Label>
               <Input
                 id="session-capacity"
                 type="number"
@@ -1015,8 +1228,13 @@ function CreateSessionDialog({
                     capacity: event.target.value,
                   }))
                 }
+                disabled={form.sessionType === "PARTNER_PRACTICE"}
               />
-            </div>
+              {form.sessionType === "PARTNER_PRACTICE" && (
+                <p className="text-xs text-muted-foreground">
+                  Partner practice sessions are always 1:1 (capacity 2).
+                </p>
+              )}
           </div>
 
           {error && <p className="text-sm text-destructive">{error}</p>}
@@ -1052,6 +1270,7 @@ const createInitialSessionForm = (): SessionFormState => {
     scheduledStart: dateToDatetimeLocal(start),
     scheduledEnd: dateToDatetimeLocal(end),
     capacity: "",
+    locationId: "",
   };
 };
 

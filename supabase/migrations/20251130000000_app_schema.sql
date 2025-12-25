@@ -244,7 +244,7 @@ alter table session_notes
 
 alter table session_participants
     add constraint fk_session_participants_user foreign key (user_id) references user_profiles,
-    add constraint fk_session_participants_session foreign key (session_id) references sessions;
+    add constraint fk_session_participants_session foreign key (session_id) references sessions on delete cascade;
 
 alter table sessions
     add constraint fk_sessions_location foreign key (location_id) references locations,

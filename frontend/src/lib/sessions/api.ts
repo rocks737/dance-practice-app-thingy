@@ -12,9 +12,19 @@ import {
   defaultSessionFilters,
 } from "./types";
 
-type SessionQueryBuilder = ReturnType<SupabaseClient<Database>["from"]>;
-
-type RawSessionRecord = Tables<"sessions"> & {
+type RawSessionRecord = {
+  id: string;
+  title: string;
+  session_type: string;
+  status: string;
+  visibility: string;
+  scheduled_start: string;
+  scheduled_end: string;
+  updated_at: string;
+  version: number;
+  capacity: number | null;
+  location_id?: string | null;
+  organizer_id?: string;
   location: {
     id: string;
     name: string | null;
@@ -92,6 +102,65 @@ export interface UpdateSessionInput {
   };
 }
 
+export type SessionParticipantSummary = {
+  id: string;
+  displayName: string | null;
+  firstName: string | null;
+  lastName: string | null;
+};
+
+export async function joinSession(
+  sessionId: string,
+  profileId: string,
+  supabaseOverride?: SupabaseClient<Database>,
+): Promise<void> {
+  const supabase = supabaseOverride ?? createClient();
+  const { error } = await supabase.from("session_participants").insert({
+    session_id: sessionId,
+    user_id: profileId,
+  });
+  if (error) {
+    throw new Error(error.message);
+  }
+}
+
+export async function leaveSession(
+  sessionId: string,
+  profileId: string,
+  supabaseOverride?: SupabaseClient<Database>,
+): Promise<void> {
+  const supabase = supabaseOverride ?? createClient();
+  const { error } = await supabase
+    .from("session_participants")
+    .delete()
+    .eq("session_id", sessionId)
+    .eq("user_id", profileId);
+  if (error) {
+    throw new Error(error.message);
+  }
+}
+
+export type LocationOption = {
+  id: string;
+  name: string | null;
+  city: string | null;
+  state: string | null;
+  country: string | null;
+};
+
+export async function fetchLocationOptions(
+  supabaseOverride?: SupabaseClient<Database>,
+): Promise<LocationOption[]> {
+  const supabase = supabaseOverride ?? createClient();
+  const { data, error } = await supabase
+    .from("locations")
+    .select("id,name,city,state,country")
+    .order("name", { ascending: true })
+    .limit(100);
+  if (error) throw new Error(error.message);
+  return (data ?? []) as LocationOption[];
+}
+
 export async function fetchSessions(
   options: FetchSessionsOptions = {},
   supabaseOverride?: SupabaseClient<Database>,
@@ -123,7 +192,58 @@ export async function fetchSessions(
   };
 }
 
-function applySessionFilters(query: SessionQueryBuilder, filters: SessionFilters) {
+/**
+ * Fetch signed-up participants for a session (rows in `session_participants`),
+ * best-effort resolving each participant to a readable `user_profiles` record.
+ *
+ * Note: profile rows may be filtered by RLS (e.g. private profiles). In that case
+ * the participant will still be returned with name fields null.
+ */
+export async function fetchSessionParticipantSummaries(
+  sessionId: string,
+  supabaseOverride?: SupabaseClient<Database>,
+): Promise<SessionParticipantSummary[]> {
+  const supabase = supabaseOverride ?? createClient();
+
+  const { data: participantRows, error: participantsError } = await supabase
+    .from("session_participants")
+    .select("user_id")
+    .eq("session_id", sessionId)
+    .order("user_id", { ascending: true });
+
+  if (participantsError) {
+    throw new Error(participantsError.message);
+  }
+
+  const ids = (participantRows ?? []).map((r) => r.user_id).filter(Boolean);
+  if (ids.length === 0) return [];
+
+  const { data: profileRows, error: profilesError } = await supabase
+    .from("user_profiles")
+    .select("id, first_name, last_name, display_name")
+    .in("id", ids);
+
+  if (profilesError) {
+    throw new Error(profilesError.message);
+  }
+
+  const byId = new Map(
+    (profileRows ?? []).map((p) => [
+      p.id,
+      {
+        id: p.id,
+        displayName: p.display_name ?? null,
+        firstName: p.first_name ?? null,
+        lastName: p.last_name ?? null,
+      } satisfies SessionParticipantSummary,
+    ]),
+  );
+
+  // Preserve participant ordering; fill unknowns if profile rows were filtered out.
+  return ids.map((id) => byId.get(id) ?? { id, displayName: null, firstName: null, lastName: null });
+}
+
+function applySessionFilters(query: any, filters: SessionFilters) {
   const normalized = { ...defaultSessionFilters, ...filters };
 
   if (normalized.searchText?.trim()) {
@@ -190,6 +310,7 @@ export async function createSession(
   supabaseOverride?: SupabaseClient<Database>,
 ): Promise<SessionListItem> {
   const supabase = supabaseOverride ?? createClient();
+  const isPartnerPractice = input.sessionType === "PARTNER_PRACTICE";
   const payload: TablesInsert<"sessions"> = {
     title: input.title,
     session_type: input.sessionType,
@@ -198,7 +319,8 @@ export async function createSession(
     scheduled_start: input.scheduledStart,
     scheduled_end: input.scheduledEnd,
     organizer_id: input.organizerId,
-    capacity: input.capacity ?? null,
+    // Partner practice is always 1:1, so capacity is fixed at 2.
+    capacity: isPartnerPractice ? 2 : (input.capacity ?? null),
     location_id: input.locationId ?? null,
   };
 
@@ -220,6 +342,22 @@ export async function updateSession(
   supabaseOverride?: SupabaseClient<Database>,
 ): Promise<SessionListItem> {
   const supabase = supabaseOverride ?? createClient();
+
+  // Guard: Partner practice is always 1:1; don't allow capacity edits.
+  if (input.patch.capacity !== undefined) {
+    const { data: existing, error: existingError } = await supabase
+      .from("sessions")
+      .select("session_type")
+      .eq("id", input.id)
+      .single();
+    if (existingError) {
+      throw new Error(existingError.message);
+    }
+    if ((existing as any)?.session_type === "PARTNER_PRACTICE") {
+      throw new Error("Partner practice capacity is fixed at 2");
+    }
+  }
+
   const patch: TablesUpdate<"sessions"> = {
     status: input.patch.status,
     visibility: input.patch.visibility,

@@ -207,6 +207,47 @@ describe("sessions/api", () => {
       expect(result.id).toBe("session-generated");
       expect(result.organizer?.id).toBe("org-5");
     });
+
+    it("forces capacity=2 for partner practice sessions", async () => {
+      const rawSession = {
+        id: "session-partner",
+        title: "Partner Practice",
+        session_type: "PARTNER_PRACTICE",
+        status: "SCHEDULED",
+        visibility: "PUBLIC",
+        scheduled_start: "2024-02-10T18:00:00Z",
+        scheduled_end: "2024-02-10T19:30:00Z",
+        updated_at: "2024-02-10T17:00:00Z",
+        version: 1,
+        capacity: 2,
+        location: null,
+        organizer: null,
+        session_participants: [],
+      };
+
+      const single = jest.fn().mockResolvedValue({ data: rawSession, error: null });
+      const select = jest.fn().mockReturnValue({ single });
+      const insert = jest.fn().mockReturnValue({ select });
+      mockSupabase.from.mockReturnValue({ insert });
+
+      await createSession({
+        title: "Partner Practice",
+        sessionType: "PARTNER_PRACTICE",
+        status: "SCHEDULED",
+        visibility: "PUBLIC",
+        scheduledStart: "2024-02-10T18:00:00Z",
+        scheduledEnd: "2024-02-10T19:30:00Z",
+        organizerId: "org-5",
+        capacity: 99,
+      });
+
+      expect(insert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          session_type: "PARTNER_PRACTICE",
+          capacity: 2,
+        }),
+      );
+    });
   });
 
   describe("updateSession", () => {
@@ -214,7 +255,7 @@ describe("sessions/api", () => {
       const rawSession = {
         id: "session-22",
         title: "Lunch Lab",
-        session_type: "PARTNER_PRACTICE",
+        session_type: "GROUP_PRACTICE",
         status: "COMPLETED",
         visibility: "PUBLIC",
         scheduled_start: "2024-02-05T12:00:00Z",
@@ -232,9 +273,21 @@ describe("sessions/api", () => {
       const eq = jest.fn().mockReturnValue({ select });
       const update = jest.fn().mockReturnValue({ eq });
 
-      mockSupabase.from.mockReturnValue({
-        update,
+      // updateSession now prefetches session_type when capacity is provided.
+      const typeSingle = jest.fn().mockResolvedValue({
+        data: { session_type: "GROUP_PRACTICE" },
+        error: null,
       });
+      const typeEq = jest.fn().mockReturnValue({ single: typeSingle });
+      const typeSelect = jest.fn().mockReturnValue({ eq: typeEq });
+
+      mockSupabase.from
+        .mockReturnValueOnce({
+          select: typeSelect,
+        })
+        .mockReturnValueOnce({
+          update,
+        });
 
       const result = await updateSession({
         id: "session-22",
@@ -254,6 +307,30 @@ describe("sessions/api", () => {
       expect(eq).toHaveBeenCalledWith("id", "session-22");
       expect(result.status).toBe("COMPLETED");
       expect(result.participantCount).toBe(1);
+    });
+
+    it("rejects capacity edits for partner practice sessions", async () => {
+      const update = jest.fn();
+
+      const typeSingle = jest.fn().mockResolvedValue({
+        data: { session_type: "PARTNER_PRACTICE" },
+        error: null,
+      });
+      const typeEq = jest.fn().mockReturnValue({ single: typeSingle });
+      const typeSelect = jest.fn().mockReturnValue({ eq: typeEq });
+
+      mockSupabase.from.mockReturnValueOnce({
+        select: typeSelect,
+      });
+
+      await expect(
+        updateSession({
+          id: "session-pp",
+          patch: { capacity: 3 },
+        }),
+      ).rejects.toThrow(/capacity is fixed at 2/i);
+
+      expect(update).not.toHaveBeenCalled();
     });
 
     it("throws when Supabase update fails", async () => {
