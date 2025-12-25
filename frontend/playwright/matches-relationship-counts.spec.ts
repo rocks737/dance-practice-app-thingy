@@ -15,12 +15,19 @@ test.describe("Matches: relationship counts (scheduled)", () => {
   test("scheduled count includes future accepted SCHEDULED sessions", async ({ authPage, authUser }) => {
     const admin = createAdminClient();
     const candidate = await createTestUser("DANCER");
+    const candidateLabel = `PW Candidate ${Date.now()}-scheduled`;
     const loc = await createTestLocation("PW Relationship Counts 1", "PW Relationship Counts 1", "CA");
 
     await admin
       .from("user_profiles")
       .update({ home_location_id: loc.locationId })
       .in("id", [authUser.profileId, candidate.profileId]);
+
+    // Make candidate label unique so we can reliably select the right card.
+    await admin
+      .from("user_profiles")
+      .update({ display_name: candidateLabel })
+      .eq("id", candidate.profileId);
 
     await createTestSchedulePreference(candidate.profileId, [
       { dayOfWeek: "MONDAY", startTime: "09:30", endTime: "10:00", recurring: true },
@@ -62,11 +69,10 @@ test.describe("Matches: relationship counts (scheduled)", () => {
     });
     const card = potentialSection
       .getByRole("listitem")
-      .filter({ has: authPage.getByText(new RegExp(candidate.firstName)) })
+      .filter({ has: authPage.getByText(candidateLabel) })
       .first();
     await expect(card).toBeVisible({ timeout: 15_000 });
 
-    await expect(card.getByText(/scheduled/i)).toBeVisible();
     await expect(card.getByText(/1\s*scheduled/i)).toBeVisible();
 
     await cleanupTestSession(createdSession.id);
@@ -77,12 +83,18 @@ test.describe("Matches: relationship counts (scheduled)", () => {
   test("scheduled count excludes completed (and past) accepted sessions", async ({ authPage, authUser }) => {
     const admin = createAdminClient();
     const candidate = await createTestUser("DANCER");
+    const candidateLabel = `PW Candidate ${Date.now()}-completed`;
     const loc = await createTestLocation("PW Relationship Counts 2", "PW Relationship Counts 2", "CA");
 
     await admin
       .from("user_profiles")
       .update({ home_location_id: loc.locationId })
       .in("id", [authUser.profileId, candidate.profileId]);
+
+    await admin
+      .from("user_profiles")
+      .update({ display_name: candidateLabel })
+      .eq("id", candidate.profileId);
 
     await createTestSchedulePreference(candidate.profileId, [
       { dayOfWeek: "MONDAY", startTime: "09:30", endTime: "10:00", recurring: true },
@@ -124,7 +136,7 @@ test.describe("Matches: relationship counts (scheduled)", () => {
     });
     const card = potentialSection
       .getByRole("listitem")
-      .filter({ has: authPage.getByText(new RegExp(candidate.firstName)) })
+      .filter({ has: authPage.getByText(candidateLabel) })
       .first();
     await expect(card).toBeVisible({ timeout: 15_000 });
 

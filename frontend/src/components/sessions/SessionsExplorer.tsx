@@ -22,6 +22,7 @@ import {
   fetchSessionParticipantSummaries,
   fetchLocationOptions,
   fetchSessions,
+  isSessionJoinable,
   joinSession,
   leaveSession,
   createSession,
@@ -539,6 +540,7 @@ function SessionDetailsDialog({
   const [participantsLoading, setParticipantsLoading] = useState(false);
   const [participantsError, setParticipantsError] = useState<string | null>(null);
   const [joining, setJoining] = useState(false);
+  const [joinable, setJoinable] = useState<boolean | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -564,6 +566,26 @@ function SessionDetailsDialog({
       cancelled = true;
     };
   }, [open, session.id]);
+
+  useEffect(() => {
+    if (!open) return;
+    // For non-participants, RLS may hide participant rows, so check joinability via RPC.
+    if (!currentProfileId || session.visibility !== "PUBLIC") {
+      setJoinable(null);
+      return;
+    }
+    let cancelled = false;
+    void isSessionJoinable(session.id)
+      .then((ok) => {
+        if (!cancelled) setJoinable(ok);
+      })
+      .catch(() => {
+        if (!cancelled) setJoinable(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, session.id, session.visibility, currentProfileId]);
 
   const startDate = new Date(session.scheduledStart);
   const endDate = new Date(session.scheduledEnd);
@@ -628,7 +650,8 @@ function SessionDetailsDialog({
               {canJoin ? (
                 <Button
                   size="sm"
-                  disabled={joining || participantsLoading}
+                  disabled={joining || participantsLoading || joinable === false}
+                  title={joinable === false ? "This session is full or not joinable." : undefined}
                   onClick={async () => {
                     if (!currentProfileId) return;
                     setJoining(true);
@@ -647,6 +670,9 @@ function SessionDetailsDialog({
                 >
                   {joining ? "Joining..." : "Join session"}
                 </Button>
+              ) : null}
+              {canJoin && joinable === false ? (
+                <span className="text-xs text-muted-foreground">This session is full.</span>
               ) : null}
               {canLeave ? (
                 <Button

@@ -109,6 +109,19 @@ export type SessionParticipantSummary = {
   lastName: string | null;
 };
 
+export async function isSessionJoinable(
+  sessionId: string,
+  supabaseOverride?: SupabaseClient<Database>,
+): Promise<boolean> {
+  const supabase = supabaseOverride ?? createClient();
+  // Database types may lag behind migrations; keep this call localized.
+  const { data, error } = await (supabase as any).rpc("session_is_joinable", {
+    p_session_id: sessionId,
+  });
+  if (error) throw new Error(error.message);
+  return Boolean(data);
+}
+
 export async function joinSession(
   sessionId: string,
   profileId: string,

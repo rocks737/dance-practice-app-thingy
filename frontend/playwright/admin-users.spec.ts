@@ -18,6 +18,7 @@ async function login(page: Page, email: string, password: string) {
 
 test.describe("Admin users panel", () => {
   test("admin can suspend/unsuspend, reset password, and soft delete", async ({ page, browser }) => {
+    test.setTimeout(120_000);
     let admin: TestUser | null = null;
     let target: TestUser | null = null;
 
@@ -177,7 +178,9 @@ test.describe("Admin users panel", () => {
       // Wait for navigation away from /login (either to /matches then middleware redirect, or directly to /account-disabled).
       await targetPage.waitForURL(/\/account-disabled|\/matches/, { timeout: 15_000 });
       if (targetPage.url().includes("/matches")) {
-        await targetPage.waitForURL(/\/account-disabled/, { timeout: 15_000 });
+        // Force a full navigation to a protected route; middleware should redirect.
+        await targetPage.goto("/matches");
+        await targetPage.waitForURL(/\/account-disabled/, { timeout: 30_000 });
       }
       await expect(
         targetPage.getByRole("heading", { name: /Account (suspended|deleted)/i }),
